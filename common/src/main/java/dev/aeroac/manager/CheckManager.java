@@ -25,6 +25,7 @@ import dev.aeroac.checks.impl.misc.GhostBlockMitigation;
 import dev.aeroac.checks.impl.misc.Post;
 import dev.aeroac.checks.impl.misc.TransactionOrder;
 import dev.aeroac.checks.impl.movement.AirStuck;
+import dev.aeroac.checks.impl.movement.GhostBlock;
 import dev.aeroac.checks.impl.movement.NoSlow;
 import dev.aeroac.checks.impl.movement.PredictionRunner;
 import dev.aeroac.checks.impl.movement.SetbackBlocker;
@@ -189,6 +190,7 @@ public class CheckManager {
                 .put(ExplosionHandler.class, new ExplosionHandler(player))
                 .put(KnockbackHandler.class, new KnockbackHandler(player))
                 .put(GhostBlockDetector.class, new GhostBlockDetector(player))
+                .put(GhostBlock.class, new GhostBlock(player))
                 .put(InventoryD.class, new InventoryD(player))
                 .put(Phase.class, new Phase(player))
                 .put(Post.class, new Post(player))

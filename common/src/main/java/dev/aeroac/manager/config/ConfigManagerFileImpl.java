@@ -161,7 +161,7 @@ public class ConfigManagerFileImpl implements ConfigManager, BasicReloadable {
             }
             String after = ensureAeroMovementPunishmentGroups(combat);
             if (!after.equals(combat)) {
-                LogUtil.info("Added the AirStuck punishment group to punishments.yml");
+                LogUtil.info("Added missing AirStuck/GhostBlock punishment groups to punishments.yml");
             }
             if (!after.equals(before)) Files.writeString(punishments.toPath(), after);
         } catch (IOException e) {
@@ -176,13 +176,20 @@ public class ConfigManagerFileImpl implements ConfigManager, BasicReloadable {
      */
     static String ensureAeroMovementPunishmentGroups(String configString) {
         if (!hasPunishmentsRoot(configString)) return configString;
-        if (Pattern.compile("(?mi)^\\s*-\\s*\"?!?[^\"\\n]*airstuck").matcher(configString).find()
-                || hasPunishmentGroup(configString, "AirStuck")) {
-            return configString;
-        }
         StringBuilder out = new StringBuilder(configString);
         if (!configString.endsWith("\n")) out.append('\n');
-        return out.append('\n').append(AIR_STUCK_PUNISHMENT_GROUP).toString();
+
+        boolean changed = false;
+        for (String[] group : AERO_MOVEMENT_GROUPS) {
+            String check = group[0];
+            if (Pattern.compile("(?mi)^\\s*-\\s*\"?!?[^\"\\n]*" + Pattern.quote(check.toLowerCase(java.util.Locale.ROOT))).matcher(configString).find()
+                    || hasPunishmentGroup(configString, check)) {
+                continue;
+            }
+            out.append('\n').append(group[1]);
+            changed = true;
+        }
+        return changed ? out.toString() : configString;
     }
 
     static String ensureLightningCombatPunishmentGroups(String configString) {
@@ -235,6 +242,24 @@ public class ConfigManagerFileImpl implements ConfigManager, BasicReloadable {
                   - "5:10 [webhook]"
                   - "5:10 [proxy]"
             """;
+
+    private static final String GHOST_BLOCK_PUNISHMENT_GROUP = """
+              GhostBlock:
+                remove-violations-after: 300
+                checks:
+                  - "GhostBlock"
+                commands:
+                  - "5:5 [alert]"
+                  - "1:1 [log]"
+                  - "10:10 [webhook]"
+                  - "10:10 [proxy]"
+            """;
+
+    /** Check name and the group added for it when no group mentions it yet. */
+    private static final String[][] AERO_MOVEMENT_GROUPS = {
+            {"AirStuck", AIR_STUCK_PUNISHMENT_GROUP},
+            {"GhostBlock", GHOST_BLOCK_PUNISHMENT_GROUP},
+    };
 
     private static final String ENTITY_PIERCE_PUNISHMENT_GROUP = """
               EntityPierce:

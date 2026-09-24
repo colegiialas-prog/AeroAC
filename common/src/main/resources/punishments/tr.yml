@@ -40,6 +40,15 @@ Punishments:
       - "1:1 [log]"
       - "5:10 [webhook]"
       - "5:10 [proxy]"
+  GhostBlock:
+    remove-violations-after: 300
+    checks:
+      - "GhostBlock"
+    commands:
+      - "5:5 [alert]"
+      - "1:1 [log]"
+      - "10:10 [webhook]"
+      - "10:10 [proxy]"
   Knockback:
     remove-violations-after: 300
     checks:
