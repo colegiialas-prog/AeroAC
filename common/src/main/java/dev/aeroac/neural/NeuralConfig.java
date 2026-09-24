@@ -23,7 +23,8 @@ public record NeuralConfig(boolean enabled, boolean collectionEnabled, int conti
     public record Risk(boolean enabled, boolean acceptUncalibrated, double decayPerSecond, double maxRisk,
                        double aiWeight, double aiThreshold, double aiClearThreshold, double aiRelief,
                        double grimWeight, double watch, double suspicious, double confirmed,
-                       double snapshotThreshold, int maxSnapshotsPerHour, int snapshotBefore, int snapshotAfter) { }
+                       double snapshotThreshold, int maxSnapshotsPerHour, int snapshotBefore, int snapshotAfter,
+                       int carryOverSeconds) { }
 
     public record Mitigation(boolean enabled, RiskState minState, boolean cancelAttacks, int durationSeconds,
                              int maxPerHour) { }
@@ -87,12 +88,13 @@ public record NeuralConfig(boolean enabled, boolean collectionEnabled, int conti
                 positive(config, "risk.ai-relief", 0.15), positive(config, "risk.grim-weight", 0.5),
                 watch, suspicious, confirmed, Math.max(watch, positive(config, "risk.snapshot-threshold", 8.0)),
                 bounded(config, "risk.max-snapshots-per-hour", 12, 0, 1000),
-                Math.min(continuous - after, bounded(config, "risk.snapshot-before", 64, 0, 512)), after);
+                Math.min(continuous - after, bounded(config, "risk.snapshot-before", 64, 0, 512)), after,
+                bounded(config, "risk.carry-over-seconds", 300, 0, 3600));
     }
 
     private static Mitigation mitigation(ConfigManager config) {
         return new Mitigation(config.getBooleanElse("neural.mitigation.enabled", false),
-                RiskState.parse(config.getStringElse("neural.mitigation.min-state", "MITIGATED")),
+                RiskState.parse(config.getStringElse("neural.mitigation.min-state", "MITIGATED"), RiskState.MITIGATED),
                 config.getBooleanElse("neural.mitigation.cancel-attacks", false),
                 bounded(config, "mitigation.duration-seconds", 30, 1, 3600),
                 bounded(config, "mitigation.max-per-hour", 20, 0, 1000));

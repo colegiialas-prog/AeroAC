@@ -8,6 +8,7 @@ import dev.aeroac.checks.impl.verbose.VerboseCodecs;
 import dev.aeroac.checks.type.BlockBreakCheck;
 import dev.aeroac.player.AeroPlayer;
 import dev.aeroac.utils.anticheat.update.BlockBreak;
+import com.github.retrooper.packetevents.protocol.component.ComponentTypes;
 import com.github.retrooper.packetevents.protocol.item.type.ItemTypes;
 import com.github.retrooper.packetevents.protocol.player.ClientVersion;
 import com.github.retrooper.packetevents.protocol.player.DiggingAction;
@@ -63,7 +64,9 @@ public class AirLiquidBreak extends Check implements BlockBreakCheck {
                 || block == StateTypes.MOVING_PISTON
                 || block == StateTypes.FIRE && noFireHitbox
                 // or the client claims to have broken an unbreakable block
-                || block.getHardness() == -1.0f && blockBreak.action == DiggingAction.FINISHED_DIGGING;
+                || block.getHardness() == -1.0f && blockBreak.action == DiggingAction.FINISHED_DIGGING
+                // or the player is holding a spear
+                || player.inventory.getHeldItem().hasComponent(ComponentTypes.PIERCING_WEAPON) && player.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_21_11);
 
         if (invalid) {
             if (flag(V.write(verbose())

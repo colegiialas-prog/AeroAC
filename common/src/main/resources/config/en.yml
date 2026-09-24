@@ -118,6 +118,11 @@ NoSlow:
     setbackvl: 5
     # Decay's when the player uses an item AND is slowed by it
     decay: 0.05
+    # Unslowed use ticks that are spread out (the "skip the slowdown every other tick" NoSlow) add 1 to a buffer,
+    # every other tick removes buffer-decay; the check flags once the buffer reaches this value.
+    # With the defaults, skipping the slowdown more often than one tick in six is detected.
+    buffer: 2.0
+    buffer-decay: 0.2
 
 Knockback:
     # How much should we multiply total advantage by when the player is legit
@@ -150,6 +155,17 @@ TimerLimit:
     # Can cause some setbacks for legitimate players but only if they are over this ping threshold.
     # -1 to disable
     ping-abuse-limit-threshold: 1000
+
+# A client that keeps ticking but stops sending its position ("air stuck", freezing in the air to hit
+# players). Vanilla sends a position at least every 20 ticks. A flag sets the player back, which also
+# cancels their attacks until they obey.
+AirStuck:
+    # 1.21.2+ clients, counted in client ticks. Never lower than 20.
+    max-ticks: 25
+    # Older clients have no tick-end packet and are timed by how long they keep answering transactions
+    # without a position (a second of vanilla ticking, stretched when the server's /tick rate is slower).
+    # Never lower than 2.
+    max-seconds-without-tick-end: 3.0
 
 NegativeTimer:
     # Number of milliseconds lost while moving before we should start flagging
@@ -297,6 +313,8 @@ neural:
         max-snapshots-per-hour: 12
         snapshot-before: 64
         snapshot-after: 32
+        # Keep a disconnected player's risk this long, so a relog is not a reset. 0 disables.
+        carry-over-seconds: 300
     mitigation:
         # Phase 6. Turn on only after measuring the false positive rate on your own server.
         enabled: false

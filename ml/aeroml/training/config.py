@@ -46,6 +46,17 @@ class TrainingConfig:
     include_review: bool = False
     torch_threads: int = 2
     golden_manifest: Path | None = None
+    # "platt" corrects the prior shift the class-weighted loss puts on every logit; "temperature"
+    # is the older scale-only method, kept for comparison with bundles trained before it.
+    calibration: str = "platt"
+    # 0 = every window counts once; 1 = every player counts once. See augment.group_balance_weights.
+    group_balance: float = 0.5
+    augment: bool = True
+    mirror_probability: float = 0.5
+    channel_dropout: float = 0.05
+    # Epochs are selected on the validation partial AUC over FPR in [0, selection_max_fpr]: the
+    # low-FPR corner an anticheat is operated in, not the whole curve.
+    selection_max_fpr: float = 0.05
 
     def __post_init__(self) -> None:
         self.dataset = Path(self.dataset)
@@ -63,6 +74,12 @@ class TrainingConfig:
             raise ValueError("invalid training dimensions or duplicate heads")
         if self.preset not in ("flash", "pro"):
             raise ValueError("unknown preset")
+        if self.calibration not in ("platt", "temperature"):
+            raise ValueError("calibration must be 'platt' or 'temperature'")
+        if not 0.0 <= self.group_balance <= 1.0 or not 0.0 < self.selection_max_fpr <= 1.0:
+            raise ValueError("group_balance must be in [0, 1] and selection_max_fpr in (0, 1]")
+        if not 0.0 <= self.mirror_probability <= 1.0 or not 0.0 <= self.channel_dropout < 1.0:
+            raise ValueError("augmentation probabilities must be in [0, 1)")
         if not self.model_version_prefix:
             self.model_version_prefix = f"aero-{self.preset}-{self.window}"
 

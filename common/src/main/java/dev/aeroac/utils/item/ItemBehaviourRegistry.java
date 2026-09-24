@@ -1,7 +1,11 @@
 package dev.aeroac.utils.item;
 
+import dev.aeroac.player.AeroPlayer;
+import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.manager.server.ServerVersion;
 import com.github.retrooper.packetevents.protocol.item.type.ItemType;
 import com.github.retrooper.packetevents.protocol.item.type.ItemTypes;
+import com.github.retrooper.packetevents.protocol.player.ClientVersion;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
@@ -13,11 +17,17 @@ public class ItemBehaviourRegistry {
             ItemTypes.SHIELD, AlwaysUseItem.INSTANCE,
             ItemTypes.SPYGLASS, AlwaysUseItem.INSTANCE,
             ItemTypes.CROSSBOW, UnsupportedItem.INSTANCE,
-            ItemTypes.BOW, UnsupportedItem.INSTANCE,
+            ItemTypes.BOW, BowItem.INSTANCE,
             ItemTypes.TRIDENT, TridentItem.INSTANCE
     );
 
-    public static @NotNull ItemBehaviour getItemBehaviour(ItemType type) {
+    private static final boolean RELIABLE_COMPONENT_SYSTEM = PacketEvents.getAPI().getServerManager().getVersion().isNewerThanOrEquals(ServerVersion.V_1_21_4);
+
+    public static @NotNull ItemBehaviour getItemBehaviour(AeroPlayer player, ItemType type) {
+        if (!RELIABLE_COMPONENT_SYSTEM || player.getClientVersion().isOlderThan(ClientVersion.V_1_21_4)) {
+            return LegacyItem.INSTANCE;
+        }
+
         return ITEM_MAPPING.getOrDefault(type, ItemBehaviour.INSTANCE);
     }
 

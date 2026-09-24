@@ -10,6 +10,8 @@ public final class PlayerMitigationState {
     private int size;
     private volatile MitigationAction current;
     private long windowStartNanos;
+    // System.nanoTime() has an arbitrary origin; a window cannot be "started at 0".
+    private boolean windowOpen;
     private int startedInWindow;
     private long suppressed;
 
@@ -35,9 +37,10 @@ public final class PlayerMitigationState {
     /** Enforces the hourly cap on a rolling window so one bad minute cannot mitigate all evening. */
     boolean admit(long nowNanos, int maxPerHour) {
         if (maxPerHour <= 0) return false;
-        if (nowNanos - windowStartNanos >= 3_600_000_000_000L) {
+        if (!windowOpen || nowNanos - windowStartNanos >= 3_600_000_000_000L) {
             windowStartNanos = nowNanos;
             startedInWindow = 0;
+            windowOpen = true;
         }
         return startedInWindow < maxPerHour;
     }

@@ -42,4 +42,5 @@ public class PacketStateData {
     public boolean isSlowedByUsingItem() {
         return slowedByUsingItemSlot != Integer.MIN_VALUE;
     }
+
 }

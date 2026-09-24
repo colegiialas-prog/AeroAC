@@ -1,6 +1,7 @@
 package dev.aeroac.predictionengine.movementtick;
 
 import dev.aeroac.player.AeroPlayer;
+import dev.aeroac.predictionengine.EntityPushBounds;
 import dev.aeroac.predictionengine.PlayerBaseTick;
 import dev.aeroac.predictionengine.blockeffects.PotentSulfurGeyser;
 import dev.aeroac.predictionengine.predictions.PredictionEngine;
@@ -18,6 +19,7 @@ import dev.aeroac.utils.nmsutil.EntityTypeTags;
 import dev.aeroac.utils.nmsutil.FluidFallingAdjustedMovement;
 import dev.aeroac.utils.nmsutil.GetBoundingBox;
 import dev.aeroac.utils.nmsutil.MainSupportingBlockPosFinder;
+import dev.aeroac.utils.nmsutil.StuckSpeed;
 import dev.aeroac.utils.team.EntityPredicates;
 import dev.aeroac.utils.team.EntityTeam;
 import dev.aeroac.utils.team.TeamHandler;
@@ -35,6 +37,9 @@ import com.github.retrooper.packetevents.util.Vector3d;
 import com.viaversion.viaversion.api.Via;
 import lombok.RequiredArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.Set;
+
 @RequiredArgsConstructor
 public class MovementTicker {
     public final AeroPlayer player;
@@ -50,6 +55,7 @@ public class MovementTicker {
 
         int possibleCollidingEntities = 0;
         int possibleRiptideEntities = 0;
+        EntityPushBounds.Builder pushes = new EntityPushBounds.Builder();
 
         // Players in vehicles do not have collisions
         if (!player.inVehicle() && player.gamemode != GameMode.SPECTATOR) {
@@ -57,6 +63,14 @@ public class MovementTicker {
             SimpleCollisionBox playerBox = GetBoundingBox.getBoundingBoxFromPosAndSize(player, player.lastX, player.lastY, player.lastZ, 0.6f, 1.8f);
             playerBox.encompass(GetBoundingBox.getBoundingBoxFromPosAndSize(player, player.x, player.y, player.z, 0.6f, 1.8f).expand(player.getMovementThreshold()));
             playerBox.expand(0.2);
+
+            // Where the player's centre was when it was pushed: vanilla pushes after moving, so the push felt
+            // this tick came from the last position, known to within the movement threshold
+            final double threshold = player.getMovementThreshold();
+            final double playerMinX = Math.min(player.lastX, player.x) - threshold;
+            final double playerMaxX = Math.max(player.lastX, player.x) + threshold;
+            final double playerMinZ = Math.min(player.lastZ, player.z) - threshold;
+            final double playerMaxZ = Math.max(player.lastZ, player.z) + threshold;
 
             final TeamHandler teamHandler = player.checkManager.getPacketCheck(TeamHandler.class);
             final EntityTeam playerTeam = teamHandler != null ? teamHandler.getPlayerTeam() : null;
@@ -77,6 +91,12 @@ public class MovementTicker {
                 }
 
                 possibleCollidingEntities++;
+
+                // Every position the entity's centre could have been at, padded for relative move precision
+                SimpleCollisionBox entityPositions = entity.getPossibleLocationBoxes().expand(0.03125, 0, 0.03125);
+                pushes.add(
+                        EntityPushBounds.pushSide(playerMinX, playerMaxX, entityPositions.minX, entityPositions.maxX),
+                        EntityPushBounds.pushSide(playerMinZ, playerMaxZ, entityPositions.minZ, entityPositions.maxZ));
             }
         }
 
@@ -88,19 +108,47 @@ public class MovementTicker {
         }
 
         player.uncertaintyHandler.riptideEntities.add(possibleRiptideEntities);
-        player.uncertaintyHandler.collidingEntities.add(possibleCollidingEntities);
+        player.uncertaintyHandler.entityPushes.add(pushes.build());
     }
 
     private boolean isHorizontalCollisionSoft(Vector3dm collide) {
         double horizontalLengthSquared = collide.getX() * collide.getX() + collide.getZ() * collide.getZ();
         if (horizontalLengthSquared < 1E-5F) return false;
 
-        float xxa = (float) player.predictedVelocity.input.getX();
-        float zza = (float) player.predictedVelocity.input.getZ();
-
         float yawInRadians = player.yaw * (float) (Math.PI / 180.0);
         double sin = player.trigHandler.sin(yawInRadians);
         double cos = player.trigHandler.cos(yawInRadians);
+
+        Vector3dm input = player.predictedVelocity.input;
+        if (input != null) {
+            return isHorizontalCollisionSoft(collide, horizontalLengthSquared, sin, cos, (float) input.getX(), (float) input.getZ());
+        } else { // elytra
+            ArrayList<VectorData> results = new ArrayList<>();
+            new PredictionEngine().loopVectors(
+                    player,
+                    Set.of(new VectorData(new Vector3dm(), VectorData.VectorType.Normal)),
+                    0,
+                    results,
+                    false
+            );
+
+            for (VectorData data : results) {
+                if (isHorizontalCollisionSoft(
+                        collide, horizontalLengthSquared,
+                        sin, cos,
+                        (float) data.input.getX(), (float) data.input.getZ())) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+
+    private boolean isHorizontalCollisionSoft(
+            Vector3dm collide, double horizontalLengthSquared,
+            double sin, double cos,
+            float xxa, float zza) {
         double g = xxa * cos - zza * sin;
         double h = zza * cos + xxa * sin;
         double i = g * g + h * h;
@@ -237,7 +285,7 @@ public class MovementTicker {
             player.uncertaintyHandler.lastStuckSpeedMultiplier.reset();
         }
 
-        player.stuckSpeedMultiplier = AeroPlayer.DEFAULT_STUCK_SPEED;
+        player.resetStuckSpeedMultiplier();
 
         // 1.15 and older clients use the handleInsideBlocks method for lava
         if (player.getClientVersion().isOlderThan(ClientVersion.V_1_16))
@@ -252,7 +300,7 @@ public class MovementTicker {
 
         // Flying players are not affected by cobwebs/sweet berry bushes
         if (player.isFlying) {
-            player.stuckSpeedMultiplier = AeroPlayer.DEFAULT_STUCK_SPEED;
+            player.setStuckSpeedMultiplier(StuckSpeed.NONE);
         }
     }
 

@@ -1,10 +1,12 @@
 package dev.aeroac.predictionengine.predictions.rideable;
 
 import dev.aeroac.player.AeroPlayer;
+import dev.aeroac.predictionengine.EntityPushBounds;
 import dev.aeroac.predictionengine.blockeffects.PotentSulfurGeyser;
 import dev.aeroac.predictionengine.predictions.PredictionEngine;
 import dev.aeroac.utils.collisions.CollisionData;
 import dev.aeroac.utils.collisions.datatypes.SimpleCollisionBox;
+import dev.aeroac.utils.data.IndexedVector3d;
 import dev.aeroac.utils.data.VectorData;
 import dev.aeroac.utils.enums.BoatEntityStatus;
 import dev.aeroac.utils.math.AeroMath;
@@ -12,6 +14,7 @@ import dev.aeroac.utils.math.Vector3dm;
 import dev.aeroac.utils.nmsutil.BlockProperties;
 import dev.aeroac.utils.nmsutil.Collisions;
 import dev.aeroac.utils.nmsutil.GetBoundingBox;
+import dev.aeroac.utils.nmsutil.StuckSpeed;
 import com.github.retrooper.packetevents.protocol.world.states.WrappedBlockState;
 import com.github.retrooper.packetevents.protocol.world.states.type.StateType;
 import com.github.retrooper.packetevents.protocol.world.states.type.StateTypes;
@@ -24,7 +27,7 @@ import java.util.Set;
 
 public class PredictionEngineBoat extends PredictionEngine {
     public PredictionEngineBoat(AeroPlayer player) {
-        player.uncertaintyHandler.collidingEntities.add(0); // We don't do collisions like living entities
+        player.uncertaintyHandler.entityPushes.add(EntityPushBounds.NONE); // We don't do collisions like living entities
         player.vehicleData.midTickY = 0;
 
         // This does stuff like getting the boat's movement on the water
@@ -149,26 +152,58 @@ public class PredictionEngineBoat extends PredictionEngine {
             // TODO: is this correct?
             data.input = new Vector3dm(player.vehicleData.vehicleForward, 0, player.vehicleData.vehicleHorizontal);
 
-            for (int applyStuckSpeed = 1; applyStuckSpeed >= 0; applyStuckSpeed--) {
-                if (applyStuckSpeed == 0 && player.isForceStuckSpeed()) break;
-
-                // Boats ignore forward steering, using raw inputs instead,
-                // so if a player tries to move in both directions, a packet will
-                // show that the player is staying, but the boat will move anyway
-                if (player.vehicleData.vehicleForward == 0) {
-                    Vector3dm vector = data.vector.clone();
-                    controlBoat(player, vector, true);
-                    if (applyStuckSpeed != 0) vector.multiply(player.stuckSpeedMultiplier);
-                    vectors.add(data.returnNewModified(vector, VectorData.VectorType.InputResult));
-                }
-
-                controlBoat(player, data.vector, false);
-                if (applyStuckSpeed != 0) data.vector.multiply(player.stuckSpeedMultiplier);
-                vectors.add(data);
+            // Boats ignore forward steering, using raw inputs instead,
+            // so if a player tries to move in both directions, a packet will
+            // show that the player is staying, but the boat will move anyway
+            if (player.vehicleData.vehicleForward == 0) {
+                Vector3dm vector = data.vector.clone();
+                controlBoat(player, vector, true);
+                VectorData result = data.returnNewModified(vector, VectorData.VectorType.InputResult);
+                result.input = data.input;
+                addStuckSpeedResults(player, vectors, result);
             }
+
+            Vector3dm vector = data.vector.clone();
+            controlBoat(player, vector, false);
+            VectorData result = data.returnNewModified(vector, VectorData.VectorType.InputResult);
+            result.input = data.input;
+            addStuckSpeedResults(player, vectors, result);
         }
 
         return vectors;
+    }
+
+    private void addStuckSpeedResults(AeroPlayer player, List<VectorData> vectors, VectorData result) {
+        if (player.uncertaintyHandler.shouldSimulateStuckSpeed) {
+            // only simulate no stuck speed if player is leaving
+            if (player.uncertaintyHandler.stuckSpeedMultiplierMask == 0 || !player.isForceStuckSpeed())
+                addStuckSpeedResult(vectors, result, null);
+            addStuckSpeedResult(vectors, result, player.stuckSpeedMultiplier);
+            addPossibleStuckSpeedResults(player, vectors, result);
+        } else {
+            for (int applyStuckSpeed = 1; applyStuckSpeed >= 0; applyStuckSpeed--) {
+                if (applyStuckSpeed == 0 && player.isForceStuckSpeed()) break;
+
+                addStuckSpeedResult(vectors, result, applyStuckSpeed != 0 ? player.stuckSpeedMultiplier : null);
+            }
+        }
+    }
+
+    private void addPossibleStuckSpeedResults(AeroPlayer player, List<VectorData> vectors, VectorData result) {
+        int possibleStuckSpeedMultipliers = player.uncertaintyHandler.stuckSpeedMultiplierMask;
+        for (IndexedVector3d stuckSpeedMultiplier : StuckSpeed.POSSIBILITIES) {
+            if ((possibleStuckSpeedMultipliers & stuckSpeedMultiplier.getIndex()) != 0 && stuckSpeedMultiplier.getIndex() != player.stuckSpeedMultiplier.getIndex()) {
+                addStuckSpeedResult(vectors, result, stuckSpeedMultiplier);
+            }
+        }
+    }
+
+    private void addStuckSpeedResult(List<VectorData> vectors, VectorData result, IndexedVector3d stuckSpeedMultiplier) {
+        if (stuckSpeedMultiplier != null) {
+            result = result.returnNewModified(result.vector.clone().multiply(stuckSpeedMultiplier), VectorData.VectorType.StuckMultiplier);
+        }
+        result.stuckSpeedMultiplier = stuckSpeedMultiplier == null ? StuckSpeed.NONE : stuckSpeedMultiplier;
+        vectors.add(result);
     }
 
     @Override

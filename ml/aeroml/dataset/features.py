@@ -16,6 +16,9 @@ import numpy as np
 from ..schema import FeatureSchema, default_schema
 
 EPSILON = 1.0e-6
+# Below this aim error (degrees) the crosshair is on or next to the target and "what fraction of the
+# error did the rotation remove" is dominated by noise; the error-frame channels are unknown there.
+MIN_ERROR_FRAME_DEGREES = 1.0
 
 
 def wrap180(degrees: np.ndarray) -> np.ndarray:
@@ -92,6 +95,19 @@ def derive(raw: np.ndarray, schema: FeatureSchema) -> dict[str, np.ndarray]:
 
     horizontal = np.hypot(raw[:, schema.raw_index("VELOCITY_X")], raw[:, schema.raw_index("VELOCITY_Z")])
 
+    # The rotation of sample t in the frame of the aim error it responded to (sample t-1's). A
+    # smoothing assist — yaw += (target - yaw) * k — removes a near-constant fraction k of the error
+    # and moves straight at the target; a hand overshoots, undershoots and curves.
+    error_yaw = _shift(wrap180(raw[:, schema.raw_index("YAW")] - target_yaw))
+    error_pitch = _shift(raw[:, schema.raw_index("PITCH")] - target_pitch)
+    error_norm2 = error_yaw * error_yaw + error_pitch * error_pitch
+    with np.errstate(invalid="ignore"):
+        framed = continuous & (error_norm2 >= MIN_ERROR_FRAME_DEGREES * MIN_ERROR_FRAME_DEGREES)
+    safe_norm2 = np.where(framed, error_norm2, 1.0)
+    with np.errstate(invalid="ignore"):
+        correction_gain = np.where(framed, -(delta_yaw * error_yaw + delta_pitch * error_pitch) / safe_norm2, unknown)
+        off_axis = np.where(framed, (delta_yaw * error_pitch - delta_pitch * error_yaw) / safe_norm2, unknown)
+
     return {
         "targetAngularVelocityYaw": angular_yaw,
         "targetAngularVelocityPitch": angular_pitch,
@@ -101,6 +117,8 @@ def derive(raw: np.ndarray, schema: FeatureSchema) -> dict[str, np.ndarray]:
         "targetAngularRadius": radius,
         "aimErrorRatio": ratio,
         "playerSpeedHorizontal": horizontal,
+        "rotationCorrectionGain": correction_gain,
+        "rotationOffAxis": off_axis,
     }
 
 

@@ -1,5 +1,6 @@
 package dev.aeroac.neural.admin.training;
 
+import dev.aeroac.neural.inference.FeatureEncoder;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -198,7 +199,7 @@ public final class HttpTrainingServiceClient implements TrainingServiceClient {
             });
         }
         int schema = Math.toIntExact(JsonFiles.integer(data, "featureSchemaVersion", 0));
-        if (schema != 0 && schema != 2) throw new IllegalArgumentException("Версия данных несовместима. Ожидается: v2. Получено: v" + schema);
+        if (schema != 0 && schema != FeatureEncoder.FEATURE_SCHEMA_VERSION) throw incompatibleSchema(schema);
         String jobId = JsonFiles.text(data, "jobId");
         if (jobId != null && !jobId.matches("[A-Za-z0-9_-]{1,128}"))
             throw new IllegalArgumentException("Недопустимый идентификатор задачи.");
@@ -241,8 +242,7 @@ public final class HttpTrainingServiceClient implements TrainingServiceClient {
                 "KNOWN_CLIENT", rate(known), "UNKNOWN_CLIENT", rate(unknown));
         JsonObject cheatBreakdowns = object(object(simulation, "breakdowns"), "cheat");
         int schema = Math.toIntExact(JsonFiles.integer(result, "featureSchemaVersion", 0));
-        if (schema != 0 && schema != 2)
-            throw new IllegalArgumentException("Версия данных несовместима. Ожидается: v2. Получено: v" + schema);
+        if (schema != 0 && schema != FeatureEncoder.FEATURE_SCHEMA_VERSION) throw incompatibleSchema(schema);
         String cohort = JsonFiles.text(report, "cohortId");
         if (report.size() > 0 && (cohort == null || !cohort.matches("[a-f0-9]{64}")))
             throw new IllegalArgumentException("Отчёт оценки не содержит допустимый cohortId.");
@@ -300,4 +300,9 @@ public final class HttpTrainingServiceClient implements TrainingServiceClient {
         return parent.has(key) && parent.get(key).isJsonObject() ? parent.getAsJsonObject(key) : new JsonObject();
     }
     @Override public synchronized void close() { closed = true; worker.shutdownNow(); }
+
+    private static IllegalArgumentException incompatibleSchema(int schema) {
+        return new IllegalArgumentException("Версия данных несовместима. Ожидается: v"
+                + FeatureEncoder.FEATURE_SCHEMA_VERSION + ". Получено: v" + schema);
+    }
 }

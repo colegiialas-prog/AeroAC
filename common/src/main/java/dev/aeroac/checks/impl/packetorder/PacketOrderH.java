@@ -19,6 +19,12 @@ public class PacketOrderH extends Check implements PostPredictionCheck {
     private int invalid;
 
     @Override
+    public boolean isApplicable() {
+        // Sneaking is set by the input packet in 1.21.6+, so there is no sneak entity action to order.
+        return player.getClientVersion().isOlderThan(ClientVersion.V_1_21_6);
+    }
+
+    @Override
     public void onPacketReceive(PacketReceiveEvent event) {
         if (event.getPacketType() == PacketType.Play.Client.ENTITY_ACTION) {
             switch (new WrapperPlayClientEntityAction(event).getAction()) {

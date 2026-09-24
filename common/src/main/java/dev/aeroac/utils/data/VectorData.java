@@ -2,6 +2,7 @@ package dev.aeroac.utils.data;
 
 import dev.aeroac.player.AeroPlayer;
 import dev.aeroac.utils.math.Vector3dm;
+import dev.aeroac.utils.nmsutil.StuckSpeed;
 import lombok.Getter;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
@@ -38,6 +39,7 @@ public class VectorData {
     public VectorData preUncertainty;
     public Vector3dm vector;
     public @MonotonicNonNull Vector3dm input;
+    public IndexedVector3d stuckSpeedMultiplier = StuckSpeed.NONE;
 
     @Getter
     private boolean isKnockback, firstBreadKb, isExplosion, firstBreadExplosion, isTrident, isZeroPointZeroThree, isSwimHop, isFlipSneaking, isFlipItem, isJump, isAttackSlow = false, isWithInput = false;
@@ -63,6 +65,7 @@ public class VectorData {
             isAttackSlow = lastVector.isAttackSlow;
             input = lastVector.input;
             isWithInput = lastVector.isWithInput;
+            stuckSpeedMultiplier = lastVector.stuckSpeedMultiplier;
         }
 
         addVectorType(vectorType);
@@ -95,12 +98,12 @@ public class VectorData {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         VectorData that = (VectorData) o;
-        return isKnockback == that.isKnockback && firstBreadKb == that.firstBreadKb && isExplosion == that.isExplosion && firstBreadExplosion == that.firstBreadExplosion && isTrident == that.isTrident && isZeroPointZeroThree == that.isZeroPointZeroThree && isSwimHop == that.isSwimHop && isFlipSneaking == that.isFlipSneaking && isFlipItem == that.isFlipItem && isJump == that.isJump && isAttackSlow == that.isAttackSlow && vectorType == that.vectorType && Objects.equals(lastVector, that.lastVector) && Objects.equals(preUncertainty, that.preUncertainty) && Objects.equals(vector, that.vector);
+        return isKnockback == that.isKnockback && firstBreadKb == that.firstBreadKb && isExplosion == that.isExplosion && firstBreadExplosion == that.firstBreadExplosion && isTrident == that.isTrident && isZeroPointZeroThree == that.isZeroPointZeroThree && isSwimHop == that.isSwimHop && isFlipSneaking == that.isFlipSneaking && isFlipItem == that.isFlipItem && isJump == that.isJump && isAttackSlow == that.isAttackSlow && vectorType == that.vectorType && Objects.equals(lastVector, that.lastVector) && Objects.equals(preUncertainty, that.preUncertainty) && Objects.equals(vector, that.vector) && Objects.equals(stuckSpeedMultiplier, that.stuckSpeedMultiplier);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(vectorType, lastVector, preUncertainty, vector, isKnockback, firstBreadKb, isExplosion, firstBreadExplosion, isTrident, isZeroPointZeroThree, isSwimHop, isFlipSneaking, isFlipItem, isJump, isAttackSlow);
+        return Objects.hash(vectorType, lastVector, preUncertainty, vector, stuckSpeedMultiplier, isKnockback, firstBreadKb, isExplosion, firstBreadExplosion, isTrident, isZeroPointZeroThree, isSwimHop, isFlipSneaking, isFlipItem, isJump, isAttackSlow);
     }
 
     public void addVectorType(VectorType type) {

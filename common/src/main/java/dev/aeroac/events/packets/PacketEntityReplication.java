@@ -12,6 +12,8 @@ import dev.aeroac.utils.data.packetentity.DashableEntity;
 import dev.aeroac.utils.data.packetentity.PacketEntity;
 import dev.aeroac.utils.data.packetentity.PacketEntityHook;
 import dev.aeroac.utils.data.packetentity.PacketEntityTrackXRot;
+import dev.aeroac.utils.enums.Pose;
+import dev.aeroac.utils.nmsutil.EntityMetadataPoseUtil;
 import dev.aeroac.utils.viaversion.ViaVersionUtil;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
@@ -151,6 +153,7 @@ public class PacketEntityReplication extends Check implements PacketCheck {
             handleMoveEntity(event, move.getEntityId(), 0, 0, 0, move.getYaw() * 0.7111111F, move.getPitch() * 0.7111111F, true, false);
         } else if (event.getPacketType() == PacketType.Play.Server.ENTITY_METADATA) {
             WrapperPlayServerEntityMetadata entityMetadata = new WrapperPlayServerEntityMetadata(event);
+            schedulePoseTransition(entityMetadata, event);
             player.latencyUtils.addRealTimeTask(player.lastTransactionSent.get(), () -> player.compensatedEntities.updateEntityMetadata(entityMetadata.getEntityId(), entityMetadata.getEntityMetadata()));
         } else if (event.getPacketType() == PacketType.Play.Server.ENTITY_EQUIPMENT) {
             WrapperPlayServerEntityEquipment equipment = new WrapperPlayServerEntityEquipment(event);
@@ -385,6 +388,14 @@ public class PacketEntityReplication extends Check implements PacketCheck {
                 }
             }
 
+            // The client may drop the entities any time after the transaction before this packet
+            player.latencyUtils.addRealTimeTask(player.lastTransactionSent.get(), () -> {
+                for (int entityId : destroyEntityIds) {
+                    PacketEntity entity = player.compensatedEntities.getEntity(entityId);
+                    if (entity != null) entity.presenceUncertain = true;
+                }
+            });
+
             final int destroyTransaction = player.lastTransactionSent.get() + 1;
             player.latencyUtils.addRealTimeTask(destroyTransaction, () -> {
                 for (int entityId : destroyEntityIds) {
@@ -515,7 +526,7 @@ public class PacketEntityReplication extends Check implements PacketCheck {
                 xRotEntity.steps = entity.isBoat ? 10 : 3;
             }
 
-            entity.onFirstTransaction(isRelative, hasPos, deltaX, deltaY, deltaZ, player);
+            entity.onFirstTransaction(isRelative, hasPos, deltaX, deltaY, deltaZ, yaw, pitch, player);
         });
 
         player.latencyUtils.addRealTimeTask(lastTrans + 1, () -> {
@@ -532,15 +543,78 @@ public class PacketEntityReplication extends Check implements PacketCheck {
 
         player.compensatedEntities.serverPositionsMap.put(entityID, new TrackerData(position.getX(), position.getY(), position.getZ(), xRot, yRot, type, player.lastTransactionSent.get()));
 
+        // The entity is added once the transaction before the spawn is answered, and the client surely has it
+        // once the transaction after it is
+        final PacketEntity[] spawned = new PacketEntity[1];
         player.latencyUtils.addRealTimeTask(player.lastTransactionSent.get(), () -> {
             PacketEntity entity = player.compensatedEntities.addEntity(entityID, uuid, type, position, xRot, extraData);
+            if (entity == null) return;
+            entity.presenceUncertain = true;
+            spawned[0] = entity;
             if (entity instanceof DashableEntity dashable) {
                 player.dashableEntities.addEntity(entityID, dashable);
             }
 
             if (entityMetadata != null) {
+                if (EntityMetadataPoseUtil.usesPoseMetadata(entity) && player.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_14)) {
+                    Pose initialPose = EntityMetadataPoseUtil.getPoseFromMetadata(entityMetadata);
+                    if (initialPose != null) {
+                        entity.currentPose = initialPose;
+                    }
+                }
+
                 player.compensatedEntities.updateEntityMetadata(entityID, entityMetadata);
             }
+        });
+        player.latencyUtils.addRealTimeTask(player.lastTransactionSent.get() + 1, () -> {
+            if (spawned[0] != null) spawned[0].presenceUncertain = false;
+        });
+    }
+
+    private void schedulePoseTransition(WrapperPlayServerEntityMetadata entityMetadata, PacketSendEvent event) {
+        if (player.getClientVersion().isOlderThan(ClientVersion.V_1_14)) return;
+
+        int entityId = entityMetadata.getEntityId();
+        if (entityId == player.entityID) return;
+
+        Pose newPose = EntityMetadataPoseUtil.getPoseFromMetadata(entityMetadata.getEntityMetadata());
+        if (newPose == null) return;
+
+        boolean shouldTrackPoseTransition = false;
+        PacketEntity entity = player.compensatedEntities.getEntity(entityId);
+        if (entity != null) {
+            shouldTrackPoseTransition = EntityMetadataPoseUtil.usesPoseMetadata(entity);
+        } else {
+            // If the client didn't respond to the spawn packet yet, we need to check if we should track the pose transition based on the entity type
+            // is there a better way to do this?
+            TrackerData trackedEntity = player.compensatedEntities.getTrackedEntity(entityId);
+            if (trackedEntity != null) {
+                shouldTrackPoseTransition = EntityMetadataPoseUtil.usesPoseMetadata(trackedEntity.getEntityType());
+            }
+        }
+
+        if (!shouldTrackPoseTransition) return;
+
+        player.sendTransaction();
+        player.latencyUtils.addRealTimeTask(player.lastTransactionSent.get(), () -> {
+            PacketEntity target = player.compensatedEntities.getEntity(entityId);
+            if (target == null) {
+                return;
+            }
+
+            target.beginPoseTransition(newPose);
+        });
+
+        event.getTasksAfterSend().add(() -> {
+            player.sendTransaction();
+            player.latencyUtils.addRealTimeTask(player.lastTransactionSent.get(), () -> {
+                PacketEntity target = player.compensatedEntities.getEntity(entityId);
+                if (target == null) {
+                    return;
+                }
+
+                target.completePoseTransition(newPose);
+            });
         });
     }
 

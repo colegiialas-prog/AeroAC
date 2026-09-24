@@ -24,6 +24,7 @@ import dev.aeroac.checks.impl.misc.ClientBrand;
 import dev.aeroac.checks.impl.misc.GhostBlockMitigation;
 import dev.aeroac.checks.impl.misc.Post;
 import dev.aeroac.checks.impl.misc.TransactionOrder;
+import dev.aeroac.checks.impl.movement.AirStuck;
 import dev.aeroac.checks.impl.movement.NoSlow;
 import dev.aeroac.checks.impl.movement.PredictionRunner;
 import dev.aeroac.checks.impl.movement.SetbackBlocker;
@@ -109,6 +110,7 @@ public class CheckManager {
                 .put(BadPacketsM.class, new BadPacketsM(player))
                 .put(BadPacketsY.class, new BadPacketsY(player))
                 .put(BadPacketsZ.class, new BadPacketsZ(player))
+                .put(AirStuck.class, new AirStuck(player))
                 .put(PacketOrderB.class, new PacketOrderB(player))
                 .put(PacketOrderC.class, new PacketOrderC(player))
                 .put(PacketOrderD.class, new PacketOrderD(player))
@@ -125,6 +127,8 @@ public class CheckManager {
                 .put(Reach.class, new Reach(player))
                 .put(PacketEntityReplication.class, player.packetEntityReplication)
                 .put(PacketChangeGameState.class, new PacketChangeGameState(player))
+                // Before the inventory simulation, so a click it cancels is never simulated
+                .put(InventoryH.class, new InventoryH(player))
                 .put(CompensatedInventory.class, player.inventory)
                 .put(PacketPlayerAbilities.class, new PacketPlayerAbilities(player))
                 .put(PacketWorldBorder.class, new PacketWorldBorder(player))
@@ -297,15 +301,15 @@ public class CheckManager {
                 .putAll(noneModules)
                 .build();
 
-        preViaPacketChecksValues = new ArrayList<>(preViaPacketChecks.values());
-        packetChecksValues = new ArrayList<>(packetChecks.values());
-        positionChecksValues = new ArrayList<>(positionChecks.values());
-        rotationChecksValues = new ArrayList<>(rotationChecks.values());
-        vehicleChecksValues = new ArrayList<>(vehicleChecks.values());
-        prePredictionChecksValues = new ArrayList<>(prePredictionChecks.values());
-        blockBreakChecksValues = new ArrayList<>(blockBreakChecks.values());
-        blockPlaceChecksValues = new ArrayList<>(blockPlaceChecks.values());
-        postPredictionChecksValues = new ArrayList<>(postPredictionChecks.values());
+        preViaPacketChecksValues = applicable(preViaPacketChecks.values());
+        packetChecksValues = applicable(packetChecks.values());
+        positionChecksValues = applicable(positionChecks.values());
+        rotationChecksValues = applicable(rotationChecks.values());
+        vehicleChecksValues = applicable(vehicleChecks.values());
+        prePredictionChecksValues = applicable(prePredictionChecks.values());
+        blockBreakChecksValues = applicable(blockBreakChecks.values());
+        blockPlaceChecksValues = applicable(blockPlaceChecks.values());
+        postPredictionChecksValues = applicable(postPredictionChecks.values());
 
         registerBuiltInVerboseTemplates();
         init();
@@ -487,6 +491,15 @@ public class CheckManager {
 
     public CompensatedCooldown getCompensatedCooldown() {
         return getPositionCheck(CompensatedCooldown.class);
+    }
+
+    /** Drops checks that can never apply to this connection's client/server version from dispatch. */
+    private static <T> List<T> applicable(java.util.Collection<T> checks) {
+        List<T> result = new ArrayList<>(checks.size());
+        for (T check : checks) {
+            if (!(check instanceof Check aeroCheck) || aeroCheck.isApplicable()) result.add(check);
+        }
+        return result;
     }
 
     public NoSlow getNoSlow() {

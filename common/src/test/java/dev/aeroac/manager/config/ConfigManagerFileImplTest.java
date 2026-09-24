@@ -61,4 +61,36 @@ class ConfigManagerFileImplTest {
 
         assertEquals(input, ConfigManagerFileImpl.ensureLightningCombatPunishmentGroups(input));
     }
+
+    @Test
+    void appendsTheAirStuckGroupToAnOlderPunishmentsFile() {
+        String input = """
+                Punishments:
+                  Simulation:
+                    remove-violations-after: 300
+                    checks:
+                      - "Simulation"
+                      - "NoFall"
+                    commands:
+                      - "100:40 [alert]"
+                """;
+
+        String output = ConfigManagerFileImpl.ensureAeroMovementPunishmentGroups(input);
+
+        assertTrue(output.startsWith(input));
+        assertTrue(output.contains("  AirStuck:\n"));
+        assertTrue(output.contains("      - \"AirStuck\"\n"));
+        assertTrue(output.contains("      - \"3:5 [alert]\"\n"));
+        assertEquals(output, ConfigManagerFileImpl.ensureAeroMovementPunishmentGroups(output), "idempotent");
+    }
+
+    @Test
+    void leavesAirStuckAloneWhereverTheOperatorPutIt() {
+        for (String entry : new String[]{"      - \"AirStuck\"\n", "      - \"!AirStuck\"\n", "      - airstuck\n"}) {
+            String input = "Punishments:\n  Movement:\n    checks:\n" + entry + "    commands:\n      - \"1:1 [alert]\"\n";
+            assertEquals(input, ConfigManagerFileImpl.ensureAeroMovementPunishmentGroups(input), entry);
+        }
+        String notPunishments = "alerts:\n  print-to-console: true\n";
+        assertEquals(notPunishments, ConfigManagerFileImpl.ensureAeroMovementPunishmentGroups(notPunishments));
+    }
 }

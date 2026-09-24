@@ -302,3 +302,15 @@ def test_session_lookup_accepts_a_prefix_and_refuses_an_ambiguous_one(sessions, 
         find_session(synthetic_root, "does-not-exist", schema)
     with pytest.raises(SystemExit, match="matches"):
         find_session(synthetic_root, "", schema)
+
+
+def test_world_rotation_check_catches_an_absolute_yaw_channel(schema):
+    """The rotation invariance check has teeth: a channel reading the raw look direction fails it."""
+    from dataclasses import replace
+
+    values = list(schema.values)
+    index = [value.name for value in values].index("DELTA_YAW")
+    values[index] = replace(values[index], source="YAW", low=-1.0e9, high=1.0e9)
+    leaky = replace(schema, values=tuple(values))
+    findings = check_encoder_invariance(leaky)
+    assert any(finding.check == "encoder-invariance/world rotation" for finding in findings), findings

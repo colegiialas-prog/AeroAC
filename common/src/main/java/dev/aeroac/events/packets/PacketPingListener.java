@@ -82,6 +82,7 @@ public class PacketPingListener extends PacketListenerAbstract {
                 if (player.didWeSendThatTrans.remove(id)) {
                     player.packetStateData.lastServerTransWasValid = true;
                     player.transactionsSent.add(new ShortToLongPair(id, System.nanoTime()));
+                    if (player.getLastTransactionSent() == 0) player.getPlayerClockAtLeast(); // start the clock
                     player.lastTransactionSent.getAndIncrement();
                     SEND_CHANNEL.fire(player, id, event.getTimestamp());
                 }
@@ -102,6 +103,7 @@ public class PacketPingListener extends PacketListenerAbstract {
                 if (player.didWeSendThatTrans.remove(shortID)) {
                     player.packetStateData.lastServerTransWasValid = true;
                     player.transactionsSent.add(new ShortToLongPair(shortID, System.nanoTime()));
+                    if (player.getLastTransactionSent() == 0) player.getPlayerClockAtLeast(); // start the clock
                     player.lastTransactionSent.getAndIncrement();
                     SEND_CHANNEL.fire(player, id, event.getTimestamp());
                 }

@@ -155,14 +155,34 @@ public class ConfigManagerFileImpl implements ConfigManager, BasicReloadable {
         if (!punishments.exists()) return;
         try {
             String before = Files.readString(punishments.toPath());
-            String after = ensureLightningCombatPunishmentGroups(before);
-            if (!after.equals(before)) {
-                Files.writeString(punishments.toPath(), after);
+            String combat = ensureLightningCombatPunishmentGroups(before);
+            if (!combat.equals(before)) {
                 LogUtil.info("Added missing WallHit/EntityPierce punishment groups to punishments.yml");
             }
+            String after = ensureAeroMovementPunishmentGroups(combat);
+            if (!after.equals(combat)) {
+                LogUtil.info("Added the AirStuck punishment group to punishments.yml");
+            }
+            if (!after.equals(before)) Files.writeString(punishments.toPath(), after);
         } catch (IOException e) {
-            LogUtil.warn("Failed to add Lightning combat punishment groups: " + e);
+            LogUtil.warn("Failed to add default punishment groups: " + e);
         }
+    }
+
+    /**
+     * Checks added after a server generated its punishments.yml would otherwise never alert there:
+     * the file is user data and is not overwritten. A group is appended only when no group mentions
+     * the check at all, so an operator who moved it, renamed the group or excluded it keeps that.
+     */
+    static String ensureAeroMovementPunishmentGroups(String configString) {
+        if (!hasPunishmentsRoot(configString)) return configString;
+        if (Pattern.compile("(?mi)^\\s*-\\s*\"?!?[^\"\\n]*airstuck").matcher(configString).find()
+                || hasPunishmentGroup(configString, "AirStuck")) {
+            return configString;
+        }
+        StringBuilder out = new StringBuilder(configString);
+        if (!configString.endsWith("\n")) out.append('\n');
+        return out.append('\n').append(AIR_STUCK_PUNISHMENT_GROUP).toString();
     }
 
     static String ensureLightningCombatPunishmentGroups(String configString) {
@@ -202,6 +222,18 @@ public class ConfigManagerFileImpl implements ConfigManager, BasicReloadable {
                   - "10:5 [webhook]"
                   - "10:5 [proxy]"
                   - "10:5 [log]"
+            """;
+
+    private static final String AIR_STUCK_PUNISHMENT_GROUP = """
+              AirStuck:
+                remove-violations-after: 300
+                checks:
+                  - "AirStuck"
+                commands:
+                  - "3:5 [alert]"
+                  - "1:1 [log]"
+                  - "5:10 [webhook]"
+                  - "5:10 [proxy]"
             """;
 
     private static final String ENTITY_PIERCE_PUNISHMENT_GROUP = """

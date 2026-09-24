@@ -5,17 +5,21 @@ import dev.aeroac.player.AeroPlayer;
 import dev.aeroac.utils.collisions.datatypes.SimpleCollisionBox;
 import dev.aeroac.utils.data.attribute.ValuedAttribute;
 import dev.aeroac.utils.inventory.EnchantmentHelper;
+import dev.aeroac.utils.inventory.Inventory;
 import dev.aeroac.utils.math.AeroMath;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.manager.server.ServerVersion;
 import com.github.retrooper.packetevents.protocol.attribute.Attributes;
 import com.github.retrooper.packetevents.protocol.entity.type.EntityTypes;
+import com.github.retrooper.packetevents.protocol.item.ItemStack;
 import com.github.retrooper.packetevents.protocol.item.enchantment.type.EnchantmentTypes;
 import com.github.retrooper.packetevents.protocol.player.ClientVersion;
+import com.github.retrooper.packetevents.protocol.player.EquipmentSlot;
 import com.github.retrooper.packetevents.protocol.player.GameMode;
 import com.github.retrooper.packetevents.protocol.potion.PotionType;
 import com.github.retrooper.packetevents.protocol.potion.PotionTypes;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerUpdateAttributes;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 
@@ -26,12 +30,12 @@ public class PacketEntitySelf extends PacketEntity {
 
     public PacketEntitySelf(AeroPlayer player) {
         super(player, EntityTypes.PLAYER);
+        this.trackEntityEquipment = true;
         this.player = player;
     }
 
     public PacketEntitySelf(AeroPlayer player, PacketEntitySelf old) {
-        super(player, EntityTypes.PLAYER);
-        this.player = player;
+        this(player);
         this.opLevel = old.opLevel;
         this.attributeMap.putAll(old.attributeMap);
     }
@@ -44,7 +48,7 @@ public class PacketEntitySelf extends PacketEntity {
         }
 
         getAttribute(Attributes.SCALE).orElseThrow().withSetRewriter((oldValue, newValue) -> {
-            if (player.getClientVersion().isOlderThanOrEquals(ClientVersion.V_1_20_5) || newValue == oldValue) {
+            if (player.getClientVersion().isOlderThan(ClientVersion.V_1_20_5) || newValue == oldValue) {
                 return oldValue;
             } else {
                 // Elytra, standing, sneaking (1.14)
@@ -164,7 +168,8 @@ public class PacketEntitySelf extends PacketEntity {
     }
 
     @Override
-    public void onFirstTransaction(boolean relative, boolean hasPos, double relX, double relY, double relZ, AeroPlayer player) {
+    public void onFirstTransaction(boolean relative, boolean hasPos, double relX, double relY, double relZ,
+                                   @Nullable Float packetXRot, @Nullable Float packetYRot, AeroPlayer player) {
         // Player ignores this
     }
 
@@ -177,4 +182,43 @@ public class PacketEntitySelf extends PacketEntity {
     public SimpleCollisionBox getPossibleCollisionBoxes() {
         return player.boundingBox.copy(); // Copy to retain behavior of PacketEntity
     }
+
+    // we're actually supposed to use the entity equipment slots for these slots (except mainhand), but it's probably fine.
+    @Override
+    public void setItemBySlot(EquipmentSlot slot, ItemStack item) {
+        if (slot == null || !player.inventory.isPacketInventoryActive && player.platformPlayer != null) return;
+        if (item == null) item = ItemStack.EMPTY;
+        switch (slot) {
+            // FIXME: the player could change slots and have a transaction split
+            // If we change the packet to some other packet, we'd need to track the serverside selected item,
+            // but even then, what if the player changes slot between when that packet is sent and when they receive it?
+            // it's probably fine...
+            case MAIN_HAND -> player.inventory.inventory.setHeldItem(item);
+            case OFF_HAND -> player.inventory.inventory.getInventoryStorage().setItem(Inventory.SLOT_OFFHAND, item);
+            case BOOTS -> player.inventory.inventory.getInventoryStorage().setItem(Inventory.SLOT_BOOTS, item);
+            case LEGGINGS -> player.inventory.inventory.getInventoryStorage().setItem(Inventory.SLOT_LEGGINGS, item);
+            case CHEST_PLATE -> player.inventory.inventory.getInventoryStorage().setItem(Inventory.SLOT_CHESTPLATE, item);
+            case HELMET -> player.inventory.inventory.getInventoryStorage().setItem(Inventory.SLOT_HELMET, item);
+        }
+    }
+
+    @Override
+    public ItemStack getItemBySlot(EquipmentSlot slot) {
+        if (slot == null) return ItemStack.EMPTY;
+        return switch (slot) {
+            case MAIN_HAND -> player.inventory.getHeldItem();
+            case OFF_HAND -> player.inventory.getOffHand();
+            case BOOTS -> player.inventory.getBoots();
+            case LEGGINGS -> player.inventory.getLeggings();
+            case CHEST_PLATE -> player.inventory.getChestplate();
+            case HELMET -> player.inventory.getHelmet();
+            case BODY, SADDLE -> ItemStack.EMPTY;
+        };
+    }
+
+    @Override
+    public boolean hasItemInSlot(EquipmentSlot slot) {
+        return !getItemBySlot(slot).isEmpty();
+    }
+
 }

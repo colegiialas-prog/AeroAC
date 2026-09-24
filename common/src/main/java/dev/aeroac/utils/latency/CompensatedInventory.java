@@ -62,6 +62,9 @@ public class CompensatedInventory extends Check implements PacketCheck {
     // Currently only used by 1.21.11+ players to handle attribute swapping items with the ATTACK_RANGE Component
     @Getter
     private ItemStack startOfTickStack = ItemStack.EMPTY;
+    // The transaction after the latest server change that gave the player arrows: server changes are applied here
+    // once the transaction before them is answered, so until this one is the client may not have them yet
+    private int arrowsConfirmedAt = Integer.MIN_VALUE;
 
     public CompensatedInventory(AeroPlayer playerData) {
         super(playerData);
@@ -191,6 +194,32 @@ public class CompensatedInventory extends Check implements PacketCheck {
             case OFFHAND -> getOffHand();
             case MAINHAND -> getHeldItem();
         };
+    }
+
+    /**
+     * Mirrors {@code Player#getProjectile} for a bow: the hands, hotbar and main inventory are searched for arrows.
+     *
+     * @return whether the client certainly has something to shoot; false when unsure, which only skips checking
+     */
+    public boolean certainlyHasArrow() {
+        // Arrows the server gave may not have reached the client yet. Arrows it took away are safe to ignore:
+        // then we just think the player has none while the client can still draw.
+        if (!isPacketInventoryActive || player.lastTransactionReceived.get() < arrowsConfirmedAt) return false;
+
+        for (int slot = Inventory.ITEMS_START; slot <= Inventory.SLOT_OFFHAND; slot++) {
+            if (isArrow(inventory.getInventoryStorage().getItem(slot))) return true;
+        }
+        return false;
+    }
+
+    private static boolean isArrow(ItemStack stack) {
+        if (stack == null) return false;
+        ItemType type = stack.getType();
+        return type == ItemTypes.ARROW || type == ItemTypes.SPECTRAL_ARROW || type == ItemTypes.TIPPED_ARROW;
+    }
+
+    private void onServerSentItem(ItemStack stack) {
+        if (isArrow(stack)) arrowsConfirmedAt = player.lastTransactionSent.get() + 1;
     }
 
     public boolean hasItemType(ItemType type) {
@@ -392,6 +421,8 @@ public class CompensatedInventory extends Check implements PacketCheck {
             stateID = items.getStateId();
 
             List<ItemStack> slots = items.getItems();
+            slots.forEach(this::onServerSentItem);
+            items.getCarriedItem().ifPresent(this::onServerSentItem);
             for (int i = 0; i < slots.size(); i++) {
                 markServerForChangingSlot(i, items.getWindowId());
             }
@@ -449,6 +480,7 @@ public class CompensatedInventory extends Check implements PacketCheck {
             final int slotID = slot.getSlot();
             final ItemStack item = slot.getStack();
 
+            onServerSentItem(item);
             inventory.getInventoryStorage().handleServerCorrectSlot(slotID);
 
             player.latencyUtils.addRealTimeTask(player.lastTransactionSent.get(), () -> {
@@ -466,6 +498,8 @@ public class CompensatedInventory extends Check implements PacketCheck {
             final int slotID = slot.getSlot();
             final int inventoryID = slot.getWindowId();
             final ItemStack item = slot.getItem();
+
+            onServerSentItem(item);
 
             if (inventoryID == -2) { // Direct inventory change
                 inventory.getInventoryStorage().handleServerCorrectSlot(slotID);

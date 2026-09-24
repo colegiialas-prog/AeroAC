@@ -15,6 +15,8 @@ public enum EvidenceType {
     GRIM_WALL_HIT(false),
     GRIM_ENTITY_PIERCE(false),
     GRIM_PACKET_ORDER(false),
+    /** Kept ticking without reporting a position, the way air-stuck clients hang in the air to hit. */
+    GRIM_AIR_STUCK(false),
     SESSION_ANOMALY(false);
 
     private final boolean model;
@@ -30,6 +32,7 @@ public enum EvidenceType {
         if (checkName.equals("WallHit")) return GRIM_WALL_HIT;
         if (checkName.equals("EntityPierce")) return GRIM_ENTITY_PIERCE;
         if (checkName.startsWith("PacketOrder")) return GRIM_PACKET_ORDER;
+        if (checkName.equals("AirStuck")) return GRIM_AIR_STUCK;
         return null;
     }
 }

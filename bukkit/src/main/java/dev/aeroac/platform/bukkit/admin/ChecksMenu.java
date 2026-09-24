@@ -81,6 +81,7 @@ public final class ChecksMenu extends AeroMenu {
             case GRIM_WALL_HIT -> "Attack through a solid block.";
             case GRIM_ENTITY_PIERCE -> "Attack through another entity.";
             case GRIM_PACKET_ORDER -> "Impossible ordering of client packets.";
+            case GRIM_AIR_STUCK -> "Kept ticking without reporting its position.";
             case SESSION_ANOMALY -> "Something wrong with the connection itself.";
             default -> "";
         };

@@ -21,7 +21,8 @@ import numpy as np
 from ..dataset.features import encode_window
 from ..schema import default_schema
 
-CASES = ("all_unknown", "tracking_run", "target_switch", "segment_boundary", "clipping", "yaw_wrap", "no_target")
+CASES = ("all_unknown", "tracking_run", "target_switch", "segment_boundary", "clipping", "yaw_wrap", "no_target",
+         "error_frame")
 
 
 def _row(schema, **values) -> list[float | None]:
@@ -128,6 +129,24 @@ def build_cases() -> list[dict]:
              TICKS_SINCE_TARGET_SWITCH=-1, DELTA_YAW=0.4, DELTA_PITCH=0.2, ON_GROUND=1, SPRINTING=0, SNEAKING=0),
     ]
     cases.append({"name": "no_target", "raw": absent})
+
+    # Error-frame channels: an unwrapped yaw many turns around, the 1 degree floor, a missing delta,
+    # a correction far past the clip bound and a target switch that must break the frame.
+    def framed(entity, switch, yaw, pitch, target_yaw, target_pitch, delta_yaw, delta_pitch):
+        return _row(schema, TARGET_PRESENT=1, TARGET_ENTITY_ID=entity, TARGET_SWITCH=switch, SEGMENT_START=0,
+                    YAW=yaw, PITCH=pitch, TARGET_YAW=target_yaw, TARGET_PITCH=target_pitch,
+                    DELTA_YAW=delta_yaw, DELTA_PITCH=delta_pitch, DISTANCE_TO_TARGET=3.0)
+    frame = [
+        framed(11, 0, 1090.0, 4.0, 5.0, 1.0, None, None),     # error (5, 3): 1090 - 5 wraps to 5
+        framed(11, 0, 1087.5, 2.5, 5.0, 1.0, -2.5, -1.5),    # removes half of it, straight at it: 0.5, 0
+        framed(11, 0, 1087.2, 2.2, 5.0, 1.5, -0.3, -0.3),    # vs error (2.5, 1.5): partly off-axis
+        framed(11, 0, 1087.0, 2.0, 5.2, 1.6, -0.2, None),    # pitch delta unknown -> both unknown
+        framed(11, 0, 1080.0, 1.8, 0.3, 1.6, -7.0, -0.2),    # vs error (1.8, 0.4): gain 3.7 clips to 3
+        framed(11, 0, 1080.1, 1.7, 0.0, 1.6, 0.1, -0.1),     # vs error (-0.3, 0.2), under 1 degree: unknown
+        framed(12, 1, 1070.0, 1.0, -8.0, 2.0, -10.1, -0.7),  # target switch: no frame across it
+        framed(12, 0, 1069.0, 1.5, -8.0, 2.0, -1.0, 0.5),    # vs error (-2, -1) on the new target: -0.3, 0.4
+    ]
+    cases.append({"name": "error_frame", "raw": frame})
     return cases
 
 

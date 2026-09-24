@@ -104,13 +104,22 @@ public class CompensatedWorld implements PacketWorld {
     public void handlePredictionConfirmation(int prediction) {
         for (Iterator<Int2ObjectMap.Entry<List<Vector3i>>> it = serverIsCurrentlyProcessingThesePredictions.int2ObjectEntrySet().iterator(); it.hasNext(); ) {
             Map.Entry<Integer, List<Vector3i>> iter = it.next();
+            // The map is a hash map, not sorted by sequence: stopping at the first newer entry left
+            // older ones behind for good, and with them a permanent ghost block (upstream #2795).
             if (iter.getKey() <= prediction) {
                 applyBlockChanges(iter.getValue());
                 it.remove();
-            } else {
-                break;
             }
         }
+    }
+
+    /** Pending block predictions belong to the world they were made in; a world change drops them. */
+    public void clearPredictions() {
+        originalServerBlocks.clear();
+        currentlyChangedBlocks = new LinkedList<>();
+        serverIsCurrentlyProcessingThesePredictions.clear();
+        unackedActions.clear();
+        isCurrentlyPredicting = false;
     }
 
     public void handleBlockBreakAck(Vector3i blockPos, int blockState, DiggingAction action, boolean accepted) {
@@ -219,8 +228,17 @@ public class CompensatedWorld implements PacketWorld {
     }
 
     public boolean isNearHardEntity(SimpleCollisionBox playerBox) {
+        return isNearHardEntity(playerBox, true);
+    }
+
+    /**
+     * @param includeSimulated whether boats that collisions already simulate count, see
+     *                         {@link dev.aeroac.utils.latency.CompensatedEntities#getSimulatedCollisionBox}
+     */
+    public boolean isNearHardEntity(SimpleCollisionBox playerBox, boolean includeSimulated) {
         for (PacketEntity entity : player.compensatedEntities.entityMap.values()) {
-            if ((entity.isBoat || entity.getType() == EntityTypes.SHULKER || entity.isHappyGhast) && player.compensatedEntities.self.getRiding() != entity) {
+            if ((entity.isBoat || entity.getType() == EntityTypes.SHULKER || entity.isHappyGhast) && player.compensatedEntities.self.getRiding() != entity
+                    && (includeSimulated || player.compensatedEntities.getSimulatedCollisionBox(entity) == null)) {
                 SimpleCollisionBox box = entity.getPossibleCollisionBoxes();
                 if (box.isIntersected(playerBox)) {
                     return true;

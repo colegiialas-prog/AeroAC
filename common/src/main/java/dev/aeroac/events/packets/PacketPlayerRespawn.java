@@ -201,10 +201,11 @@ public class PacketPlayerRespawn extends PacketListenerAbstract {
 
                 // EVERYTHING gets reset on a cross dimensional teleport, clear chunks and entities!
                 if (isWorldChange(player, respawn)) {
-                    player.compensatedEntities.entityMap.clear();
+                    player.compensatedEntities.clearEntities();
                     player.compensatedWorld.activePistons.clear();
                     player.compensatedWorld.openShulkerBoxes.clear();
                     player.compensatedWorld.chunks.clear();
+                    player.compensatedWorld.clearPredictions();
                     player.compensatedGeysers.clear();
                     player.compensatedWorld.isRaining = false;
                     player.checkManager.getBlockPlaceCheck(BadPacketsH.class).onWorldChange();

@@ -49,6 +49,7 @@ import dev.aeroac.utils.nmsutil.Collisions;
 import dev.aeroac.utils.nmsutil.GetBoundingBox;
 import dev.aeroac.utils.nmsutil.ReachUtils;
 import dev.aeroac.utils.nmsutil.Materials;
+import dev.aeroac.utils.nmsutil.StuckSpeed;
 import dev.aeroac.utils.viaversion.ViaVersionUtil;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketSendEvent;
@@ -58,6 +59,7 @@ import com.github.retrooper.packetevents.protocol.ConnectionState;
 import com.github.retrooper.packetevents.protocol.attribute.Attributes;
 import com.github.retrooper.packetevents.protocol.component.ComponentTypes;
 import com.github.retrooper.packetevents.protocol.component.builtin.item.ItemEquippable;
+import com.github.retrooper.packetevents.protocol.entity.EntityPositionData;
 import com.github.retrooper.packetevents.protocol.entity.type.EntityType;
 import com.github.retrooper.packetevents.protocol.entity.type.EntityTypes;
 import com.github.retrooper.packetevents.protocol.item.ItemStack;
@@ -106,7 +108,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 // Variables that need lag compensation should have their own class
 // Soon there will be a generic class for lag compensation
 public class AeroPlayer implements GrimUser {
-    public static final Vector3d DEFAULT_STUCK_SPEED = new Vector3d(1, 1, 1);
     public final UUID uuid;
     public final User user;
     public int entityID;
@@ -134,7 +135,6 @@ public class AeroPlayer implements GrimUser {
     private long transactionPing = 0;
     public long lastTransSent = 0;
     public long lastTransReceived = 0;
-    @Getter
     private long playerClockAtLeast = System.nanoTime();
     public double lastWasClimbing = 0;
     public boolean canSwimHop = false;
@@ -145,7 +145,8 @@ public class AeroPlayer implements GrimUser {
     public boolean playerEntityHasGravity = true;
     public VectorData predictedVelocity = new VectorData(new Vector3dm(), VectorData.VectorType.Normal);
     public Vector3dm actualMovement = new Vector3dm();
-    public Vector3d stuckSpeedMultiplier = DEFAULT_STUCK_SPEED;
+    public IndexedVector3d stuckSpeedMultiplier = StuckSpeed.NONE;
+    public IndexedVector3d lastStuckSpeedMultiplier = StuckSpeed.NONE;
     public final UncertaintyHandler uncertaintyHandler;
     public double gravity;
     public float friction;
@@ -530,7 +531,8 @@ public class AeroPlayer implements GrimUser {
     }
 
     public double getEyeHeight() {
-        return getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_9) ? pose.eyeHeight
+        return getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_9) ?
+                compensatedEntities.self.getAttributeValue(Attributes.SCALE) * pose.eyeHeight
                 : isSneaking ? 1.54f : 1.62f;
     }
 
@@ -761,6 +763,18 @@ public class AeroPlayer implements GrimUser {
         return PacketEvents.getAPI().getPlayerManager().getPing(platformPlayer.getNative());
     }
 
+    /**
+     * Until the first transaction is sent the clock follows real time: the player object exists from
+     * login, possibly long before the first transaction, and a clock stuck at construction time made
+     * the timer checks see seconds of "lost" time on join (upstream 29d8fb4).
+     */
+    public long getPlayerClockAtLeast() {
+        if (lastTransactionSent.get() == 0) {
+            playerClockAtLeast = System.nanoTime();
+        }
+        return playerClockAtLeast;
+    }
+
     public SetbackTeleportUtil getSetbackTeleportUtil() {
         return checkManager.getSetbackUtil();
     }
@@ -831,7 +845,16 @@ public class AeroPlayer implements GrimUser {
                 int ridingId = getRidingVehicleId();
                 TrackerData data = compensatedEntities.serverPositionsMap.get(ridingId);
                 if (data != null) {
-                    user.writePacket(new WrapperPlayServerEntityTeleport(ridingId, new Vector3d(data.getX(), data.getY(), data.getZ()), data.getXRot(), data.getYRot(), false));
+                    final Vector3d pos = new Vector3d(data.getX(), data.getY(), data.getZ());
+                    // Resync the position of the entity
+                    if (PacketEvents.getAPI().getServerManager().getVersion().isNewerThanOrEquals(ServerVersion.V_1_21_2)) {
+                        // Yes, this is the new "entity teleport" on 1.21.2+!
+                        // WrapperPlayServerEntityTeleport on 1.21.2+ still exists but has a different purpose!
+                        // Using WrapperPlayServerEntityTeleport is wrong and will lead to weird behaviour!
+                        user.writePacket(new WrapperPlayServerEntityPositionSync(ridingId, new EntityPositionData(pos, new Vector3d(), data.getXRot(), data.getYRot()), false));
+                    } else {
+                        user.writePacket(new WrapperPlayServerEntityTeleport(ridingId, pos, data.getXRot(), data.getYRot(), false));
+                    }
                 }
             }
         });
@@ -1034,6 +1057,9 @@ public class AeroPlayer implements GrimUser {
         resetItemUsageOnItemUse = config.getBooleanElse("reset-item-usage-on-item-use", true);
         // reload all checks
         for (AbstractCheck value : checkManager.allChecks.values()) value.reload();
+        // Not registered in the check manager, so the loop above never reached it: without this,
+        // exploit.allow-sprint-jumping-when-using-elytra kept its startup value forever (upstream 5d4e4d3).
+        movementCheckRunner.reload();
         // reload punishment manager
         punishmentManager.reload(config);
     }
@@ -1083,6 +1109,15 @@ public class AeroPlayer implements GrimUser {
         }
 
         this.movementThisTick.add(movement);
+    }
+
+    public void setStuckSpeedMultiplier(IndexedVector3d stuckSpeedMultiplier) {
+        this.stuckSpeedMultiplier = stuckSpeedMultiplier;
+    }
+
+    public void resetStuckSpeedMultiplier() {
+        this.lastStuckSpeedMultiplier = this.stuckSpeedMultiplier;
+        this.stuckSpeedMultiplier = StuckSpeed.NONE;
     }
 
     public record Movement(Vector3d from, Vector3d to, Vector3d axisDependentOriginalMovement) {

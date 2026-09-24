@@ -102,6 +102,7 @@ class RiskEngineTest {
         RiskEngine engine = engine(Map.of());
         assertEquals(EvidenceType.GRIM_WALL_HIT, engine.fromCheck("WallHit", SECOND).type());
         assertEquals(EvidenceType.GRIM_PACKET_ORDER, engine.fromCheck("PacketOrderC", SECOND).type());
+        assertEquals(EvidenceType.GRIM_AIR_STUCK, engine.fromCheck("AirStuck", SECOND).type());
         assertNull(engine.fromCheck("SimulationA", SECOND));
         assertNull(engine.fromCheck(null, SECOND));
         assertNull(engine(Map.of("neural.risk.grim-weight", 0.0)).fromCheck("Reach", SECOND));
@@ -134,6 +135,43 @@ class RiskEngineTest {
         for (int i = 7; i < 20; i++) trail.add(prediction(i, 0.5, 0.5));
         assertEquals(4, trail.size());
         assertEquals(16, trail.get(0).requestId());
+    }
+
+    @Test void aSlowProAnswerIsNotStaleBehindANewerFlashAnswer() {
+        PredictionTrail trail = new PredictionTrail(8);
+        PredictionResult flash = new PredictionResult(8, 8 * SECOND, ModelKind.FLASH, "f", true,
+                new String[]{"overall"}, new double[]{0.9}, 5);
+        PredictionResult pro = new PredictionResult(7, 9 * SECOND, ModelKind.PRO, "p", true,
+                new String[]{"overall"}, new double[]{0.95}, 80);
+        PredictionResult oldFlash = new PredictionResult(6, 10 * SECOND, ModelKind.FLASH, "f", true,
+                new String[]{"overall"}, new double[]{0.1}, 5);
+        assertTrue(trail.add(flash));
+        assertTrue(trail.add(pro), "Pro id 7 answered after Flash id 8 is still Pro's newest answer");
+        assertFalse(trail.add(oldFlash), "an older Flash answer is still stale");
+        assertFalse(trail.add(pro), "a duplicate is still stale");
+        assertEquals(2, trail.accepted());
+        assertEquals(2, trail.rejectedStale());
+        trail.clear();
+        assertTrue(trail.add(oldFlash));
+    }
+
+    @Test void aMisspelledStateNeverLowersTheSettingItConfigures() {
+        assertEquals(RiskState.CONFIRMED, RiskState.parse("CONFIRMD", RiskState.CONFIRMED));
+        assertEquals(RiskState.WATCH, RiskState.parse(null, RiskState.WATCH));
+        assertEquals(RiskState.SUSPICIOUS, RiskState.parse(" suspicious ", RiskState.CONFIRMED));
+    }
+
+    @Test void theHourlyCapWindowDoesNotDependOnTheClockOrigin() {
+        // System.nanoTime() may be negative or small; the cap must still reopen an hour later.
+        MitigationManager manager = mitigation(Map.of("neural.mitigation.enabled", true,
+                "neural.mitigation.min-state", "WATCH", "neural.mitigation.duration-seconds", 5,
+                "neural.mitigation.max-per-hour", 1));
+        PlayerMitigationState state = new PlayerMitigationState(8);
+        PlayerRiskProfile profile = confirmed();
+        long start = -10L * 3600 * SECOND;
+        assertNotNull(manager.evaluate(state, profile, start, "test"));
+        assertNull(manager.evaluate(state, profile, start + 60 * SECOND, "test"), "capped inside the hour");
+        assertNotNull(manager.evaluate(state, profile, start + 3601 * SECOND, "test"), "reopened after an hour");
     }
 
     @Test void mitigationStaysOffUntilTheConfiguredStateIsReached() {

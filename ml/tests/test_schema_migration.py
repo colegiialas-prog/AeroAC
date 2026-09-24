@@ -42,9 +42,30 @@ def _manifest_dict(schema, *, version: int, channels=None) -> dict:
     }
 
 
-def test_the_current_schema_is_version_two(schema):
-    assert schema.version == 2
-    assert manifest_path().name == "feature_schema_v2.json"
+def test_the_current_schema_is_version_three(schema):
+    assert schema.version == 3
+    assert manifest_path().name == "feature_schema_v3.json"
+
+
+def test_v3_only_inserts_the_error_frame_channels_after_aim_error_ratio(schema):
+    """Every v2 channel keeps its definition; v3 adds two derived channels and nothing else."""
+    previous = load_schema(manifest_path().with_name("feature_schema_v2.json"))
+    assert previous.version == 2 and previous.raw_fields == schema.raw_fields
+    added = [value for value in schema.values if value.name not in {v.name for v in previous.values}]
+    assert [value.name for value in added] == ["ROTATION_CORRECTION_GAIN", "ROTATION_OFF_AXIS"]
+    assert all(value.derived and value.nullable for value in added)
+    names = [value.name for value in schema.values]
+    assert names.index("ROTATION_CORRECTION_GAIN") == names.index("AIM_ERROR_RATIO") + 1
+    assert [value for value in schema.values if value not in added] == list(previous.values)
+    assert schema.feature_count == previous.feature_count + 4
+
+
+def test_a_bundle_built_for_schema_v2_is_refused(tmp_path, schema):
+    path = tmp_path / "v2-bundle"
+    path.mkdir()
+    (path / "manifest.json").write_text(json.dumps(_manifest_dict(schema, version=2)), encoding="utf-8")
+    with pytest.raises(ValueError, match="feature schema"):
+        Bundle.load(path, schema)
 
 
 def test_a_bundle_built_for_schema_v1_is_refused(tmp_path, schema):
@@ -81,7 +102,7 @@ def test_the_previous_schema_file_is_still_readable_for_provenance():
     if not previous.is_file():
         pytest.skip("v1 manifest not retained")
     old = load_schema(previous)
-    current = default_schema()
+    current = load_schema(manifest_path().with_name("feature_schema_v2.json"))
     assert old.version == 1 and current.version == 2
     assert old.channel_names == current.channel_names, "channel order must not change silently"
     old_switch = next(v for v in old.values if v.name == "TICKS_SINCE_TARGET_SWITCH")

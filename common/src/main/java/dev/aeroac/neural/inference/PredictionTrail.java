@@ -6,6 +6,8 @@ package dev.aeroac.neural.inference;
  */
 public final class PredictionTrail {
     private final PredictionResult[] entries;
+    /** Newest accepted request id per model: Flash and Pro share one id sequence but not one answer. */
+    private final long[] newestByModel = new long[ModelKind.values().length];
     private int next;
     private int size;
     private long accepted;
@@ -14,15 +16,22 @@ public final class PredictionTrail {
     public PredictionTrail(int capacity) {
         if (capacity < 1 || capacity > 256) throw new IllegalArgumentException("capacity must be 1..256");
         entries = new PredictionResult[capacity];
+        java.util.Arrays.fill(newestByModel, Long.MIN_VALUE);
     }
 
-    /** Out-of-order and duplicate responses are dropped: a late answer must not overwrite a newer one. */
+    /**
+     * Out-of-order and duplicate responses are dropped: a late answer must not overwrite a newer one
+     * from the same model. Staleness is per model because the two models share one request id sequence
+     * but answer at very different speeds: a Pro window sent at id 7 routinely comes back after the
+     * Flash answer to id 8, and comparing them against each other threw away most Pro escalations.
+     */
     public boolean add(PredictionResult result) {
-        PredictionResult latest = latest();
-        if (latest != null && result.requestId() <= latest.requestId()) {
+        int model = result.model().ordinal();
+        if (result.requestId() <= newestByModel[model]) {
             rejectedStale++;
             return false;
         }
+        newestByModel[model] = result.requestId();
         entries[next] = result;
         next = (next + 1) % entries.length;
         size = Math.min(size + 1, entries.length);
@@ -43,6 +52,7 @@ public final class PredictionTrail {
 
     public void clear() {
         for (int i = 0; i < entries.length; i++) entries[i] = null;
+        java.util.Arrays.fill(newestByModel, Long.MIN_VALUE);
         next = size = 0;
     }
 }

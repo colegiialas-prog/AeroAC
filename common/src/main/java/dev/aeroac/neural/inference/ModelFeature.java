@@ -3,7 +3,7 @@ package dev.aeroac.neural.inference;
 import dev.aeroac.neural.telemetry.FrameField;
 
 /**
- * Ordered model input contract, mirrored by ml/schema/feature_schema_v1.json.
+ * Ordered model input contract, mirrored by the newest ml/schema/feature_schema_v*.json.
  * Identity, absolute position and Grim check evidence are intentionally excluded:
  * the model must not be able to learn who a player is, nor to copy deterministic thresholds.
  */
@@ -27,6 +27,10 @@ public enum ModelFeature {
     TARGET_SPEED(null, true, 0, 8),
     TARGET_ANGULAR_RADIUS(null, true, 0, 90),
     AIM_ERROR_RATIO(null, true, 0, 64),
+    /** Fraction of the previous sample's aim error this rotation removed; a smoothing assist holds it near its k. */
+    ROTATION_CORRECTION_GAIN(null, true, -3, 3),
+    /** Rotation perpendicular to the previous aim error, same units; assisted rotation runs straight at the target. */
+    ROTATION_OFF_AXIS(null, true, -3, 3),
     PLAYER_SPEED_HORIZONTAL(null, true, 0, 8),
     PLAYER_VELOCITY_Y(FrameField.VELOCITY_Y, true, -8, 8),
     ON_GROUND(FrameField.ON_GROUND, false, 0, 1),

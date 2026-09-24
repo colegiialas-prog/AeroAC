@@ -126,7 +126,9 @@ def test_a_real_job_trains_calibrates_exports_and_predicts(tmp_path, loopback_op
         assert bundle.manifest.feature_schema_version == schema.version
         assert bundle.manifest.model_kind == "flash" and bundle.manifest.window == "attack"
         assert bundle.manifest.calibration, "the bundle carries no calibration"
-        assert bundle.manifest.calibration["method"] == "per-head-temperature"
+        assert bundle.manifest.calibration["method"] in ("per-head", "per-head-temperature")
+        methods = {scaler["method"] for scaler in bundle.manifest.calibration["scalers"].values()}
+        assert methods <= {"platt", "temperature"}, methods
 
         # Real inference: onnxruntime, the exported graph, and a window taken from the corpus.
         model = LoadedModel.load(bundle_dir, schema)

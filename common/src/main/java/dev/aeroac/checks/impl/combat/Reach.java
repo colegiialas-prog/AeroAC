@@ -65,7 +65,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 // You may not copy the check unless you are licensed under GPL
-@CheckData(name = "Reach", stableKey = "grim.combat.reach", description = "Attacked an entity from too far away", setback = 10)
+@CheckData(name = "Reach", stableKey = "grim.combat.reach", description = "Attacked an entity from too far away")
 public class Reach extends Check implements PacketCheck {
     private static final Verbose V = Verbose.of("{f64:%.5f} blocks, type={entity}");
 
@@ -256,7 +256,7 @@ public class Reach extends Check implements PacketCheck {
             switch (result.type()) {
                 case REACH -> {
                     flag(
-                            V.write(verbose()).f64(result.minDistance()).uint(reachEntity.getType().getId(player.getClientVersion())),
+                            V.write(verbose()).f64(result.minDistance()).uint(Math.max(0, reachEntity.getType().getId(PacketEvents.getAPI().getServerManager().getVersion().toClientVersion()))),
                             () -> {
                                 String added = ", type=" + reachEntity.getType().getName().getKey();
                                 if (reachEntity instanceof PacketEntitySizeable sizeable) {

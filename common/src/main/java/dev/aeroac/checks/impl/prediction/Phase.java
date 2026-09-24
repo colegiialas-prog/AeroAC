@@ -30,7 +30,8 @@ public class Phase extends Check implements PostPredictionCheck {
             SimpleCollisionBox newBB = player.boundingBox;
 
             List<SimpleCollisionBox> boxes = new ArrayList<>();
-            Collisions.getCollisionBoxes(player, newBB, boxes, false);
+            // Blocks only: an entity can move into the player by itself, so overlapping one proves nothing
+            Collisions.getCollisionBoxes(player, newBB, boxes, false, false);
 
             for (SimpleCollisionBox box : boxes) {
                 if (newBB.isIntersected(box) && !oldBB.isIntersected(box)) {
