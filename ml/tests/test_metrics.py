@@ -179,3 +179,105 @@ def test_evaluate_rejects_malformed_inputs():
         evaluate([0, 1], [0.5, np.nan])
     with pytest.raises(ValueError, match="no samples"):
         evaluate([], [])
+
+
+# --- Platt scaling and the low-FPR selection metric -------------------------------------------------
+
+from aeroml.evaluation.calibration import (  # noqa: E402
+    HeadCalibration,
+    PlattScaler,
+    fit_scaler,
+    load_calibration,
+)
+from aeroml.evaluation.metrics import partial_auc  # noqa: E402
+
+
+def _shifted(seed: int = 0, size: int = 20000):
+    """True log-odds z; the model reports 2z + 3, i.e. overconfident AND prior-shifted, which is
+    what a pos_weight-trained network does to a legit-heavy population."""
+    rng = np.random.default_rng(seed)
+    z = rng.normal(-3.0, 2.0, size)
+    labels = (rng.random(size) < sigmoid(z)).astype(float)
+    return 2.0 * z + 3.0, labels
+
+
+def test_platt_removes_the_prior_shift_a_temperature_cannot():
+    logits, labels = _shifted()
+    platt = PlattScaler.fit(logits, labels)
+    temperature = TemperatureScaler.fit(logits, labels)
+    assert platt.slope == pytest.approx(0.5, rel=0.1)
+    assert platt.bias == pytest.approx(-1.5, abs=0.25)
+    assert platt.nll_after < temperature.nll_after
+    assert platt.ece_after < 0.02 < temperature.ece_after
+
+
+def test_platt_preserves_ranking_exactly():
+    logits, labels = _shifted(seed=3, size=3000)
+    platt = PlattScaler.fit(logits, labels)
+    assert roc_auc(labels, platt.apply_logits(logits)) == pytest.approx(roc_auc(labels, logits))
+    order = np.argsort(logits)
+    assert np.all(np.diff(platt.apply_logits(logits)[order]) >= 0)
+
+
+def test_platt_stays_finite_on_a_separable_fold():
+    logits = np.array([-4.0, -3.0, -2.0, 2.0, 3.0, 4.0])
+    labels = np.array([0, 0, 0, 1, 1, 1])
+    platt = PlattScaler.fit(logits, labels)
+    assert np.isfinite(platt.slope) and np.isfinite(platt.bias) and platt.slope > 0
+
+
+def test_platt_refuses_one_class_and_bad_dicts():
+    with pytest.raises(ValueError):
+        PlattScaler.fit(np.zeros(10), np.zeros(10))
+    with pytest.raises(ValueError):
+        PlattScaler.from_dict({"method": "platt", "slope": -1.0, "bias": 0.0})
+    with pytest.raises(ValueError):
+        PlattScaler.from_dict({"method": "temperature", "temperature": 1.0})
+
+
+def test_fit_scaler_falls_back_to_temperature_when_asked():
+    logits, labels = _shifted(size=2000)
+    assert isinstance(fit_scaler(logits, labels, "platt"), PlattScaler)
+    assert isinstance(fit_scaler(logits, labels, "temperature"), TemperatureScaler)
+    with pytest.raises(ValueError):
+        fit_scaler(logits, labels, "isotonic")
+
+
+def test_head_calibration_round_trips_new_and_legacy_manifests():
+    logits, labels = _shifted(size=4000)
+    stacked = np.stack([logits, logits * 0.5], axis=1)
+    targets = np.stack([labels, labels], axis=1)
+    heads = ("overall", "aimAssist")
+    fitted = HeadCalibration.fit(stacked, targets, heads)
+    manifest = fitted.to_dict()
+    assert manifest["method"] == "per-head"
+    restored = load_calibration(manifest, heads)
+    assert np.allclose(restored.apply_logits(stacked), fitted.apply_logits(stacked))
+    legacy = HeadCalibration.fit(stacked, targets, heads, method="temperature").to_dict()
+    assert legacy["method"] == "per-head-temperature"
+    assert np.allclose(load_calibration(legacy, heads).apply_logits(stacked),
+                       HeadCalibration.fit(stacked, targets, heads, method="temperature").apply_logits(stacked))
+    single = load_calibration(PlattScaler.fit(logits, labels).to_dict(), heads)
+    assert isinstance(single, PlattScaler)
+
+
+def test_partial_auc_reference_points():
+    labels = np.array([0, 0, 0, 0, 1, 1])
+    assert partial_auc(labels, np.array([0.1, 0.2, 0.3, 0.4, 0.8, 0.9]), 0.1) == pytest.approx(1.0)
+    assert partial_auc(labels, np.array([0.9, 0.8, 0.7, 0.6, 0.1, 0.2]), 0.1) < 0.5
+    assert partial_auc(labels, np.full(6, 0.5), 0.1) == pytest.approx(0.5)
+    scores = np.array([0.1, 0.9, 0.3, 0.4, 0.8, 0.2])
+    assert partial_auc(labels, scores, 1.0) == pytest.approx(roc_auc(labels, scores))
+    assert np.isnan(partial_auc(np.zeros(4), np.arange(4.0), 0.1))
+    with pytest.raises(ValueError):
+        partial_auc(labels, scores, 0.0)
+
+
+def test_partial_auc_prefers_the_scorer_that_is_clean_at_low_fpr():
+    # Same ROC-AUC, different corner: A is perfect for its top scores, B pays at low FPR.
+    rng = np.random.default_rng(5)
+    negatives, positives = rng.normal(0, 1, 4000), rng.normal(1.5, 1, 400)
+    labels = np.r_[np.zeros(4000), np.ones(400)]
+    clean_top = np.r_[negatives, np.where(positives > 2.0, positives + 10.0, positives)]
+    noisy_top = np.r_[np.where(negatives > 2.5, negatives + 10.0, negatives), positives]
+    assert partial_auc(labels, clean_top, 0.01) > partial_auc(labels, noisy_top, 0.01)

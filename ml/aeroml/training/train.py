@@ -26,9 +26,10 @@ from ..dataset.splits import Split, group_split, unknown_client_split
 from ..dataset.statistics import dataset_report, missingness, split_report
 from ..dataset.windows import WindowIndex, attack_windows, balance_report, continuous_windows
 from ..evaluation.calibration import HeadCalibration, probability_to_logit
-from ..evaluation.metrics import evaluate
+from ..evaluation.metrics import evaluate, partial_auc
 from ..export.bundle import Provenance, model_version
 from ..schema import FeatureSchema, default_schema
+from .augment import AugmentConfig, Augmenter, group_balance_weights
 from .config import TrainingConfig, git_commit, head_positive
 from ..audit.report import inspect_dataset
 from ..audit.leakage import check_split, check_feature_schema, check_encoder_invariance, exit_code
@@ -213,14 +214,24 @@ def run(config: TrainingConfig, schema: FeatureSchema | None = None, progress=No
         fold: torch.as_tensor(heads.values[split[fold]][:, columns])
         for fold in tensors
     }
-    positives = targets["train"].sum(dim=0).clamp(min=1.0)
-    negatives = targets["train"].shape[0] - positives
-    pos_weight = (negatives / positives).to(config.device)
-    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+    # Per-window weights: a player (or session) with ten times the recording time does not get ten
+    # times the say in what "legit" looks like. Class balance is computed on the same weights.
+    balance_key = "player" if "player" in config.group_by else "session"
+    sample_weights = torch.as_tensor(group_balance_weights(index.attribute(balance_key)[split.train],
+                                                           config.group_balance))
+    weighted_targets = targets["train"] * sample_weights.unsqueeze(1)
+    positives = weighted_targets.sum(dim=0).clamp(min=1.0e-6)
+    negatives = sample_weights.sum() - positives
+    pos_weight = (negatives / positives).clamp(max=1.0e4).to(config.device)
+    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight, reduction="none")
+    augmenter = None
+    if config.augment:
+        augmenter = Augmenter(schema, normalizer.mean, normalizer.std,
+                              AugmentConfig(config.mirror_probability, config.channel_dropout))
     optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max(1, config.epochs))
 
-    best_state, best_score, patience = None, -np.inf, 0
+    best_state, best_score, patience = None, (-np.inf, -np.inf), 0
     history = []
     generator = torch.Generator().manual_seed(config.seed)
     for epoch in range(config.epochs):
@@ -230,8 +241,13 @@ def run(config: TrainingConfig, schema: FeatureSchema | None = None, progress=No
         for start in range(0, order.numel(), config.batch_size):
             rows = order[start:start + config.batch_size]
             optimizer.zero_grad(set_to_none=True)
-            logits = model(tensors["train"][rows].to(config.device))
-            loss = criterion(logits, targets["train"][rows].to(config.device))
+            batch = tensors["train"][rows]
+            if augmenter is not None:
+                batch = augmenter(batch, generator)
+            logits = model(batch.to(config.device))
+            weights = sample_weights[rows].to(config.device)
+            per_window = criterion(logits, targets["train"][rows].to(config.device)).mean(dim=1)
+            loss = (per_window * weights).sum() / weights.sum().clamp(min=1.0e-12)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)
             optimizer.step()
@@ -239,20 +255,28 @@ def run(config: TrainingConfig, schema: FeatureSchema | None = None, progress=No
         scheduler.step()
         validation = _score(model, tensors["validation"], config)
         overall_column = published.index("overall")
-        report = evaluate(targets["validation"][:, overall_column].numpy().astype(int), validation[:, overall_column])
+        validation_labels = targets["validation"][:, overall_column].numpy().astype(int)
+        report = evaluate(validation_labels, validation[:, overall_column])
+        low_fpr_auc = partial_auc(validation_labels, validation[:, overall_column], config.selection_max_fpr)
         validation_loss = _binary_cross_entropy(validation[:, overall_column], targets["validation"][:, overall_column].numpy())
-        history.append({"epoch": epoch, "loss": total / max(1, order.numel()), "validationRocAuc": report.roc_auc, "validationLoss": validation_loss})
+        history.append({"epoch": epoch, "loss": total / max(1, order.numel()), "validationRocAuc": report.roc_auc,
+                        "validationPartialAuc": low_fpr_auc, "selectionMaxFpr": config.selection_max_fpr,
+                        "validationLoss": validation_loss})
         notify("training", epoch=epoch, totalEpochs=config.epochs, trainLoss=history[-1]["loss"], validationLoss=validation_loss)
-        LOGGER.info("epoch %d loss=%.4f validation ROC-AUC=%.4f", epoch, history[-1]["loss"], report.roc_auc)
-        if report.roc_auc > best_score:
-            best_score, patience = report.roc_auc, 0
+        LOGGER.info("epoch %d loss=%.4f validation ROC-AUC=%.4f pAUC@%.3g=%.4f", epoch, history[-1]["loss"],
+                    report.roc_auc, config.selection_max_fpr, low_fpr_auc)
+        # Selection follows the operating region: the low-FPR partial AUC first, the whole curve
+        # only to break ties (a tiny validation fold often has many epochs tied at the corner).
+        score = (_finite_or(low_fpr_auc, -np.inf), _finite_or(report.roc_auc, -np.inf))
+        if score > best_score:
+            best_score, patience = score, 0
             best_state = {key: value.detach().clone() for key, value in model.state_dict().items()}
         else:
             patience += 1
             if patience >= config.early_stopping_patience:
                 LOGGER.info("early stop at epoch %d", epoch)
                 break
-    if best_state is None:
+    if best_state is None or not np.isfinite(best_score[1]):
         raise ValueError("no finite validation score; no model can be selected")
     model.load_state_dict(best_state)
 
@@ -262,9 +286,10 @@ def run(config: TrainingConfig, schema: FeatureSchema | None = None, progress=No
     calibration_labels = targets["calibration"].numpy()
     scaler = None
     try:
-        scaler = HeadCalibration.fit(probability_to_logit(calibration_scores), calibration_labels, published)
+        scaler = HeadCalibration.fit(probability_to_logit(calibration_scores), calibration_labels, published,
+                                     method=config.calibration)
         if not scaler.improved:
-            LOGGER.warning("temperature scaling did not improve likelihood; publishing uncalibrated")
+            LOGGER.warning("%s calibration did not improve likelihood; publishing uncalibrated", config.calibration)
             scaler = None
     except ValueError as error:
         LOGGER.warning("calibration skipped: %s", error)
@@ -333,6 +358,10 @@ def run(config: TrainingConfig, schema: FeatureSchema | None = None, progress=No
     }
 
 
+def _finite_or(value: float, fallback: float) -> float:
+    return float(value) if np.isfinite(value) else fallback
+
+
 def _binary_cross_entropy(probabilities: np.ndarray, labels: np.ndarray) -> float:
     """Plain BCE on the validation fold, for the progress line.
 
@@ -389,6 +418,12 @@ def main() -> None:
     parser.add_argument("--allow-synthetic", action="store_true", help="pipeline tests only; blocks production promotion")
     parser.add_argument("--include-review", action="store_true", help="explicitly include readable REVIEW sessions; never UNUSABLE")
     parser.add_argument("--golden", type=Path, help="reserve all reviewed golden players outside every training fold")
+    parser.add_argument("--calibration", choices=("platt", "temperature"), default="platt")
+    parser.add_argument("--group-balance", type=float, default=0.5,
+                        help="0 = every window counts once, 1 = every player counts once")
+    parser.add_argument("--no-augment", action="store_true", help="disable yaw mirroring and channel dropout")
+    parser.add_argument("--selection-max-fpr", type=float, default=0.05,
+                        help="select the epoch on validation partial AUC over FPR in [0, this]")
     parser.add_argument("--log-level", default="INFO")
     arguments = parser.parse_args()
     use_utf8_console()
@@ -411,6 +446,10 @@ def main() -> None:
         allow_synthetic=arguments.allow_synthetic,
         include_review=arguments.include_review,
         golden_manifest=arguments.golden,
+        calibration=arguments.calibration,
+        group_balance=arguments.group_balance,
+        augment=not arguments.no_augment,
+        selection_max_fpr=arguments.selection_max_fpr,
     )
     print(dumps(run(config)))
 

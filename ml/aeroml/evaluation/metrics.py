@@ -70,6 +70,32 @@ def roc_curve(labels: np.ndarray, scores: np.ndarray) -> tuple[np.ndarray, np.nd
     return fpr, tpr, thresholds
 
 
+def partial_auc(labels: np.ndarray, scores: np.ndarray, max_fpr: float) -> float:
+    """Standardised (McClish) area under the ROC curve for FPR in [0, max_fpr].
+
+    ROC-AUC weighs a gain at FPR 40% exactly like a gain at FPR 0.1%, and nobody deploys an
+    anticheat at FPR 40%. This is the part of the curve an operator can use, rescaled so that a
+    random scorer is 0.5 and a perfect one is 1.0, as ROC-AUC is. NaN when a class is missing."""
+    if not np.isfinite(max_fpr) or not 0 < max_fpr <= 1:
+        raise ValueError("max_fpr must be in (0, 1]")
+    labels, scores = _check(labels, scores)
+    if len(np.unique(labels)) != 2:
+        return float("nan")
+    if max_fpr >= 1:
+        return roc_auc(labels, scores)
+    fpr, tpr, _ = roc_curve(labels, scores)
+    stop = int(np.searchsorted(fpr, max_fpr, side="right"))
+    if stop >= fpr.size:
+        area = float(np.trapezoid(tpr, fpr)) if hasattr(np, "trapezoid") else float(np.trapz(tpr, fpr))
+    else:
+        edge = float(np.interp(max_fpr, fpr[stop - 1:stop + 1], tpr[stop - 1:stop + 1]))
+        xs = np.append(fpr[:stop], max_fpr)
+        ys = np.append(tpr[:stop], edge)
+        area = float(np.trapezoid(ys, xs)) if hasattr(np, "trapezoid") else float(np.trapz(ys, xs))
+    minimum = 0.5 * max_fpr * max_fpr
+    return float(0.5 * (1.0 + (area - minimum) / (max_fpr - minimum)))
+
+
 def pr_auc(labels: np.ndarray, scores: np.ndarray) -> float:
     """Average precision: the step-wise sum used for ranking tasks, not a trapezoid over a curve."""
     labels, scores = _check(labels, scores)
