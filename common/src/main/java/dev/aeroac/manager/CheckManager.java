@@ -127,6 +127,8 @@ public class CheckManager {
                 .put(Reach.class, new Reach(player))
                 .put(PacketEntityReplication.class, player.packetEntityReplication)
                 .put(PacketChangeGameState.class, new PacketChangeGameState(player))
+                // Before the inventory simulation, so a click it cancels is never simulated
+                .put(InventoryH.class, new InventoryH(player))
                 .put(CompensatedInventory.class, player.inventory)
                 .put(PacketPlayerAbilities.class, new PacketPlayerAbilities(player))
                 .put(PacketWorldBorder.class, new PacketWorldBorder(player))
