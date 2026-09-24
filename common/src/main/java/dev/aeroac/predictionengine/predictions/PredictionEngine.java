@@ -288,7 +288,7 @@ public class PredictionEngine {
 
     public List<VectorData> applyInputsToVelocityPossibilities(AeroPlayer player, Set<VectorData> possibleVectors, float speed) {
         List<VectorData> returnVectors = new ArrayList<>();
-        loopVectors(player, possibleVectors, speed, returnVectors);
+        loopVectors(player, possibleVectors, speed, returnVectors, true);
         return returnVectors;
     }
 
@@ -734,7 +734,7 @@ public class PredictionEngine {
         player.lastWasClimbing = 0;
     }
 
-    private void loopVectors(AeroPlayer player, Set<VectorData> possibleVectors, float speed, List<VectorData> returnVectors) {
+    public void loopVectors(AeroPlayer player, Set<VectorData> possibleVectors, float speed, List<VectorData> returnVectors, boolean doStuckSpeed) {
         // Stop omni-sprint
         // Optimization - Also cuts down scenarios by 2/3
         // For some reason the player sprints while swimming no matter what
@@ -789,6 +789,11 @@ public class PredictionEngine {
                                     .add(inputTransformer.getMovementResultFromInput(player, input, speed, player.yaw)),
                                     possibleLastTickOutput, VectorData.VectorType.InputResult, forward, strafe);
                             result.input = input.vector();
+
+                            if (!doStuckSpeed) {
+                                returnVectors.add(result);
+                                continue;
+                            }
 
                             if (player.uncertaintyHandler.shouldSimulateStuckSpeed) {
                                 // only simulate no stuck speed if player is leaving

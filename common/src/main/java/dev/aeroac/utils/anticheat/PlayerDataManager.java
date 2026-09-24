@@ -132,9 +132,12 @@ public class PlayerDataManager {
         if (uuid == null)
             return; // folia doesn't like null getPlayer()
 
-        AeroAPI.INSTANCE.getAlertManager().handlePlayerQuit(
-                AeroAPI.INSTANCE.getPlatformPlayerFactory().getFromUUID(uuid)
-        );
+        // The platform player may already be gone on quit; looking it up again by UUID threw (upstream #2792).
+        dev.aeroac.platform.api.player.PlatformPlayer quittingPlayer =
+                dev.aeroac.platform.api.player.PlatformPlayerCache.getInstance().getPlayer(uuid);
+        if (quittingPlayer != null) {
+            AeroAPI.INSTANCE.getAlertManager().handlePlayerQuit(quittingPlayer);
+        }
 
         AeroAPI.INSTANCE.getSpectateManager().onQuit(uuid);
 
