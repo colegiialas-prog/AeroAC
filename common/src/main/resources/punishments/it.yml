@@ -15,6 +15,7 @@ Punishments:
       - "Timer"
       - "TimerLimit"
       - "NoFall"
+      - "AirStuck"
     commands:
       - "100:40 [alert]"
       - "1:1 [log]"

@@ -20,6 +20,7 @@ Punishments:
       - "Timer"
       - "TimerLimit"
       - "NoFall"
+      - "AirStuck"
     # Threshold:Interval Command
     #
     # N is the active violation count required to run the command.

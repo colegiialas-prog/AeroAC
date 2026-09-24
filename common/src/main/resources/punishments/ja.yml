@@ -19,6 +19,7 @@ Punishments:
       - "Timer"
       - "TimerLimit"
       - "NoFall"
+      - "AirStuck"
     # しきい値:間隔 コマンド
     #
     # 例: 100回の違反で「incorrect movement!」と表示しプレイヤーをキックする場合

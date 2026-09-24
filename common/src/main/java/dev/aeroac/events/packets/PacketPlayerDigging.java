@@ -257,11 +257,26 @@ public class PacketPlayerDigging extends PacketListenerAbstract {
 
             player.packetStateData.slowedByUsingItemTransaction = player.lastTransactionReceived.get();
 
-            if (player.isResetItemUsageOnItemUse()) {
+            final boolean resetsUsage = player.isResetItemUsageOnItemUse();
+            if (resetsUsage) {
                 AeroAPI.INSTANCE.getItemResetHandler().resetItemUsage(player.platformPlayer);
             }
 
+            final boolean wasUsing = player.packetStateData.isSlowedByUsingItem();
+            final InteractionHand usingHand = player.packetStateData.itemInUseHand;
+            final int usingSlot = player.packetStateData.getSlowedByUsingItemSlot();
+
             handleUseItem(player, hand);
+
+            // Using one hand does not end a use already running in the other: the server keeps eating
+            // with the main hand when an empty or unusable off hand is "used". A vanilla client cannot
+            // send this mid-use at all (it starts no new use while one is running); NoSlow clients send
+            // it every tick precisely because resolving it to "not slowed" here made the prediction stop
+            // expecting the slowdown while the item stayed in use. Unless this server resets the usage
+            // on every use packet, the use that was running is still running.
+            if (wasUsing && !resetsUsage && hand != usingHand && !player.packetStateData.isSlowedByUsingItem()) {
+                player.packetStateData.restoreSlowedByUsingItem(usingSlot, usingHand);
+            }
         }
     }
 }

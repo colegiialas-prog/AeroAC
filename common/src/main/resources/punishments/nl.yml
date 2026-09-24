@@ -19,6 +19,7 @@ Punishments:
       - "Timer"
       - "TimerLimit"
       - "NoFall"
+      - "AirStuck"
     # Drempel: Interval-commando
     #
     # Voorbeeld, om de speler te schoppen met het bericht "verkeerde beweging!" na 100 overtredingen, zonder interval

@@ -118,6 +118,11 @@ NoSlow:
     setbackvl: 5
     # Decay's when the player uses an item AND is slowed by it
     decay: 0.05
+    # Unslowed use ticks that are spread out (the "skip the slowdown every other tick" NoSlow) add 1 to a buffer,
+    # every other tick removes buffer-decay; the check flags once the buffer reaches this value.
+    # With the defaults, skipping the slowdown more often than one tick in six is detected.
+    buffer: 2.0
+    buffer-decay: 0.2
 
 Knockback:
     # How much should we multiply total advantage by when the player is legit
@@ -150,6 +155,12 @@ TimerLimit:
     # Can cause some setbacks for legitimate players but only if they are over this ping threshold.
     # -1 to disable
     ping-abuse-limit-threshold: 1000
+
+# 1.21.2+ clients only: a client that keeps ticking but stops sending its position ("air stuck",
+# freezing in the air to hit players). Vanilla sends a position at least every 20 ticks, so this is
+# never lower than 20. A flag sets the player back, which also cancels their attacks until they obey.
+AirStuck:
+    max-ticks: 25
 
 NegativeTimer:
     # Number of milliseconds lost while moving before we should start flagging

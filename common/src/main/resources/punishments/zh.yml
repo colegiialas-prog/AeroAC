@@ -19,6 +19,7 @@ Punishments:
       - "Timer"
       - "TimerLimit"
       - "NoFall"
+      - "AirStuck"
     # 最大vl:下一次执行需要的vl
     #
     # 这是个例子, 当到达100VL时为了以 "incorrect movement!" 为理由踢出玩家

@@ -19,6 +19,7 @@ Punishments:
       - "Timer"
       - "TimerLimit"
       - "NoFall"
+      - "AirStuck"
     # Limiar: Intervalo entre comandos
     #
     # Exemplo, para expulsar um jogador com a mensagem: "movimento incorreto!" depois de 100 violações, sem

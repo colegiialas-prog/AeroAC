@@ -24,6 +24,7 @@ import dev.aeroac.checks.impl.misc.ClientBrand;
 import dev.aeroac.checks.impl.misc.GhostBlockMitigation;
 import dev.aeroac.checks.impl.misc.Post;
 import dev.aeroac.checks.impl.misc.TransactionOrder;
+import dev.aeroac.checks.impl.movement.AirStuck;
 import dev.aeroac.checks.impl.movement.NoSlow;
 import dev.aeroac.checks.impl.movement.PredictionRunner;
 import dev.aeroac.checks.impl.movement.SetbackBlocker;
@@ -109,6 +110,7 @@ public class CheckManager {
                 .put(BadPacketsM.class, new BadPacketsM(player))
                 .put(BadPacketsY.class, new BadPacketsY(player))
                 .put(BadPacketsZ.class, new BadPacketsZ(player))
+                .put(AirStuck.class, new AirStuck(player))
                 .put(PacketOrderB.class, new PacketOrderB(player))
                 .put(PacketOrderC.class, new PacketOrderC(player))
                 .put(PacketOrderD.class, new PacketOrderD(player))

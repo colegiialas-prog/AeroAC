@@ -19,6 +19,7 @@ Punishments:
       - "Timer"
       - "TimerLimit"
       - "NoFall"
+      - "AirStuck"
     # Eşik:Aralık Komutu
     #
     # Örnek: 100 ihlalde "yanlış hareket!" mesajıyla oyuncuyu atmak için, aralık komutu olmadan:

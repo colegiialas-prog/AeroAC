@@ -446,7 +446,13 @@ public class MovementCheckRunner extends Check implements PositionCheck {
         }
 
         boolean couldBeStuckSpeed = Collisions.checkStuckSpeed(player, player.getMovementThreshold());
-        boolean couldLeaveStuckSpeed = player.isPointThree() && Collisions.checkStuckSpeed(player, -player.getMovementThreshold());
+        // True when even a box shrunk by 0.03 still touches the stuck block: the player is certainly inside
+        // it, so there is nothing to have "left". The lenience below (0.15 horizontal, 0.06 vertical) is
+        // for the thin shell at the block's edge where they may have. This used to be gated on
+        // isPointThree(), which is false for every 1.18.2+ client, so every tick a modern client spent
+        // inside a cobweb got the full edge lenience — enough for NoWeb to walk at several times web
+        // speed and to fly up and down through the web. The 0.03 shell is the same for all versions.
+        boolean couldLeaveStuckSpeed = Collisions.checkStuckSpeed(player, -0.03);
         player.uncertaintyHandler.claimingLeftStuckSpeed = !player.inVehicle() && player.stuckSpeedMultiplier.getX() < 1 && !couldLeaveStuckSpeed;
 
         if (couldBeStuckSpeed) {

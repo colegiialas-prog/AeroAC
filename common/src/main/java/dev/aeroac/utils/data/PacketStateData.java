@@ -42,4 +42,10 @@ public class PacketStateData {
     public boolean isSlowedByUsingItem() {
         return slowedByUsingItemSlot != Integer.MIN_VALUE;
     }
+
+    /** Puts back a use that was in progress, on the slot it started on (not the currently selected one). */
+    public void restoreSlowedByUsingItem(int slot, InteractionHand hand) {
+        slowedByUsingItemSlot = slot;
+        itemInUseHand = hand;
+    }
 }

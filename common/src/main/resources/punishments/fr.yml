@@ -19,6 +19,7 @@ Punishments:
       - "Timer"
       - "TimerLimit"
       - "NoFall"
+      - "AirStuck"
     # Limite : Intervale entre chaque Commande
     #
     # Par exemple, pour exclure le joueur avec le message "Mouvement incorrect !" après 100 violations, sans intervale

@@ -19,6 +19,7 @@ Punishments:
       - "Timer"
       - "TimerLimit"
       - "NoFall"
+      - "AirStuck"
     # Límite:Intervalo Comando
     #
     # Por ejemplo, para expulsar al jugador con el mensaje "movimiento incorrecto!" después de 100 violaciones sin intervalo:
