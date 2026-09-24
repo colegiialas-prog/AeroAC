@@ -22,7 +22,7 @@ from typing import Sequence
 
 import numpy as np
 
-from ..dataset.features import encode_window
+from ..dataset.features import encode_window, wrap180
 from ..dataset.normalize import Normalizer
 from ..dataset.splits import Split, group_keys
 from ..dataset.windows import WindowIndex
@@ -62,7 +62,10 @@ FORBIDDEN_CHANNEL_TOKENS = (
     "SCENARIO", "ASSIST_STRENGTH", "REVIEWER",
 )
 DERIVED_SOURCES = {"targetAngularVelocityYaw", "targetAngularVelocityPitch", "rotationTargetAlignment",
-                   "targetRadialSpeed", "targetSpeed", "targetAngularRadius", "aimErrorRatio", "playerSpeedHorizontal"}
+                   "targetRadialSpeed", "targetSpeed", "targetAngularRadius", "aimErrorRatio", "playerSpeedHorizontal",
+                   # Schema 3. Read YAW/PITCH only as the difference to TARGET_YAW/TARGET_PITCH, so they see
+                   # the aim error, never the absolute look direction; pinned by the world-rotation check.
+                   "rotationCorrectionGain", "rotationOffAxis"}
 
 #: Absolute world coordinates in the raw frame. Translating all of them must change nothing.
 ABSOLUTE_FIELDS = (
@@ -125,6 +128,15 @@ def check_encoder_invariance(schema: FeatureSchema | None = None, seed: int = 0)
         translated[:, schema.raw_index(field)] += 1024.0
     findings += _compare(baseline, encode_window(translated, schema), schema,
                          "world translation", "absolute position reached the model")
+
+    # Turning the whole fight about the vertical axis changes every absolute yaw and no relative one.
+    # A channel that moves here reads the direction the player happens to face.
+    rotated = raw.copy()
+    for field in ("YAW", "TARGET_YAW"):
+        rotated[:, schema.raw_index(field)] += 137.0
+    rotated[:, schema.raw_index("TARGET_YAW")] = wrap180(rotated[:, schema.raw_index("TARGET_YAW")])
+    findings += _compare(baseline, encode_window(rotated, schema), schema,
+                         "world rotation", "absolute look direction reached the model")
 
     renumbered = raw.copy()
     for field in IDENTIFIER_FIELDS:

@@ -10,8 +10,10 @@ import dev.aeroac.neural.telemetry.FrameField;
  * derived deltas are unknown. ml/aeroml/features.py applies exactly the same rule.
  */
 public final class FeatureEncoder {
-    public static final int FEATURE_SCHEMA_VERSION = 2;
+    public static final int FEATURE_SCHEMA_VERSION = 3;
     private static final double EPSILON = 1.0E-6;
+    /** Below this aim error (degrees) the error-frame channels are noise and stay unknown. */
+    private static final double MIN_ERROR_FRAME_DEGREES = 1.0;
 
     private FeatureEncoder() { }
 
@@ -83,6 +85,20 @@ public final class FeatureEncoder {
                 double radius = derive(ModelFeature.TARGET_ANGULAR_RADIUS, frame, previous, continuous);
                 if (!(radius > EPSILON)) return Double.NaN;
                 return frame.value(FrameField.AIM_ERROR_TOTAL) / radius;
+            }
+            case ROTATION_CORRECTION_GAIN:
+            case ROTATION_OFF_AXIS: {
+                // This sample's rotation in the frame of the aim error it responded to (the previous
+                // sample's). Same order of operations as ml/aeroml/dataset/features.py.
+                if (!continuous) return Double.NaN;
+                double errorYaw = AimErrorCalculator.normalizeYaw(previous.value(FrameField.YAW) - previous.value(FrameField.TARGET_YAW));
+                double errorPitch = previous.value(FrameField.PITCH) - previous.value(FrameField.TARGET_PITCH);
+                double norm2 = errorYaw * errorYaw + errorPitch * errorPitch;
+                if (!(norm2 >= MIN_ERROR_FRAME_DEGREES * MIN_ERROR_FRAME_DEGREES)) return Double.NaN;
+                double deltaYaw = frame.value(FrameField.DELTA_YAW), deltaPitch = frame.value(FrameField.DELTA_PITCH);
+                return feature == ModelFeature.ROTATION_CORRECTION_GAIN
+                        ? -(deltaYaw * errorYaw + deltaPitch * errorPitch) / norm2
+                        : (deltaYaw * errorPitch - deltaPitch * errorYaw) / norm2;
             }
             case PLAYER_SPEED_HORIZONTAL: {
                 double x = frame.value(FrameField.VELOCITY_X), z = frame.value(FrameField.VELOCITY_Z);

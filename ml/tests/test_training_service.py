@@ -21,7 +21,10 @@ import pytest
 from aeroml.service.training_api import _handler, build_manager, create_server
 from aeroml.training.contract import AUTOMATIC_DEPLOYMENT, PROMOTION_STATUS
 
-SCHEMA_VERSION = 2
+from aeroml.schema import default_schema  # noqa: E402
+
+SCHEMA_VERSION = default_schema().version
+FEATURE_COUNT = default_schema().feature_count
 JOB_STATES = ("QUEUED", "AUDITING", "PREPARING", "TRAINING", "CALIBRATING", "EVALUATING",
               "EXPORTING", "COMPLETED", "FAILED", "CANCELLED")
 TERMINAL = ("COMPLETED", "FAILED", "CANCELLED")
@@ -80,7 +83,7 @@ class FakeProcess:
             "window": self._spec["window"],
             "sequenceLength": self._spec.get("sequenceLength", 31),
             "featureSchemaVersion": self._spec["featureSchemaVersion"],
-            "featureCount": 63,
+            "featureCount": FEATURE_COUNT,
             "heads": list(self._spec["heads"]),
             "calibration": {"method": "per-head-temperature", "heads": ["overall", "aimAssist"],
                             "scalers": {"overall": {"method": "temperature", "temperature": 1.5}}},
@@ -262,7 +265,7 @@ def test_health_describes_the_schema_the_queue_and_the_reach_of_the_socket(servi
     assert health["status"] == "ok"
     assert health["featureSchemaVersion"] == SCHEMA_VERSION
     assert health["rawSchemaVersion"] == 1
-    assert health["featureCount"] == 63
+    assert health["featureCount"] == FEATURE_COUNT
     assert health["localOnly"] is True and health["authRequired"] is False
     assert health["automaticDeployment"] is AUTOMATIC_DEPLOYMENT is False
     assert dataset_name(synthetic_root) in health["datasets"]

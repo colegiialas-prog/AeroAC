@@ -1,12 +1,12 @@
 {
  "note": "Canonical inference request. Java InferenceJson.encode must produce these fields and these feature values; the Python service must accept the result.",
  "protocolVersion": 1,
- "featureSchemaVersion": 2,
+ "featureSchemaVersion": 3,
  "requestId": 4242,
  "model": "flash",
  "window": "attack",
  "sequenceLength": 2,
- "featureCount": 63,
+ "featureCount": 67,
  "features": [
   -2.0,
   -1.75,
@@ -133,6 +133,14 @@
   0.0,
   0.25,
   0.5,
-  0.75
+  0.75,
+  1.0,
+  1.25,
+  1.5,
+  1.75,
+  2.0,
+  2.25,
+  2.5,
+  -2.0
  ]
 }
