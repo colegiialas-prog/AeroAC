@@ -49,6 +49,15 @@ Punishments:
       - "1:1 [log]"
       - "10:10 [webhook]"
       - "10:10 [proxy]"
+  Aura:
+    remove-violations-after: 600
+    checks:
+      - "Aura"
+    commands:
+      - "2:3 [alert]"
+      - "1:1 [log]"
+      - "4:6 [webhook]"
+      - "4:6 [proxy]"
   Knockback:
     remove-violations-after: 300
     checks:

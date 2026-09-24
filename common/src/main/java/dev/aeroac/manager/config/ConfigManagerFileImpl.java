@@ -161,7 +161,7 @@ public class ConfigManagerFileImpl implements ConfigManager, BasicReloadable {
             }
             String after = ensureAeroMovementPunishmentGroups(combat);
             if (!after.equals(combat)) {
-                LogUtil.info("Added missing AirStuck/GhostBlock punishment groups to punishments.yml");
+                LogUtil.info("Added missing AirStuck/GhostBlock/Aura punishment groups to punishments.yml");
             }
             if (!after.equals(before)) Files.writeString(punishments.toPath(), after);
         } catch (IOException e) {
@@ -255,10 +255,24 @@ public class ConfigManagerFileImpl implements ConfigManager, BasicReloadable {
                   - "10:10 [proxy]"
             """;
 
+    /** The three aura rotation checks: AuraSnapBack, AuraShake and AuraLock. */
+    private static final String AURA_PUNISHMENT_GROUP = """
+              Aura:
+                remove-violations-after: 600
+                checks:
+                  - "Aura"
+                commands:
+                  - "2:3 [alert]"
+                  - "1:1 [log]"
+                  - "4:6 [webhook]"
+                  - "4:6 [proxy]"
+            """;
+
     /** Check name and the group added for it when no group mentions it yet. */
     private static final String[][] AERO_MOVEMENT_GROUPS = {
             {"AirStuck", AIR_STUCK_PUNISHMENT_GROUP},
             {"GhostBlock", GHOST_BLOCK_PUNISHMENT_GROUP},
+            {"Aura", AURA_PUNISHMENT_GROUP},
     };
 
     private static final String ENTITY_PIERCE_PUNISHMENT_GROUP = """
