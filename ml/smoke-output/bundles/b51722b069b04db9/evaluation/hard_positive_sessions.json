@@ -1,0 +1,242 @@
+[
+  {
+    "sessionId": "c6bfa837-fa0e-4785-88a9-2e0c04484712",
+    "playerId": "synthetic-player-02",
+    "label": "CHEAT",
+    "clientFamily": "clientA",
+    "configuration": "assist-0.85",
+    "cheatFamily": "aimassist",
+    "peakProbability": 0.013284,
+    "meanTopK": 0.010506,
+    "peakRisk": 0.0,
+    "reachedSuspicious": false,
+    "maxConsecutiveAboveThreshold": 0,
+    "windows": [
+      {
+        "window": 181,
+        "timestampSeconds": 1.6,
+        "score": 0.005079
+      },
+      {
+        "window": 183,
+        "timestampSeconds": 2.5,
+        "score": 0.005106
+      },
+      {
+        "window": 188,
+        "timestampSeconds": 5.6,
+        "score": 0.005158
+      },
+      {
+        "window": 190,
+        "timestampSeconds": 7.05,
+        "score": 0.005534
+      },
+      {
+        "window": 189,
+        "timestampSeconds": 6.35,
+        "score": 0.00564
+      }
+    ],
+    "telemetry": {
+      "medianPingMs": 66.9605,
+      "medianRotationSpeed": 3.6919,
+      "medianAimErrorDegrees": 0.782,
+      "medianTargetDistance": 3.735,
+      "targetPresentRate": 1.0,
+      "attackWindows": 5
+    }
+  },
+  {
+    "sessionId": "6916637e-b48a-42c6-b1ca-c1e4ee82d1e8",
+    "playerId": "synthetic-player-06",
+    "label": "CHEAT",
+    "clientFamily": "clientA",
+    "configuration": "assist-0.35",
+    "cheatFamily": "aimassist",
+    "peakProbability": 0.019544,
+    "meanTopK": 0.014036,
+    "peakRisk": 0.0,
+    "reachedSuspicious": false,
+    "maxConsecutiveAboveThreshold": 0,
+    "windows": [
+      {
+        "window": 104,
+        "timestampSeconds": 2.85,
+        "score": 0.004322
+      },
+      {
+        "window": 109,
+        "timestampSeconds": 5.55,
+        "score": 0.004469
+      },
+      {
+        "window": 123,
+        "timestampSeconds": 12.95,
+        "score": 0.004618
+      },
+      {
+        "window": 121,
+        "timestampSeconds": 11.95,
+        "score": 0.005584
+      },
+      {
+        "window": 103,
+        "timestampSeconds": 2.3,
+        "score": 0.005827
+      }
+    ],
+    "telemetry": {
+      "medianPingMs": 77.7362,
+      "medianRotationSpeed": 5.1311,
+      "medianAimErrorDegrees": 12.3928,
+      "medianTargetDistance": 2.2823,
+      "targetPresentRate": 1.0,
+      "attackWindows": 5
+    }
+  },
+  {
+    "sessionId": "b0fd0bb9-6ba7-4e82-a9d2-4123c3022c5f",
+    "playerId": "synthetic-player-01",
+    "label": "CHEAT",
+    "clientFamily": "clientB",
+    "configuration": "assist-0.6",
+    "cheatFamily": "aimassist",
+    "peakProbability": 0.882379,
+    "meanTopK": 0.713935,
+    "peakRisk": 1.1846,
+    "reachedSuspicious": false,
+    "maxConsecutiveAboveThreshold": 5,
+    "windows": [
+      {
+        "window": 155,
+        "timestampSeconds": 1.75,
+        "score": 0.019116
+      },
+      {
+        "window": 158,
+        "timestampSeconds": 3.8,
+        "score": 0.024925
+      },
+      {
+        "window": 157,
+        "timestampSeconds": 3.15,
+        "score": 0.025989
+      },
+      {
+        "window": 156,
+        "timestampSeconds": 2.35,
+        "score": 0.034629
+      },
+      {
+        "window": 173,
+        "timestampSeconds": 11.4,
+        "score": 0.06901
+      }
+    ],
+    "telemetry": {
+      "medianPingMs": 68.1252,
+      "medianRotationSpeed": 6.4085,
+      "medianAimErrorDegrees": 5.6523,
+      "medianTargetDistance": 2.0707,
+      "targetPresentRate": 1.0,
+      "attackWindows": 5
+    }
+  },
+  {
+    "sessionId": "ec861b5b-c4f4-48dc-9fc0-70155694ea96",
+    "playerId": "synthetic-player-00",
+    "label": "CHEAT",
+    "clientFamily": "clientA",
+    "configuration": "assist-0.35",
+    "cheatFamily": "aimassist",
+    "peakProbability": 0.987795,
+    "meanTopK": 0.935216,
+    "peakRisk": 4.8277,
+    "reachedSuspicious": false,
+    "maxConsecutiveAboveThreshold": 7,
+    "windows": [
+      {
+        "window": 233,
+        "timestampSeconds": 2.15,
+        "score": 0.339648
+      },
+      {
+        "window": 234,
+        "timestampSeconds": 2.75,
+        "score": 0.449714
+      },
+      {
+        "window": 248,
+        "timestampSeconds": 11.5,
+        "score": 0.600064
+      },
+      {
+        "window": 240,
+        "timestampSeconds": 6.2,
+        "score": 0.613924
+      },
+      {
+        "window": 239,
+        "timestampSeconds": 5.65,
+        "score": 0.687548
+      }
+    ],
+    "telemetry": {
+      "medianPingMs": 37.7302,
+      "medianRotationSpeed": 4.7646,
+      "medianAimErrorDegrees": 9.8002,
+      "medianTargetDistance": 2.4447,
+      "targetPresentRate": 1.0,
+      "attackWindows": 5
+    }
+  },
+  {
+    "sessionId": "1150fc30-fb44-45f3-8de9-5e82f2ff9158",
+    "playerId": "synthetic-player-04",
+    "label": "CHEAT",
+    "clientFamily": "clientA",
+    "configuration": "assist-0.6",
+    "cheatFamily": "aimassist",
+    "peakProbability": 0.991199,
+    "meanTopK": 0.954728,
+    "peakRisk": 4.1332,
+    "reachedSuspicious": false,
+    "maxConsecutiveAboveThreshold": 11,
+    "windows": [
+      {
+        "window": 26,
+        "timestampSeconds": 2.15,
+        "score": 0.01774
+      },
+      {
+        "window": 28,
+        "timestampSeconds": 3.05,
+        "score": 0.019126
+      },
+      {
+        "window": 27,
+        "timestampSeconds": 2.55,
+        "score": 0.036036
+      },
+      {
+        "window": 29,
+        "timestampSeconds": 3.75,
+        "score": 0.094931
+      },
+      {
+        "window": 39,
+        "timestampSeconds": 8.95,
+        "score": 0.102214
+      }
+    ],
+    "telemetry": {
+      "medianPingMs": 80.8878,
+      "medianRotationSpeed": 5.2183,
+      "medianAimErrorDegrees": 5.4853,
+      "medianTargetDistance": 2.1715,
+      "targetPresentRate": 1.0,
+      "attackWindows": 5
+    }
+  }
+]

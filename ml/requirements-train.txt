@@ -1,0 +1,8 @@
+-r requirements.txt
+# Training and export. onnxruntime is not optional here: an export is verified against the
+# PyTorch outputs before a bundle is written.
+torch>=2.1
+onnx>=1.15
+onnxruntime>=1.17
+# torch >= 2.9 exports ONNX through the torch.export path, which needs onnxscript.
+onnxscript>=0.1

@@ -1,0 +1,1 @@
+{"state": "FAILED", "stage": "failed", "updatedAtMillis": 1789500989883, "pid": 14084, "epoch": 0, "totalEpochs": 4, "trainLoss": null, "validationLoss": null, "elapsedSeconds": 0.082, "lastStage": "failed", "progress": 0.0, "message": "Внутренняя ошибка сервиса обучения (Exception). Подробности — в логе задачи."}

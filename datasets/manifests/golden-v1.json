@@ -1,0 +1,8 @@
+{
+  "manifestVersion": 1,
+  "name": "golden-v1",
+  "reviewStatus": "PENDING_REAL_DATA",
+  "purpose": "Independent regression evaluation only; never use these sessions or players to fit training, calibration, or thresholds.",
+  "note": "No real labelled sessions were available during implementation. This manifest intentionally contains no fabricated human reviews.",
+  "sessions": []
+}

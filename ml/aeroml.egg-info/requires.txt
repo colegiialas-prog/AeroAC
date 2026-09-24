@@ -1,0 +1,15 @@
+numpy>=1.24
+
+[dev]
+pytest>=8.0
+
+[serve]
+onnxruntime>=1.17
+fastapi>=0.110
+uvicorn>=0.27
+
+[train]
+torch>=2.1
+onnx>=1.15
+onnxruntime>=1.17
+onnxscript>=0.1

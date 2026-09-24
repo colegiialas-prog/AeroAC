@@ -1,0 +1,417 @@
+# Configuration principale de Aero AC
+# Code source : https://github.com/MWHunter/Grim
+# Copyright 2025 DefineOutside et contributeurs, sous licence GPLv3.
+# Les binaires modifiés, ou les plugins contenant du code grim copié, doivent être privés,
+# ou avec le code source complet disponible pour les acheteurs sans frais supplémentaires.
+
+alerts:
+    # En plus de diffuser des alertes aux joueurs, doivent-elles également être afffichées dans console ?
+    print-to-console: true
+    # Cela contrôle la manière dont les alertes sont partagées entre les serveurs connectés à votre proxy.
+    # Vous devez avoir activé 'bungee-plugin-message-channel' dans la configuration de Velocity si Velocity est utilisé.
+    proxy:
+        # Les alertes doivent-elles être envoyées aux autres serveurs connectés à votre proxy ?
+        send: false
+        # Les alertes reçues des autres serveurs doivent-elles être annoncées sur ce serveur ?
+        receive: false
+
+verbose:
+    print-to-console: false
+
+check-for-updates: true
+
+client-brand:
+    # Cela signifie qu'il n'enverra pas la nature du client aux opérateurs si il correspond aux clients suivants
+    ignored-clients:
+        - "^vanilla$"
+        - "^fabric$"
+        - "^quilt$"
+        - "^lunarclient:v\\d+\\.\\d+\\.\\d+-\\d{4},(?:fabric|forge)$"
+        - "^Feather Fabric$"
+        - "^labymod$"
+    # Grim will blacklist specific Forge versions which include built-in Reach hacks (Forge 1.18.2 to 1.19.3).
+    # Setting this option to false will allow said clients to connect to the server. Disable this at your own risk.
+    disconnect-blacklisted-forge-versions: true
+
+spectators:
+    # Masquer tout les spectateurs ayant la permission grim.spectator, peu importe s'ils sont actuellement en train d'observer.
+    hide-regardless: false
+    # Les spectateurs seront cachés uniquement dans ces mondes, laissez vide pour les afficher dans tous les mondes.
+    allowed-worlds:
+        - ""
+
+# Au bout de combien de temps les joueurs doivent-ils être expulsés en cas de perte de connexion ? Défault = 60 secondes
+max-transaction-time: 60
+
+# Enable this to stop Grim cancelling pongs received from players.
+# This may improve compatibility with other anticheats. It may cause issues with packet limiters.
+# Do not enable this if you are not sure what you are doing.
+disable-pong-cancelling: false
+
+# Le gestionnaire de resynchronisation des blocs par défaut doit-il être désactivé ?
+# Par défaut, Grim lit les blocs du monde serveur et les envoie au client pour corriger la désynchronisation.
+# Si vous utilisez des plugins créant de faux blocs via paquets (qui n'existent pas dans le monde serveur),
+# vous devez régler ceci sur true pour empêcher Grim de les écraser avec de l'air ou des blocs réels.
+# Cela force l'utilisation d'un gestionnaire "NoOp" (Aucune Opération) sauf si un personnalisé est fourni via l'API.
+disable-default-resync-handler: false
+
+# Should the duplicate movement packet be cancelled?
+# Mojang has fixed this issue in 1.21. This was their attempt to fix the "bucket desync". https://bugs.mojang.com/browse/MC-12363
+# This setting only applies to 1.17-1.20.5 clients on 1.8 servers.
+cancel-duplicate-packet: true
+
+# Whether or not to ignore the rotation in duplicate packets
+ignore-duplicate-packet-rotation: false
+
+Simulation:
+    # De combien devons-nous multiplier l'avantage total lorsque le joueur est légitime ?
+    # Voici à quoi ressemble la configuration par défaut (l'axe x = secondes, l'axe y = 1/1000 de bloc) : https://www.desmos.com/calculator/d4ufgxrxer
+    setback-decay-multiplier: 0.999
+    # Quel est l'écart maximal par rapport au mouvement du joueur pour lequel nous devrions créer une violation ?
+    # Mesuré en blocs par rapport au mouvement possible.
+    # Nous prenons en compte Optifine en changeant les tables trigonométriques, mais en réduisant cela à 0.001, cela réduira les signalements de l'anticheat
+    # sur FastMath si cette compensation ne fonctionne pas...
+    threshold: 0.001
+    # Quelle est la distance maximale d'une violation par tick avant que le joueur ne soit immédiatement renvoyé en arrière ?
+    # -1 pour désactiver
+    immediate-setback-threshold: 0.1
+    # Quelle est la distance maximale d'une violation sur tout les ticks avant que l'anti-cheat commence à renvoyer en arrière ?
+    # -1 pour désactiver
+    max-advantage: 1
+    # Après 50 secondes avec la configuration par défaut, le joueur passera de 4 blocs -> 1 bloc d'avantage
+    # Cela vise à empêcher le joueur d'accumuler trop de violations et de ne jamais pouvoir toutes les réinitialiser.
+    # Plafond d'avantage par défaut (l"axe x = secondes, l'axe y = 1/1000 de bloc)) : https://www.desmos.com/calculator/4lovswdarj
+    max-ceiling: 4
+    # Seuil du niveau de violation pour le setback
+    # 1 pour le comportement ancien
+    setback-violation-threshold: 1
+
+# Vérifications pour voir si un joueur est entré dans un bloc pendant un mouvement.
+Phase:
+    setbackvl: 1 # Rentrer dans des blocs peut permettre de grimper sur les murs, et cette vérification est relativement stable.
+    decay: 0.005
+
+AirLiquidPlace:
+    cancelvl: 0
+
+FabricatedPlace:
+    cancelvl: 5
+
+FarPlace:
+    cancelvl: 5
+
+PositionPlace:
+    cancelvl: 5
+
+RotationPlace:
+    cancelvl: 5
+
+# Vérification de no-slow basée sur la prédiction.
+# Grim tient compte des problèmes de netcode ici... difficile à tromper même en spamant le clic droit et le bouton de la main secondaire.
+# Bien plus stable que les autres anti-triche, mais veuillez signaler toute fausse détection... J'ai corrigé de nombreux problèmes de netcode ici.
+NoSlow:
+    # Quel est le niveau d'écart considéré comme "triche"
+    # Par défaut, cela est inférieur à d'autres écarts.
+    # Génère des avertissements avec des valeurs comprises entre 0,03 et 0,2 lors de l'utilisation de NoSlow
+    threshold: 0.001
+    # Renvoyer en arrière sur le premier objet pour éliminer tout avantage donné par NoSlow
+    setbackvl: 5
+    # Décroissance lorsque le joueur utilise un objet ET est ralenti par celui-ci.
+    decay: 0.05
+
+Knockback:
+    # De combien devons-nous multiplier l'avantage total lorsque le joueur est légitime ?
+    setback-decay-multiplier: 0.999
+    # Quel est l'écart maximal par rapport au mouvement du joueur pour lequel nous devrions créer une violation ?
+    # Mesuré en blocs par rapport au mouvement possible.
+    threshold: 0.001
+    # Quelle est la distance maximale d'une violation par tick avant que le joueur ne soit immédiatement renvoyé en arrière ?
+    # -1 pour désactiver
+    immediate-setback-threshold: 0.1
+    # Quelle est la distance maximale d'une violation sur tout les ticks avant que l'anti-cheat commence à renvoyer en arrière ?
+    # -1 pour désactiver
+    max-advantage: 1
+    # Cela vise à empêcher le joueur d'accumuler trop de violations et de ne jamais pouvoir toutes les réinitialiser.
+    max-ceiling: 4
+
+
+Explosion:
+    threshold: 0.001
+    setbackvl: 3
+
+TimerA:
+    setbackvl: 10
+    # Le nombre de millisecondes que le joueur peut accumuler pour une utilisation ultérieure lorsqu'il prend du retard.
+    # Si la valeur est trop élevée, cela pourrait potentiellement permettre de contourner les mécaniques 1.8, comme l'utilisation rapide, la guérison rapide et le tir à l'arc rapide. Une valeur de 120 ms semble être un bon équilibre.
+    drift: 120
+
+# This check limits abuse of the TimerA balance by preventing the player's movement falling too far behind realtime
+TimerLimit:
+    # Ping at which the check will start to limit timer balance, to prevent abuse.
+    # Can cause some setbacks for legitimate players but only if they are over this ping threshold.
+    # -1 to disable
+    ping-abuse-limit-threshold: 1000
+
+NegativeTimer:
+    # Le nombre de millisecondes perdus pendant le déplacement avant de commencer à signaler des infractions.
+    drift: 1200
+
+# Même méthode de vérification que TimerA, mais pour les véhicules.
+VehicleTimer:
+    # Cibler un chronomètre de 1,005.
+    setbackvl: 10
+
+PacketOrderI:
+    # Activer si les joueurs sont signalés pour l'utilisation de mods d'animation 1.7
+    exempt-placing-while-digging: false
+
+Reach:
+    # De combien devrions-nous agrandir les hitboxes ? Une augmentation de 0,0005 devrait détecter une portée de 3,0005 ou plus.
+    #
+    # Il y a un agrandissement forcé de 0,03 avec les versions 1.9 à 1.18.1 (pas 1.18.2) ou certaines combinaisons client/serveur en raison
+    # des changements et limitations du protocole. Cette vérification est particulièrement puissante avec les clients 1.7/1.8 sur les serveurs 1.8.
+    threshold: 0.0005
+    # Devons-nous annuler les coups que nous savons impossibles ?
+    # Les coups entre 3,00 et 3,03 peuvent passer mais seront quand même signalés en raison des limitations de l'ordre des paquets.
+    block-impossible-hits: true
+    # Cela enverra un paquet supplémentaire à la fin de chaque tick pour augmenter les chances de détecter les triches.
+    # Cela s'injecte dans la liste de connexions du serveur pour envoyer un dernier paquet juste avant que le serveur ne le vide.
+    # Activer cette fonctionnalité augmentera l'utilisation de la bande passante pour tous les joueurs.
+    # Cela n'entraînera pas de diminution des performances globales du serveur.
+    # Activer cette fonctionnalité permettra de détecter davantage de tricheurs.
+    # Laisser cette fonctionnalité désactivée permettra tout de même de détecter les tricheurs et n'entraînera pas de faux positifs.
+    # À moins d'être un serveur axé sur le PvP en 1.8, l'envoi de ce paquet supplémentaire n'est pas recommandé.
+    enable-post-packet: false
+
+exploit:
+    allow-sprint-jumping-when-using-elytra: true
+    # Cette option atténue le placement du joueur sur les ghostblocks en resynchronisant le joueur lorsque cela se produit.
+    allow-building-on-ghostblocks: true
+    distance-to-check-if-ghostblocks: 2
+
+# Activer l'enregistrement des plugins ayant injecté dans Netty lors de la connexion pour déboguer les problèmes de compatibilité
+debug-pipeline-on-join: false
+
+# Active les vérifications expérimentales
+experimental-checks: false
+
+reset-item-usage-on-item-update: true
+reset-item-usage-on-attack: true
+reset-item-usage-on-slot-change: true
+reset-item-usage-on-item-use: true
+
+# Grim annule parfois des paquets illégaux, comme ceux liés au chronomètre, après avoir annulé X paquets en une seconde,
+# à partir de combien de paquets annulés devrions-nous simplement expulser le joueur ?
+# Cela est nécessaire car certains limiteurs de paquets ne comptent pas les paquets annulés par Grim.
+packet-spam-threshold: 100
+# Activez ceci pour afficher une trace de pile lorsqu’un joueur est expulsé à cause du packet-spam-threshold
+debug-packet-cancel: false
+
+# Grim peut faire en sorte qu’un joueur sorti de l’état de vol n’ait pas plus de X ms de ping
+# Cela est dû au fait que Grim ne vérifie pas encore les joueurs en vol
+# Pour désactiver, utilisez -1
+max-ping-out-of-flying: 1000
+
+# Ping maximal lorsque la propulsion de feu d’artifice est retirée du joueur.
+# Cela empêche les joueurs à forte latence d’utiliser indéfiniment un seul boost de feu d’artifice avec une élytra.
+max-ping-firework-boost: 1000
+
+# Marqueurs de schéma — ne modifier qu'en sachant ce que l'on fait.
+#   config-flavor:  V2 = build Grim 2.x, V3 = Grim 3.x. Le plugin refuse de
+#                   charger une config dont le flavor ne correspond pas à son
+#                   propre build : une config V3 ouverte par un jar V2 échoue
+#                   immédiatement au lieu de fusionner silencieusement dans
+#                   les mauvaises clés.
+#   config-version: incrémenté à chaque changement de forme incompatible. Les
+#                   anciennes configs sont migrées automatiquement par
+#                   l'updater intégré au prochain démarrage.
+# Grim actualise toujours les permissions mises en cache quand un joueur rejoint
+# le serveur et quand Grim est rechargé, que LuckPerms soit installé ou non.
+# Les hooks d'événements LuckPerms actualisent aussi immédiatement les permissions
+# Grim mises en cache dans les configurations normales.
+# Ce repli périodique n'est nécessaire que pour les changements de permissions en
+# ligne non couverts par ces événements, comme un contexte LuckPerms personnalisé
+# qui n'appelle pas signalContextUpdate, des lacunes de contexte sur Fabric ou un
+# fournisseur de permissions autre que LuckPerms qui change les permissions en direct.
+# Mettez -1 pour désactiver le sondage. Mettez une valeur positive pour actualiser tous les X ticks.
+update-permission-ticks: -1
+
+config-flavor: V2
+config-version: 12
+
+# Aero AC neural module. Every stage is opt-in and each one needs `enabled: true` above it.
+# neural.enabled alone collects nothing: a consumer (collection, inference or risk) must be on too.
+# Telemetry starts at a player's first attack and stops again after idle-timeout-seconds of no combat.
+neural:
+    enabled: false
+    collection:
+        # Explicit, operator-started dataset recording. See docs/dataset.md.
+        enabled: false
+        target-timeout-ticks: 40
+        queue-capacity: 256
+        max-sessions: 16
+        max-duration-seconds: 1800
+        max-session-mib: 128
+        max-total-mib: 1024
+    windows:
+        continuous-size: 96
+        attack-before: 20
+        attack-after: 10
+    telemetry:
+        # Frames stop being collected once combat has been quiet this long.
+        idle-timeout-seconds: 30
+    inference:
+        # Requires a running model service; see docs/inference.md. Monitoring only, never a punishment.
+        enabled: false
+        mode: remote
+        endpoint: "http://127.0.0.1:8080/predict"
+        timeout-ms: 300
+        max-in-flight: 8
+        min-interval-ms: 500
+        flash:
+            # attack: one request per completed attack window. continuous: the last N samples.
+            window: attack
+            sequence-length: 31
+        pro:
+            # The larger model runs only when Flash already reported at least trigger-overall.
+            enabled: false
+            window: continuous
+            sequence-length: 96
+            trigger-overall: 0.5
+            min-interval-ms: 2000
+    risk:
+        # Accumulates evidence over time. A single high prediction can never reach CONFIRMED alone.
+        enabled: false
+        # An uncalibrated model output is not a probability; leave this false unless you know why.
+        accept-uncalibrated: false
+        decay-per-second: 0.01
+        max-risk: 20.0
+        ai-weight: 0.5
+        ai-threshold: 0.80
+        ai-clear-threshold: 0.20
+        ai-relief: 0.15
+        grim-weight: 0.5
+        watch: 2.0
+        suspicious: 6.0
+        confirmed: 12.0
+        snapshot-threshold: 8.0
+        max-snapshots-per-hour: 12
+        snapshot-before: 64
+        snapshot-after: 32
+    mitigation:
+        # Phase 6. Turn on only after measuring the false positive rate on your own server.
+        enabled: false
+        min-state: MITIGATED
+        cancel-attacks: false
+        duration-seconds: 30
+        max-per-hour: 20
+    training:
+        # The training service, separate from inference: inference answers questions about a
+        # running model, this starts and watches runs that produce one. Both are off unless the
+        # server has something to talk to.
+        enabled: false
+        endpoint: "http://127.0.0.1:8090"
+        timeout-ms: 2000
+        # Required when the training service listens outside loopback. Protect this configuration;
+        # an empty token is valid only for a loopback service.
+        token: ""
+        # Server-side directory name under the service's allowed root. Point the service at the
+        # plugin data directory to train the recorder's plugins/AeroAC/datasets corpus.
+        dataset: "datasets"
+    gui:
+        # The /aero administrator interface. Reading only: nothing under this key can change a
+        # prediction, a risk value, a mitigation, or what a dataset session records.
+        enabled: true
+        # How often the published snapshot behind every screen is rebuilt.
+        refresh-ms: 1000
+        floating:
+            # The risk indicator above a player, drawn as a viewer-only packet entity. No Bukkit
+            # entity or scoreboard team is created, and players without permission never see it.
+            enabled: true
+            refresh-ms: 500
+            # off | all | suspicious | auto
+            default-mode: suspicious
+        alerts:
+            # One alert per meaningful state transition, never one per prediction.
+            enabled: true
+            min-state: WATCH
+            throttle-seconds: 30
+        training:
+            # Optional read-only report adapter; empty = NOT CONFIGURED. Relative to plugin data folder.
+            report-directory: "reports"
+            # Recommended collection targets shown as progress bars while recording. They are
+            # operator guidance only: missing them does not make a session bad, and meeting them
+            # does not make it reviewed, calibrated or usable.
+            target-duration-seconds: 300
+            target-attack-windows: 150
+            # Presets offered by the recording wizard. Extend them freely; the wizard also lets an
+            # operator type a value the list does not contain.
+            scenarios: [box-pvp, tracking, flick, strafe, flat-duel, custom]
+            cheat-families: [aim-assist, kill-aura, trigger-bot, reach, auto-clicker, other]
+            client-families: []
+            # Coverage goals for the collection helper screen. They say what you still want to
+            # record; they say nothing about the false positive rate the dataset can support.
+            goal-sessions-per-assist-strength: 20
+            goal-distinct-cheat-clients: 5
+            goal-high-ping-legit-sessions: 20
+        dataset:
+            # The dataset summary is read off the main thread and cached for this long.
+            cache-seconds: 60
+            max-sessions: 5000
+            recent-sessions: 45
+    enforcement:
+        # Whether the anticheat may ask for a ban, and who decides.
+        #
+        #   off        -- nothing is decided and nothing is announced
+        #   announce   -- staff are told what it would have done; a person confirms (default)
+        #   automatic  -- the ban runs on its own
+        #
+        # The default is announce on purpose. The model behind the risk value has not been
+        # calibrated against a labelled dataset recorded on this server, so automatic bans would
+        # remove honest players and nobody would find out until an appeal. Switch to automatic
+        # after measuring your own false positive rate, not before.
+        mode: announce
+        # Everything below is a gate on a verdict the risk engine already reached. Nothing here
+        # changes how risk is computed.
+        min-state: CONFIRMED
+        min-evidence: 12
+        min-predictions: 10
+        # One player is decided on at most once per this many seconds.
+        cooldown-seconds: 600
+        # An announced verdict nobody answered is dropped after this. Silence is a refusal.
+        confirm-timeout-seconds: 900
+        # Run by the console. {player} and {reason} are substituted; point it at whatever
+        # punishment plugin you actually use.
+        command: "ban {player} {reason}"
+        reason: "Aero AC: unfair advantage"
+        animation:
+            # The send-off. Cosmetic from end to end: it decides nothing, and a ban that ran
+            # without it is the same ban. Try it without banning anyone: /aero ban preview <player>
+            enabled: true
+            seconds: 5
+            # Their gear comes off them on the way up, backpack first and armour last, and lands
+            # around the spot for others to pick up. A preview throws copies and keeps everything.
+            scatter-inventory: true
+            # 0 floats up slowly; 1 is about nine blocks over five seconds.
+            levitation-amplifier: 1
+            glow: true
+            # A lightning flash at the top. Effect only: no damage, no fire.
+            lightning: true
+            title: true
+            # Tells the whole server. Previews never broadcast.
+            broadcast: true
+            # Sounds are "key pitch volume". Keys, not enum names, so an unknown key is silence
+            # rather than an error on another version.
+            ascend-sound: "block.beacon.activate 0.6 1.5"
+            # Played once a second on the way up, its pitch climbing toward the top.
+            charge-sound: "block.note_block.bass 0.5 1.0"
+            scatter-sound: "entity.item.break 1.2 0.8"
+            # The bang is layered: all of these at once. Any one of them alone is just a sound.
+            ban-sounds:
+                - "entity.warden.sonic_boom 0.7 2.0"
+                - "entity.lightning_bolt.impact 0.8 1.5"
+                - "entity.firework_rocket.large_blast 0.6 1.5"
+    monitor:
+        interval-ms: 1000
+    debug:
+        enabled: false

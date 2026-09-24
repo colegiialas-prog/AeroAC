@@ -1,0 +1,419 @@
+# Aero AC ana konfigrasyon dosyası
+# Kaynak kodu: https://github.com/MWHunter/Grim
+# Telif Hakkı 2025 DefineOutside ve katkıda bulunanlar, GPLv3 altında lisanslanmıştır.
+# Değiştirilmiş ikili dosyalar veya kopyalanmış grim kodlu eklentiler özel olmalıdır,
+# veya ek ücret ödemeden alıcılara sunulan tam kaynak kodu ile.
+
+alerts:
+    # Oyunculara uyarı yayınlamanın yanı sıra, uyarılar konsola da gönderilmeli mi?
+    print-to-console: true
+    # Bu, uyarıların proxy'nize bağlı sunucular arasında paylaşılıp paylaşılmayacağını/nasıl paylaşılacağını kontrol eder.
+    # Velocity kullanılıyorsa, Velocity yapılandırmanızda 'bungee-plugin-message-channel' etkinleştirilmiş olmalıdır.
+    proxy:
+        # Proxy'nize bağlı diğer sunuculara uyarılar gönderilmeli mi?
+        send: false
+        # Diğer sunuculardan alınan uyarılar bu sunucuya duyurulmalı mı?
+        receive: false
+
+verbose:
+    print-to-console: false
+
+check-for-updates: true
+
+client-brand:
+    # Bu, giriş yapılan clientin aşağıdaki regex'lerle eşleşmesi durumunda markalarını operatörlere yayınlamayacağı anlamına gelir
+    ignored-clients:
+        - "^vanilla$"
+        - "^fabric$"
+        - "^quilt$"
+        - "^lunarclient:v\\d+\\.\\d+\\.\\d+-\\d{4},(?:fabric|forge)$"
+        - "^Feather Fabric$"
+        - "^labymod$"
+    # Grim will blacklist specific Forge versions which include built-in Reach hacks (Forge 1.18.2 to 1.19.3).
+    # Setting this option to false will allow said clients to connect to the server. Disable this at your own risk.
+    disconnect-blacklisted-forge-versions: true
+
+spectators:
+    # Seyirciler aktif olarak izliyor olsalar bile, grim.spectator iznine sahip tüm seyircileri gizle
+    hide-regardless: false
+    # Sadece bu dünyalarda seyircileri gizleyecek, tüm dünyalara izin vermek için boş bırakın
+    allowed-worlds:
+        - ""
+
+# Oyuncuların zaman aşımından dolayı sunucudan atılmadan önce ne kadar süreleri olmalı? Varsayılan = 60 saniye
+max-transaction-time: 60
+
+# Enable this to stop Grim cancelling pongs received from players.
+# This may improve compatibility with other anticheats. It may cause issues with packet limiters.
+# Do not enable this if you are not sure what you are doing.
+disable-pong-cancelling: false
+
+# Varsayılan blok yeniden senkronizasyon işleyicisi devre dışı bırakılsın mı?
+# Varsayılan olarak Grim, blokları sunucu dünyasından okur ve senkronizasyon bozukluğunu düzeltmek için istemciye gönderir.
+# Paket tabanlı sahte bloklar (sunucu dünyasında var olmayan) oluşturan eklentiler kullanıyorsanız,
+# Grim'in bunları hava/gerçek bloklarla üzerine yazmasını önlemek için bunu true olarak ayarlamalısınız.
+# Bu, API aracılığıyla özel bir tane sağlanmadıkça bir "NoOp" (İşlemsiz) işleyicisinin kullanılmasını zorlar.
+disable-default-resync-handler: false
+
+# Kopya hareket paketinin iptal edilip edilmemesi gerektiği
+# Mojang bu sorunu 1.21'de çözdü. Bu, "kova senkronizasyonu" sorununu düzeltme girişimiydi. https://bugs.mojang.com/browse/MC-12363
+# Bu ayar yalnızca 1.17-1.20.5 istemcileri için 1.8 sunucularında geçerlidir.
+cancel-duplicate-packet: true
+
+# Eşya çoğaltma paketlerindeki rotayı göz ardı edip etmeyeceğimiz
+ignore-duplicate-packet-rotation: false
+
+Simulation:
+    # Oyuncu meşru olduğunda toplam avantajı ne kadar çarpmalıyız?
+    # Varsayılan yapılandırma bu şekilde görünür (x ekseni = saniye, y ekseni = 1/1000 blok): https://www.desmos.com/calculator/d4ufgxrxer
+    setback-decay-multiplier: 0.999
+    # Oyuncunun hareketinden ne kadar büyük bir sapma ihlal oluşturmalıyız?
+    # Mümkün olan hareketten blok cinsinden ölçülür
+    # Optifine için trig tablolarını değiştirerek hesaba katıyoruz, ancak bunu 0.001'e düşürmek FastMath'ı azaltır
+    # Bu telafi işe yaramazsa anticheat'i işaretle...
+    threshold: 0.001
+    # Bir tik içinde ne kadar büyük bir ihlal olmalı ki oyuncu hemen geri dönsün?
+    # Devre dışı bırakmak için -1 yazın
+    immediate-setback-threshold: 0.1
+    # Tüm tikler boyunca ne kadar büyük bir avantaja sahip olmalıyız ki geri dönüş yapmaya başlayalım?
+    # Devre dışı bırakmak için -1 yazın
+    max-advantage: 1
+    # Varsayılan config ile 50 saniye sonra, oyuncu 4 bloktan -> 1 bloğa kadar avantaj kazanır
+    # Bu, oyuncunun çok fazla ihlal biriktirmesini ve bunların hepsini temizleyememesini önlemek içindir
+    # Varsayılan avantaj tavanı (x ekseni = saniye, y ekseni = 1/1000 blok): https://www.desmos.com/calculator/4lovswdarj
+    max-ceiling: 4
+    # Geri alma için ihlal seviyesi eşiği
+    # Eski davranış için 1
+    setback-violation-threshold: 1
+
+# Bir oyuncunun bir hareket sırasında bir bloğa girip girmediğini kontrol eder
+Phase:
+    setbackvl: 1 # Blokların içinde glitch yapmak duvara tırmanmaya izin verebilir, ayrıca bu kontrol nispeten stabildir
+    decay: 0.005
+
+AirLiquidPlace:
+    cancelvl: 0
+
+FabricatedPlace:
+    cancelvl: 5
+
+FarPlace:
+    cancelvl: 5
+
+PositionPlace:
+    cancelvl: 5
+
+RotationPlace:
+    cancelvl: 5
+
+# Tahmin tabanlı yavaşlama kontrolü
+# Grim burada hatalı ağ kodunu dikkate alır... sağ tıklama ve el yan tuşunu spam yapsanız bile yanlış pozitiflik oluşturması zordur
+# Diğer anti-hilelerden çok daha stabil, ancak herhangi bir yanlış pozitif rapor edin... burada birçok ağ kodu sorununu çözdüm.
+NoSlow:
+    # Ne kadar bir sapma "hile" olarak kabul edilir?
+    # Varsayılan olarak bu, diğer sapmalardan daha düşüktür
+    # NoSlow açıkken 0.03-0.2 aralığında sürekli olarak uyarı verir
+    threshold: 0.001
+    # NoSlow'un sağladığı avantajı ortadan kaldırmak için ilk itemi hızlı bir şekilde geri alın
+    setbackvl: 5
+    # Oyuncu bir eşya kullandığında VE onun tarafından yavaşlatıldığında beklenilen zaman
+    decay: 0.05
+
+Knockback:
+    # Oyuncu legit olduğunda toplam avantajı ne kadarla çarpmalıyız
+    setback-decay-multiplier: 0.999
+    # Oyuncunun hızından ne kadar büyük bir sapma ihlal oluşturmalıyız?
+    # Mümkün olan hızdan blok cinsinden ölçülür
+    threshold: 0.001
+    # Bir tik içinde ne kadar büyük bir ihlal olmalı ki oyuncu hemen geri dönsün?
+    # Devre dışı bırakmak için -1 yazın
+    immediate-setback-threshold: 0.1
+    # Tüm tikler boyunca ne kadar büyük bir avantaja sahip olmalıyız ki geri dönüş yapmaya başlayalım?
+    # Devre dışı bırakmak için -1 yazın
+    max-advantage: 1
+    # Bu, oyuncunun çok fazla ihlal toplamasını ve asla hepsini temizleyememesini engellemek içindir
+    max-ceiling: 4
+
+Explosion:
+    threshold: 0.001
+    setbackvl: 3
+
+TimerA:
+    setbackvl: 10
+    # Oyuncunun geri kaldığında biriktirebileceği milisaniye miktarı
+    # Çok yüksek ayarlandığında 1.8 hızlı kullanma/hızlı iyileşme/hızlı yay atlama durumlarına izin verebilir, 120 ms iyi bir denge gibi görünüyor
+    drift: 120
+
+# This check limits abuse of the TimerA balance by preventing the player's movement falling too far behind realtime
+TimerLimit:
+    # Kontrolün zamanlayıcı dengesini sınırlamaya başlayacağı ping değeri, kötüye kullanımı önlemek için.
+    # Bu, yalnızca bu ping eşiğini aşan meşru oyuncular için bazı geri dönüşlere neden olabilir.
+    # Devre dışı bırakmak için -1 yazın
+    ping-abuse-limit-threshold: 1000
+
+NegativeTimer:
+    # Uyarı vermeye başlamadan önce hareket halindeyken kaybedilen milisaniye sayısı
+    drift: 1200
+
+    # TimerA ile aynı kontrol yöntemi, ancak araçlar için
+VehicleTimer:
+    # Hedef 1.005 timer
+    setbackvl: 10
+
+PacketOrderI:
+    # Oyuncular 1.7 animasyon modlarını kullandıkları için işaretleniyorsa etkinleştirin
+    exempt-placing-while-digging: false
+
+Reach:
+    # Hitbox'ları ne kadar genişletmeliyiz? 0.0005, 3.0005+ menzili tespit etmelidir
+    #
+    # 1.9-1.18.1 (1.18.2 değil) ile zorunlu olarak 0.03 genişletme vardır veya bazı istemci/sunucu kombinasyonları nedeniyle
+    # protokol değişiklikleri ve sınırlamaları nedeniyle. Bu kontrol, 1.7/1.8 istemcilerle 1.8 sunucularda en güçlüdür.
+    threshold: 0.0005
+    # İmkansız olduğunu bildiğimiz vuruşları iptal etmeli miyiz?
+    # Paket sırası sınırlamaları nedeniyle 3.00-3.03 arası vuruşlar gerçekleşebilir, ancak yine de işaretlenebilir
+    block-impossible-hits: true
+    # Bu, hileleri yakalama olasılığını artırmak için her tikin sonunda ek bir paket gönderecektir
+    # Bu, sunucunun bağlantı listesine enjekte edilerek sunucu boşaltmadan hemen önce son bir paket göndermek için yapılır
+    # Bunu etkinleştirmek, tüm oyuncular için bant genişliği kullanımını artıracaktır
+    # Bu, genel sunucu performansını düşürmez
+    # Bunu etkinleştirmek, daha fazla hilecinin yakalanmasını sağlar
+    # Bu özellik devre dışı bırakılsa bile hileciler yakalanır ve yanlış pozitifler oluşmaz
+    # 1.8 PvP odaklı bir sunucu değilseniz, bu ek paket önerilmez
+    enable-post-packet: false
+
+exploit:
+    # Elytra ile sprint zıplarken yüksek hızlar kazanabilirsiniz, bu ayar false olarak ayarlandığında bu istismarı önler
+    # Mojang, elytra'nın istemci tarafında başlamasını ve sunucu tarafında bitmesini sağlayarak netcode'u bozdu
+    # Elytra'lar 0.99 yatay sürtünme alır, bu yüzden sürekli olarak 0.2 yatay hız eklemek çok yüksek hızlara yol açar
+    allow-sprint-jumping-when-using-elytra: true
+    # Bu seçenek, oyuncunun hayalet bloklar üzerindeki yerleşimini, gerçekleştiğinde oyuncuyu yeniden senkronize ederek hafifletir
+    allow-building-on-ghostblocks: true
+    # Bu ayar, yukarıdaki boolean ile etkilenen hayalet blokları kontrol etmek için mesafeyi tanımlar
+    # Geçerli aralığı 2 ile 4 arasında sınırlıdır
+    distance-to-check-if-ghostblocks: 2
+
+# Netty'ye enjekte olan eklentileri giriş sırasında günlüklemeyi etkinleştirerek uyumluluk sorunlarını gider
+debug-pipeline-on-join: false
+
+# Deneysel kontrolleri etkinleştir
+experimental-checks: false
+
+reset-item-usage-on-item-update: true
+reset-item-usage-on-attack: true
+reset-item-usage-on-slot-change: true
+reset-item-usage-on-item-use: true
+
+# Grim bazen timer gibi yasa dışı paketleri iptal eder; bir saniyede X paket iptal edildikten sonra, ne zaman
+# oyuncuyu basitçe atmalıyız? Bu, bazı paket sınırlayıcılarının Grim tarafından iptal edilen paketleri saymaması gerektiğindendir.
+packet-spam-threshold: 100
+# Bir oyuncu packet-spam-threshold nedeniyle atıldığında stacktrace yazdırmak için bunu etkinleştirin
+debug-packet-cancel: false
+
+# Grim, uçma durumundan çıkmış bir oyuncunun X milisaniyeden fazla ping'e sahip olamayacağını uygulayabilir
+# Bu, Grim'in şu anda uçan oyuncuları kontrol etmemesindendir
+# Devre dışı bırakmak için -1 yazın
+max-ping-out-of-flying: 1000
+
+# Bir havai fişek ivmesi oyuncudan çıkarıldığında maksimum ping.
+# Bu, yüksek gecikmeli oyuncuların bir havai fişek ivmesini elytra ile sonsuza kadar kullanmalarını engeller.
+max-ping-firework-boost: 1000
+
+# Şema işaretçileri — yalnızca ne yaptığınızı biliyorsanız değiştirin.
+#   config-flavor:  V2 = Grim 2.x derlemesi, V3 = Grim 3.x. Eklenti, flavor'ı
+#                   kendi derlemesiyle uyuşmayan bir config'i yüklemeyi
+#                   reddeder; V3 config'i V2 jar ile açılırsa, yanlış
+#                   anahtarlara sessizce karışmak yerine hemen başarısız olur.
+#   config-version: her geriye dönük uyumsuz biçim değişikliğinde artırılır.
+#                   Eski config'ler bir sonraki başlatmada, pakete dahil
+#                   updater tarafından otomatik taşınır.
+# LuckPerms kurulu olsun ya da olmasın, bir oyuncu katıldığında ve Grim yeniden
+# yüklendiğinde Grim önbellekteki izinleri her zaman yeniler.
+# LuckPerms olay hook'ları normal kurulumlarda önbellekteki Grim izinlerini de
+# anında yeniler.
+# Bu periyodik yedek yalnızca bu olayların kapsamadığı çevrim içi izin
+# değişiklikleri için gereklidir; örneğin signalContextUpdate çağırmayan özel bir
+# LuckPerms context'i, Fabric context boşlukları veya LuckPerms dışında izinleri
+# canlı olarak değiştiren bir izin sağlayıcısı.
+# Yoklamayı devre dışı bırakmak için -1 kullanın. Her X tick'te yenilemek için pozitif bir değer kullanın.
+update-permission-ticks: -1
+
+config-flavor: V2
+config-version: 12
+
+# Aero AC neural module. Every stage is opt-in and each one needs `enabled: true` above it.
+# neural.enabled alone collects nothing: a consumer (collection, inference or risk) must be on too.
+# Telemetry starts at a player's first attack and stops again after idle-timeout-seconds of no combat.
+neural:
+    enabled: false
+    collection:
+        # Explicit, operator-started dataset recording. See docs/dataset.md.
+        enabled: false
+        target-timeout-ticks: 40
+        queue-capacity: 256
+        max-sessions: 16
+        max-duration-seconds: 1800
+        max-session-mib: 128
+        max-total-mib: 1024
+    windows:
+        continuous-size: 96
+        attack-before: 20
+        attack-after: 10
+    telemetry:
+        # Frames stop being collected once combat has been quiet this long.
+        idle-timeout-seconds: 30
+    inference:
+        # Requires a running model service; see docs/inference.md. Monitoring only, never a punishment.
+        enabled: false
+        mode: remote
+        endpoint: "http://127.0.0.1:8080/predict"
+        timeout-ms: 300
+        max-in-flight: 8
+        min-interval-ms: 500
+        flash:
+            # attack: one request per completed attack window. continuous: the last N samples.
+            window: attack
+            sequence-length: 31
+        pro:
+            # The larger model runs only when Flash already reported at least trigger-overall.
+            enabled: false
+            window: continuous
+            sequence-length: 96
+            trigger-overall: 0.5
+            min-interval-ms: 2000
+    risk:
+        # Accumulates evidence over time. A single high prediction can never reach CONFIRMED alone.
+        enabled: false
+        # An uncalibrated model output is not a probability; leave this false unless you know why.
+        accept-uncalibrated: false
+        decay-per-second: 0.01
+        max-risk: 20.0
+        ai-weight: 0.5
+        ai-threshold: 0.80
+        ai-clear-threshold: 0.20
+        ai-relief: 0.15
+        grim-weight: 0.5
+        watch: 2.0
+        suspicious: 6.0
+        confirmed: 12.0
+        snapshot-threshold: 8.0
+        max-snapshots-per-hour: 12
+        snapshot-before: 64
+        snapshot-after: 32
+    mitigation:
+        # Phase 6. Turn on only after measuring the false positive rate on your own server.
+        enabled: false
+        min-state: MITIGATED
+        cancel-attacks: false
+        duration-seconds: 30
+        max-per-hour: 20
+    training:
+        # The training service, separate from inference: inference answers questions about a
+        # running model, this starts and watches runs that produce one. Both are off unless the
+        # server has something to talk to.
+        enabled: false
+        endpoint: "http://127.0.0.1:8090"
+        timeout-ms: 2000
+        # Required when the training service listens outside loopback. Protect this configuration;
+        # an empty token is valid only for a loopback service.
+        token: ""
+        # Server-side directory name under the service's allowed root. Point the service at the
+        # plugin data directory to train the recorder's plugins/AeroAC/datasets corpus.
+        dataset: "datasets"
+    gui:
+        # The /aero administrator interface. Reading only: nothing under this key can change a
+        # prediction, a risk value, a mitigation, or what a dataset session records.
+        enabled: true
+        # How often the published snapshot behind every screen is rebuilt.
+        refresh-ms: 1000
+        floating:
+            # The risk indicator above a player, drawn as a viewer-only packet entity. No Bukkit
+            # entity or scoreboard team is created, and players without permission never see it.
+            enabled: true
+            refresh-ms: 500
+            # off | all | suspicious | auto
+            default-mode: suspicious
+        alerts:
+            # One alert per meaningful state transition, never one per prediction.
+            enabled: true
+            min-state: WATCH
+            throttle-seconds: 30
+        training:
+            # Optional read-only report adapter; empty = NOT CONFIGURED. Relative to plugin data folder.
+            report-directory: "reports"
+            # Recommended collection targets shown as progress bars while recording. They are
+            # operator guidance only: missing them does not make a session bad, and meeting them
+            # does not make it reviewed, calibrated or usable.
+            target-duration-seconds: 300
+            target-attack-windows: 150
+            # Presets offered by the recording wizard. Extend them freely; the wizard also lets an
+            # operator type a value the list does not contain.
+            scenarios: [box-pvp, tracking, flick, strafe, flat-duel, custom]
+            cheat-families: [aim-assist, kill-aura, trigger-bot, reach, auto-clicker, other]
+            client-families: []
+            # Coverage goals for the collection helper screen. They say what you still want to
+            # record; they say nothing about the false positive rate the dataset can support.
+            goal-sessions-per-assist-strength: 20
+            goal-distinct-cheat-clients: 5
+            goal-high-ping-legit-sessions: 20
+        dataset:
+            # The dataset summary is read off the main thread and cached for this long.
+            cache-seconds: 60
+            max-sessions: 5000
+            recent-sessions: 45
+    enforcement:
+        # Whether the anticheat may ask for a ban, and who decides.
+        #
+        #   off        -- nothing is decided and nothing is announced
+        #   announce   -- staff are told what it would have done; a person confirms (default)
+        #   automatic  -- the ban runs on its own
+        #
+        # The default is announce on purpose. The model behind the risk value has not been
+        # calibrated against a labelled dataset recorded on this server, so automatic bans would
+        # remove honest players and nobody would find out until an appeal. Switch to automatic
+        # after measuring your own false positive rate, not before.
+        mode: announce
+        # Everything below is a gate on a verdict the risk engine already reached. Nothing here
+        # changes how risk is computed.
+        min-state: CONFIRMED
+        min-evidence: 12
+        min-predictions: 10
+        # One player is decided on at most once per this many seconds.
+        cooldown-seconds: 600
+        # An announced verdict nobody answered is dropped after this. Silence is a refusal.
+        confirm-timeout-seconds: 900
+        # Run by the console. {player} and {reason} are substituted; point it at whatever
+        # punishment plugin you actually use.
+        command: "ban {player} {reason}"
+        reason: "Aero AC: unfair advantage"
+        animation:
+            # The send-off. Cosmetic from end to end: it decides nothing, and a ban that ran
+            # without it is the same ban. Try it without banning anyone: /aero ban preview <player>
+            enabled: true
+            seconds: 5
+            # Their gear comes off them on the way up, backpack first and armour last, and lands
+            # around the spot for others to pick up. A preview throws copies and keeps everything.
+            scatter-inventory: true
+            # 0 floats up slowly; 1 is about nine blocks over five seconds.
+            levitation-amplifier: 1
+            glow: true
+            # A lightning flash at the top. Effect only: no damage, no fire.
+            lightning: true
+            title: true
+            # Tells the whole server. Previews never broadcast.
+            broadcast: true
+            # Sounds are "key pitch volume". Keys, not enum names, so an unknown key is silence
+            # rather than an error on another version.
+            ascend-sound: "block.beacon.activate 0.6 1.5"
+            # Played once a second on the way up, its pitch climbing toward the top.
+            charge-sound: "block.note_block.bass 0.5 1.0"
+            scatter-sound: "entity.item.break 1.2 0.8"
+            # The bang is layered: all of these at once. Any one of them alone is just a sound.
+            ban-sounds:
+                - "entity.warden.sonic_boom 0.7 2.0"
+                - "entity.lightning_bolt.impact 0.8 1.5"
+                - "entity.firework_rocket.large_blast 0.6 1.5"
+    monitor:
+        interval-ms: 1000
+    debug:
+        enabled: false

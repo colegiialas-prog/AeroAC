@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "aeroac",
+  "version": "${version}",
+  "name": "AeroAC",
+  "description": "Aero AC Fabric meta-mod aggregator. Loads the intermediary or official variant by Minecraft version range.",
+  "license": "GPL-3.0",
+  "environment": "*",
+  "depends": {
+    "minecraft": [">=1.16.1 <26", ">=26.1.2 <26.3"],
+    "java": ">=17",
+    "fabricloader": ">=0.16"
+  }
+}

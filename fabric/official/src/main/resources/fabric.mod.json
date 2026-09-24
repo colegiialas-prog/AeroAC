@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "id": "aeroac-fabric-official",
+  "version": "${version}",
+  "name": "AeroAC (Fabric, official mappings)",
+  "description": "Aero AC for Minecraft 26.1-26.2. Official-mapped platform compiled against the deobfuscated 26.X jar; the intermediary sibling covers 1.16.1-1.21.11.",
+  "license": "GPLv3",
+  "environment": "server",
+  "entrypoints": {
+    "preLaunch": [
+      "dev.aeroac.platform.fabric.AeroACFabricOfficialEntryPoint"
+    ],
+    "main": [
+      "dev.aeroac.platform.fabric.AeroACFabricOfficialEntryPoint"
+    ]
+  },
+  "mixins": [
+    "aeroac.mixins.json"
+  ],
+  "accessWidener": "aeroac.accesswidener",
+  "custom": {
+    "loom:injected_interfaces": {
+      "net/minecraft/world/level/Level": [
+        "dev/aeroac/platform/api/world/PlatformWorld"
+      ],
+      "net/minecraft/world/entity/Entity": [
+        "dev/aeroac/platform/fabric/inject/FabricEntityHandle"
+      ],
+      "net/minecraft/server/level/ServerPlayer": [
+        "dev/aeroac/platform/fabric/inject/FabricServerPlayerHandle"
+      ],
+      "net/minecraft/server/MinecraftServer": [
+        "dev/aeroac/platform/fabric/inject/FabricMinecraftServerHandle"
+      ],
+      "net/minecraft/commands/CommandSourceStack": [
+        "dev/aeroac/platform/api/sender/Sender"
+      ]
+    }
+  },
+  "depends": {
+    "minecraft": ">=26.1.2 <26.3",
+    "java": ">=25",
+    "fabricloader": ">=0.19",
+    "fabric-lifecycle-events-v1": "*",
+    "packetevents": "*"
+  },
+  "recommends": {
+    "luckperms": "*"
+  }
+}

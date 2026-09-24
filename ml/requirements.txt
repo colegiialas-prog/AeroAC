@@ -1,0 +1,3 @@
+# Dataset pipeline only: loader, windows, features, splits, normalisation, metrics, calibration.
+# Deliberately minimal so dataset work and evaluation run anywhere.
+numpy>=1.24

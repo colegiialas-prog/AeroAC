@@ -1,0 +1,17 @@
+Metadata-Version: 2.4
+Name: aeroml
+Version: 0.1.0
+Summary: Aero AC dataset pipeline, combat models and inference service
+Requires-Python: >=3.10
+Requires-Dist: numpy>=1.24
+Provides-Extra: train
+Requires-Dist: torch>=2.1; extra == "train"
+Requires-Dist: onnx>=1.15; extra == "train"
+Requires-Dist: onnxruntime>=1.17; extra == "train"
+Requires-Dist: onnxscript>=0.1; extra == "train"
+Provides-Extra: serve
+Requires-Dist: onnxruntime>=1.17; extra == "serve"
+Requires-Dist: fastapi>=0.110; extra == "serve"
+Requires-Dist: uvicorn>=0.27; extra == "serve"
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"

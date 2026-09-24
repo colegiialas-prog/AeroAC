@@ -1,0 +1,4 @@
+[console_scripts]
+aero-serve = aeroml.service.app:main
+aero-synthetic = aeroml.tools.make_synthetic:main
+aero-train = aeroml.training.train:main
