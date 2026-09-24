@@ -335,7 +335,9 @@ public class UncertaintyHandler {
         final PacketEntity riding = player.compensatedEntities.self.getRiding();
         for (PacketEntity entity : player.compensatedEntities.entityMap.values()) {
             if ((entity.isBoat || entity.getType() == EntityTypes.SHULKER || entity.isHappyGhast) && entity != riding
-                    && entity.getPossibleCollisionBoxes().isIntersected(expandedBB)) {
+                    && entity.getPossibleCollisionBoxes().isIntersected(expandedBB)
+                    // Boats at a known position are collided with like blocks, no need to excuse them
+                    && player.compensatedEntities.getSimulatedCollisionBox(entity) == null) {
                 return true;
             }
         }

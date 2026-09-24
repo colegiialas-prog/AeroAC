@@ -407,4 +407,20 @@ public class ReachInterpolationData {
     public void expandNonRelative() {
         expandNonRelative = true;
     }
+
+    /**
+     * @return the entity's hitbox when every possible interpolation step puts it at one exact position,
+     * otherwise null
+     */
+    public @Nullable SimpleCollisionBox getExactHitbox() {
+        if (expandNonRelative) return null;
+
+        SimpleCollisionBox location = getPossibleLocationCombined();
+        if (location.minX != location.maxX || location.minY != location.maxY || location.minZ != location.maxZ) {
+            return null;
+        }
+
+        GetBoundingBox.expandBoundingBoxByEntityDimensions(location, player, entity);
+        return location;
+    }
 }

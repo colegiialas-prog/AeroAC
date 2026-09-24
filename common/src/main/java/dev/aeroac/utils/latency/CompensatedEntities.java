@@ -29,6 +29,7 @@ import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerUp
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +43,12 @@ public class CompensatedEntities {
     public static final UUID SPRINTING_MODIFIER_UUID = UUID.fromString("662A6B8D-DA3E-4C1C-8813-96EA6097278D");
     public static final UUID SNOW_MODIFIER_UUID = UUID.fromString("1eaf83ff-7207-4596-b37a-d7a07b3ec4ce");
 
+    // ViaVersion rewrites boat positions between 1.8 and 1.9, so boats are only simulated when neither side is legacy
+    private static final boolean SERVER_HAS_MODERN_BOATS = PacketEvents.getAPI().getServerManager().getVersion().isNewerThanOrEquals(ServerVersion.V_1_9);
+
     public final Int2ObjectOpenHashMap<PacketEntity> entityMap = new Int2ObjectOpenHashMap<>(40, 0.7f);
+    // Every boat in entityMap, so collision lookups don't have to scan all entities
+    private final List<PacketEntity> boats = new ArrayList<>();
     public final IntArraySet entitiesRemovedThisTick = new IntArraySet();
     public final Int2ObjectOpenHashMap<TrackerData> serverPositionsMap = new Int2ObjectOpenHashMap<>(40, 0.7f);
     public final Object2ObjectOpenHashMap<UUID, UserProfile> profiles = new Object2ObjectOpenHashMap<>();
@@ -79,6 +85,7 @@ public class CompensatedEntities {
     public void removeEntity(int entityID) {
         PacketEntity entity = entityMap.remove(entityID);
         if (entity == null) return;
+        if (entity.isBoat) boats.remove(entity);
 
         if (entity instanceof PacketEntityEnderDragon dragon) {
             for (int i = 1; i < dragon.getParts().size() + 1; i++) {
@@ -223,8 +230,45 @@ public class CompensatedEntities {
             packetEntity = new PacketEntity(player, uuid, entityType, position.getX(), position.getY(), position.getZ());
         }
 
-        entityMap.put(entityID, packetEntity);
+        PacketEntity replaced = entityMap.put(entityID, packetEntity);
+        if (replaced != null && replaced.isBoat) boats.remove(replaced);
+        if (packetEntity.isBoat) boats.add(packetEntity);
         return packetEntity;
+    }
+
+    public void clearEntities() {
+        entityMap.clear();
+        boats.clear();
+    }
+
+    /**
+     * A boat the client is known to see at one exact position is as solid to it as a block, so it is simulated
+     * as one. Only boats whose position is uncertain - moving, or waiting on a transaction - fall back to the
+     * hard lerping entity lenience.
+     *
+     * @return the boat's collision box if it is simulated, otherwise null
+     */
+    public @Nullable SimpleCollisionBox getSimulatedCollisionBox(PacketEntity entity) {
+        if (!entity.isBoat || entity == self.getRiding() || !SERVER_HAS_MODERN_BOATS
+                || player.getClientVersion().isOlderThan(ClientVersion.V_1_9)) {
+            return null;
+        }
+        return entity.getSettledCollisionBox();
+    }
+
+    /**
+     * Adds the collision boxes of simulated boats touching the box.
+     *
+     * @return whether one touched it, when only checking for a collision
+     */
+    public boolean addSimulatedCollisionBoxes(SimpleCollisionBox wantedBB, @Nullable List<SimpleCollisionBox> listOfBoxes, boolean onlyCheckCollide) {
+        for (PacketEntity boat : boats) {
+            SimpleCollisionBox box = getSimulatedCollisionBox(boat);
+            if (box == null || !box.isCollided(wantedBB)) continue;
+            if (onlyCheckCollide) return true;
+            listOfBoxes.add(box);
+        }
+        return false;
     }
 
     public PacketEntity getEntity(int entityID) {

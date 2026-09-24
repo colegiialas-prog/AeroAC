@@ -388,6 +388,14 @@ public class PacketEntityReplication extends Check implements PacketCheck {
                 }
             }
 
+            // The client may drop the entities any time after the transaction before this packet
+            player.latencyUtils.addRealTimeTask(player.lastTransactionSent.get(), () -> {
+                for (int entityId : destroyEntityIds) {
+                    PacketEntity entity = player.compensatedEntities.getEntity(entityId);
+                    if (entity != null) entity.presenceUncertain = true;
+                }
+            });
+
             final int destroyTransaction = player.lastTransactionSent.get() + 1;
             player.latencyUtils.addRealTimeTask(destroyTransaction, () -> {
                 for (int entityId : destroyEntityIds) {
@@ -535,8 +543,14 @@ public class PacketEntityReplication extends Check implements PacketCheck {
 
         player.compensatedEntities.serverPositionsMap.put(entityID, new TrackerData(position.getX(), position.getY(), position.getZ(), xRot, yRot, type, player.lastTransactionSent.get()));
 
+        // The entity is added once the transaction before the spawn is answered, and the client surely has it
+        // once the transaction after it is
+        final PacketEntity[] spawned = new PacketEntity[1];
         player.latencyUtils.addRealTimeTask(player.lastTransactionSent.get(), () -> {
             PacketEntity entity = player.compensatedEntities.addEntity(entityID, uuid, type, position, xRot, extraData);
+            if (entity == null) return;
+            entity.presenceUncertain = true;
+            spawned[0] = entity;
             if (entity instanceof DashableEntity dashable) {
                 player.dashableEntities.addEntity(entityID, dashable);
             }
@@ -551,6 +565,9 @@ public class PacketEntityReplication extends Check implements PacketCheck {
 
                 player.compensatedEntities.updateEntityMetadata(entityID, entityMetadata);
             }
+        });
+        player.latencyUtils.addRealTimeTask(player.lastTransactionSent.get() + 1, () -> {
+            if (spawned[0] != null) spawned[0].presenceUncertain = false;
         });
     }
 

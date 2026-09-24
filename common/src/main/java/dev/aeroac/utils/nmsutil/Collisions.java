@@ -254,12 +254,21 @@ public final class Collisions {
         return false;
     }
 
-    // This is mostly taken from Tuinity collisions
     public static boolean getCollisionBoxes(AeroPlayer player, SimpleCollisionBox wantedBB, List<SimpleCollisionBox> listOfBlocks, boolean onlyCheckCollide) {
+        return getCollisionBoxes(player, wantedBB, listOfBlocks, onlyCheckCollide, true);
+    }
+
+    // This is mostly taken from Tuinity collisions
+    public static boolean getCollisionBoxes(AeroPlayer player, SimpleCollisionBox wantedBB, List<SimpleCollisionBox> listOfBlocks, boolean onlyCheckCollide, boolean includeEntities) {
         SimpleCollisionBox expandedBB = wantedBB.copy();
 
         boolean collided = addWorldBorder(player, wantedBB, listOfBlocks, onlyCheckCollide);
         if (onlyCheckCollide && collided) return true;
+
+        // Vanilla collides with entities like boats alongside blocks
+        if (includeEntities && player.compensatedEntities.addSimulatedCollisionBoxes(wantedBB, listOfBlocks, onlyCheckCollide)) {
+            return true;
+        }
 
         int minBlockX = (int) Math.floor(expandedBB.minX - COLLISION_EPSILON) - 1;
         int maxBlockX = (int) Math.floor(expandedBB.maxX + COLLISION_EPSILON) + 1;

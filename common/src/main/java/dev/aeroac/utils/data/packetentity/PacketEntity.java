@@ -72,6 +72,8 @@ public class PacketEntity extends TypedPacketEntity {
     private EnumMap<EquipmentSlot, ItemStack> equipment = null;
     public Pose currentPose = Pose.STANDING;
     public Pose transitionalPose = null;
+    // Whether the client might not have this entity: spawned but not confirmed yet, or already being destroyed
+    public boolean presenceUncertain = false;
 
     public PacketEntity(AeroPlayer player, EntityType type) {
         super(type);
@@ -307,6 +309,22 @@ public class PacketEntity extends TypedPacketEntity {
         }
 
         return ReachInterpolationData.combineCollisionBox(oldPacketLocation.getPossibleHitboxCombined(), newPacketLocation.getPossibleHitboxCombined());
+    }
+
+    /**
+     * @return the collision box the client has this entity at when it is known exactly - the client surely has
+     * the entity and has no interpolation left, on both sides of a transaction split - otherwise null
+     */
+    public @Nullable SimpleCollisionBox getSettledCollisionBox() {
+        if (presenceUncertain) return null;
+
+        SimpleCollisionBox box = newPacketLocation.getExactHitbox();
+        if (box == null || oldPacketLocation == null) return box;
+
+        // A packet restating where the entity already is (the periodic position sync) leaves it just as exact
+        SimpleCollisionBox old = oldPacketLocation.getExactHitbox();
+        return old != null && old.minX == box.minX && old.minY == box.minY && old.minZ == box.minZ
+                && old.maxX == box.maxX && old.maxY == box.maxY && old.maxZ == box.maxZ ? box : null;
     }
 
     public CollisionBox getMinimumPossibleCollisionBoxes() {

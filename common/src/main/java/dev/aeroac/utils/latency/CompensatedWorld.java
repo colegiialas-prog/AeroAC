@@ -228,8 +228,17 @@ public class CompensatedWorld implements PacketWorld {
     }
 
     public boolean isNearHardEntity(SimpleCollisionBox playerBox) {
+        return isNearHardEntity(playerBox, true);
+    }
+
+    /**
+     * @param includeSimulated whether boats that collisions already simulate count, see
+     *                         {@link dev.aeroac.utils.latency.CompensatedEntities#getSimulatedCollisionBox}
+     */
+    public boolean isNearHardEntity(SimpleCollisionBox playerBox, boolean includeSimulated) {
         for (PacketEntity entity : player.compensatedEntities.entityMap.values()) {
-            if ((entity.isBoat || entity.getType() == EntityTypes.SHULKER || entity.isHappyGhast) && player.compensatedEntities.self.getRiding() != entity) {
+            if ((entity.isBoat || entity.getType() == EntityTypes.SHULKER || entity.isHappyGhast) && player.compensatedEntities.self.getRiding() != entity
+                    && (includeSimulated || player.compensatedEntities.getSimulatedCollisionBox(entity) == null)) {
                 SimpleCollisionBox box = entity.getPossibleCollisionBoxes();
                 if (box.isIntersected(playerBox)) {
                     return true;
