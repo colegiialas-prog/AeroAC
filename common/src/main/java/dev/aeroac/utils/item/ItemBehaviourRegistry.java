@@ -17,7 +17,7 @@ public class ItemBehaviourRegistry {
             ItemTypes.SHIELD, AlwaysUseItem.INSTANCE,
             ItemTypes.SPYGLASS, AlwaysUseItem.INSTANCE,
             ItemTypes.CROSSBOW, UnsupportedItem.INSTANCE,
-            ItemTypes.BOW, UnsupportedItem.INSTANCE,
+            ItemTypes.BOW, BowItem.INSTANCE,
             ItemTypes.TRIDENT, TridentItem.INSTANCE
     );
 
