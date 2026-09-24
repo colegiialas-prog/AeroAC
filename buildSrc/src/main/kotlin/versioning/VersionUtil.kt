@@ -81,7 +81,8 @@ object VersionUtil {
                 errorOutput = ByteArrayOutputStream()
             }.standardOutput.asText.get().trim()
         } catch (e: Exception) {
-            return null
+            // Same sentinel as a missing checkout: processResources requires a non-null git_branch.
+            return if (raw) NO_GIT else null
         }
 
         if (rawBranch.isEmpty()) return if (raw) NO_GIT else null

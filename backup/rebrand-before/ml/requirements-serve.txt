@@ -1,5 +1,0 @@
--r requirements.txt
-onnxruntime>=1.17
-# Only needed for --framework fastapi; the stdlib server needs nothing extra.
-fastapi>=0.110
-uvicorn>=0.27
