@@ -156,11 +156,16 @@ TimerLimit:
     # -1 to disable
     ping-abuse-limit-threshold: 1000
 
-# 1.21.2+ clients only: a client that keeps ticking but stops sending its position ("air stuck",
-# freezing in the air to hit players). Vanilla sends a position at least every 20 ticks, so this is
-# never lower than 20. A flag sets the player back, which also cancels their attacks until they obey.
+# A client that keeps ticking but stops sending its position ("air stuck", freezing in the air to hit
+# players). Vanilla sends a position at least every 20 ticks. A flag sets the player back, which also
+# cancels their attacks until they obey.
 AirStuck:
+    # 1.21.2+ clients, counted in client ticks. Never lower than 20.
     max-ticks: 25
+    # Older clients have no tick-end packet and are timed by how long they keep answering transactions
+    # without a position (a second of vanilla ticking, stretched when the server's /tick rate is slower).
+    # Never lower than 2.
+    max-seconds-without-tick-end: 3.0
 
 NegativeTimer:
     # Number of milliseconds lost while moving before we should start flagging

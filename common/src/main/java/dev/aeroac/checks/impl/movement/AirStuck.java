@@ -12,6 +12,8 @@ import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.protocol.player.GameMode;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerFlying;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerCamera;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerChangeGameState;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerTickingState;
 
 /**
  * A client that keeps ticking but stops reporting where it is.
@@ -28,15 +30,20 @@ import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerCa
  * and a pending setback cancels their attacks until the client accepts it with a real position — the
  * very packet the cheat refuses to send.
  *
- * <p>Older clients have no tick-end packet, and without it a frozen client cannot be told apart from
- * a lagging one, so they are not checked here.
+ * <p>Older clients (and 1.21.2+ clients on older servers) send no tick end, so there the check is timed
+ * with transaction responses instead: a client that keeps answering steadily for seconds without a single
+ * position has ticked far more than 20 times (see {@link ResponseClockReminder}). That also covers an
+ * air-stuck client that connects with an older protocol to dodge the tick-end count.
  */
 @CheckData(name = "AirStuck", stableKey = "aero.movement.air_stuck",
         description = "Kept ticking without reporting its position", setback = 0)
 public class AirStuck extends Check implements PacketCheck {
     private static final Verbose V = Verbose.of("ticks={uint}");
+    private static final Verbose V_RESPONSES = Verbose.of("ms={uint}");
 
     private PositionReminder reminder = new PositionReminder(25);
+    private ResponseClockReminder responseReminder = new ResponseClockReminder(3);
+    private float tickRate = 20;
     /** The server put the client's camera on another entity; a vanilla client then sends no position. */
     private boolean cameraOnOtherEntity;
 
@@ -46,17 +53,24 @@ public class AirStuck extends Check implements PacketCheck {
 
     @Override
     public void onPacketReceive(PacketReceiveEvent event) {
-        if (!player.supportsEndTick()) return;
-
         if (WrapperPlayClientPlayerFlying.isFlying(event.getPacketType())) {
             // Counted whatever happens to the packet afterwards: the client did report a position.
-            if (new WrapperPlayClientPlayerFlying(event).hasPositionChanged()) reminder.position();
+            if (new WrapperPlayClientPlayerFlying(event).hasPositionChanged()) {
+                reminder.position();
+                responseReminder.position();
+            }
             return;
         }
 
-        if (event.getPacketType() == PacketType.Play.Client.CLIENT_TICK_END) {
-            int ticks = reminder.tickEnd(exempt());
-            if (ticks > 0) flagWithSetback(V.write(verbose()).uint(ticks));
+        if (player.supportsEndTick()) {
+            if (event.getPacketType() == PacketType.Play.Client.CLIENT_TICK_END) {
+                int ticks = reminder.tickEnd(exempt());
+                if (ticks > 0) flagWithSetback(V.write(verbose()).uint(ticks));
+            }
+        } else if (event.getPacketType() == PacketType.Play.Client.PONG
+                || event.getPacketType() == PacketType.Play.Client.WINDOW_CONFIRMATION) {
+            long span = responseReminder.response(System.nanoTime(), exempt());
+            if (span > 0) flagWithSetback(V_RESPONSES.write(verbose()).uint((int) (span / 1_000_000L)));
         }
     }
 
@@ -67,13 +81,28 @@ public class AirStuck extends Check implements PacketCheck {
         if (event.getPacketType() == PacketType.Play.Server.JOIN_GAME
                 || event.getPacketType() == PacketType.Play.Server.RESPAWN) {
             cameraOnOtherEntity = false;
-            reminder.disarm();
+            disarm();
         } else if (event.getPacketType() == PacketType.Play.Server.CAMERA) {
             // Cutscene and spectate plugins move the camera; LocalPlayer only reports its position while
             // it is the camera. Disarming also covers the latency before the client sees the change back.
             cameraOnOtherEntity = new WrapperPlayServerCamera(event).getCameraId() != player.entityID;
-            reminder.disarm();
+            disarm();
+        } else if (event.getPacketType() == PacketType.Play.Server.CHANGE_GAME_STATE) {
+            // The end credits: the server removes the player until the client asks to respawn
+            if (new WrapperPlayServerChangeGameState(event).getReason() == WrapperPlayServerChangeGameState.Reason.WIN_GAME) {
+                disarm();
+            }
+        } else if (event.getPacketType() == PacketType.Play.Server.TICKING_STATE) {
+            // Clients tick at the server's /tick rate, so positions come further apart in time when it is slow
+            tickRate = new WrapperPlayServerTickingState(event).getTickRate();
+            responseReminder.setTickRate(tickRate);
+            disarm();
         }
+    }
+
+    private void disarm() {
+        reminder.disarm();
+        responseReminder.disarm();
     }
 
     /** States in which a vanilla client legitimately sends no position. */
@@ -88,7 +117,9 @@ public class AirStuck extends Check implements PacketCheck {
 
     @Override
     public void onReload(ConfigManager config) {
-        // Never below what vanilla itself can produce; PositionReminder enforces the floor.
+        // Never below what vanilla itself can produce; both reminders enforce their floor.
         reminder = new PositionReminder(config.getIntElse(getConfigName() + ".max-ticks", 25));
+        responseReminder = new ResponseClockReminder(config.getDoubleElse(getConfigName() + ".max-seconds-without-tick-end", 3.0));
+        responseReminder.setTickRate(tickRate);
     }
 }
