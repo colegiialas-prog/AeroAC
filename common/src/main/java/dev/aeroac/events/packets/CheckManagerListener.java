@@ -633,10 +633,8 @@ public class CheckManagerListener extends PacketListenerAbstract {
             // Mark that we want this packet to be cancelled from reaching the server
             // Additionally, only yaw/pitch matters: https://github.com/GrimAnticheat/Grim/issues/1275#issuecomment-1872444018
             // 1.9+ isn't impacted by this packet as much.
-            if (PacketEvents.getAPI().getServerManager().getVersion().isOlderThanOrEquals(ServerVersion.V_1_9)) {
-                if (player.isCancelDuplicatePacket()) {
-                    player.packetStateData.cancelDuplicatePacket = true;
-                }
+            if (PacketEvents.getAPI().getServerManager().getVersion().isOlderThan(ServerVersion.V_1_9) && player.isCancelDuplicatePacket()) {
+                player.packetStateData.cancelDuplicatePacket = true;
             } else {
                 // Override location to force it to use the last real position of the player. Prevents position-related bypasses like nofall.
                 flying.setLocation(new Location(player.filterMojangStupidityOnMojangStupidity.getX(), player.filterMojangStupidityOnMojangStupidity.getY(), player.filterMojangStupidityOnMojangStupidity.getZ(), location.getYaw(), location.getPitch()));
@@ -792,6 +790,7 @@ public class CheckManagerListener extends PacketListenerAbstract {
         }
 
         if (action == DiggingAction.START_DIGGING) {
+            // FIXME: getBlockDamage might not return the correct value if the player switched slots before this
             double damage = BlockBreakSpeed.getBlockDamage(player, blockBreak.block);
 
             // Instant breaking, no damage means it is unbreakable by creative players (with swords)

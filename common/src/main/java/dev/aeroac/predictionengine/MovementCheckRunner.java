@@ -382,9 +382,16 @@ public class MovementCheckRunner extends Check implements PositionCheck {
                 .expand(player.getMovementThreshold())
                 .offset(0.0, player.getClientVersion().isOlderThan(ClientVersion.V_1_15) ? -1.0 : -0.2, 0.0);
         Collisions.forEachCollisionBox(player, steppingOnBB, (block, x, y, z) -> {
-            if (block.getType() == StateTypes.SLIME_BLOCK && Math.abs((y + 1D) - player.lastY) <= player.getMovementThreshold() && player.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_8)) {
-                player.uncertaintyHandler.isSteppingOnSlime = true;
-                player.uncertaintyHandler.isSteppingOnBouncyBlock = true;
+            if (block.getType() == StateTypes.SLIME_BLOCK && player.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_8)) {
+                double blockHeight = 1D;
+                double blockAboveHeight = BlockProperties.getBlockCollisionHeight(player, player.compensatedWorld.getBlock(x, y + 1, z));
+                if (blockAboveHeight > 0D && blockAboveHeight < 1D) {
+                    blockHeight += blockAboveHeight;
+                }
+                if (Math.abs((y + blockHeight) - player.lastY) <= player.getMovementThreshold()) {
+                    player.uncertaintyHandler.isSteppingOnSlime = true;
+                    player.uncertaintyHandler.isSteppingOnBouncyBlock = true;
+                }
             }
             if (block.getType() == StateTypes.HONEY_BLOCK) {
                 if (player.getClientVersion().isOlderThanOrEquals(ClientVersion.V_1_14)

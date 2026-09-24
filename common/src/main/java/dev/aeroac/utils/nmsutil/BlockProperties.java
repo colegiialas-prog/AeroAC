@@ -1,6 +1,10 @@
 package dev.aeroac.utils.nmsutil;
 
 import dev.aeroac.player.AeroPlayer;
+import dev.aeroac.utils.collisions.CollisionData;
+import dev.aeroac.utils.collisions.datatypes.CollisionBox;
+import dev.aeroac.utils.collisions.datatypes.ComplexCollisionBox;
+import dev.aeroac.utils.collisions.datatypes.SimpleCollisionBox;
 import dev.aeroac.utils.data.MainSupportingBlockData;
 import dev.aeroac.utils.data.packetentity.PacketEntity;
 import dev.aeroac.utils.data.packetentity.PacketEntityHorse;
@@ -320,4 +324,23 @@ public class BlockProperties {
 
         return 0.0F;
     }
+
+    public static double getBlockCollisionHeight(AeroPlayer player, WrappedBlockState block) {
+        StateType type = block.getType();
+        if (type.isAir()) {
+            return 0D;
+        }
+
+        CollisionBox movementCollisionBox = CollisionData.getData(type).getMovementCollisionBox(player, player.getClientVersion(), block);
+        SimpleCollisionBox[] movementCollisionBoxes = new SimpleCollisionBox[ComplexCollisionBox.DEFAULT_MAX_COLLISION_BOX_SIZE];
+        int size = movementCollisionBox.downCast(movementCollisionBoxes);
+
+        double height = 0D;
+        for (int i = 0; i < size; i++) {
+            height = Math.max(height, movementCollisionBoxes[i].maxY);
+        }
+
+        return height;
+    }
+
 }

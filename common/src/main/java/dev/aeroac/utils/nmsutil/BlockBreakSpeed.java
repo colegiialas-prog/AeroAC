@@ -63,6 +63,15 @@ public class BlockBreakSpeed {
 
     record ToolSpeedData(float speedMultiplier, boolean isCorrectToolForDrop) {}
 
+    public static boolean couldInstantlyBreakBlock(AeroPlayer player, StateType block) {
+        for (int i = 0; i < 9; i++) {
+            ItemStack stack = player.inventory.inventory.getHotbar(i);
+            if (getBlockDamage(player, stack, block) >= 1) return true;
+        }
+
+        return false;
+    }
+
     public static double getBlockDamage(AeroPlayer player, WrappedBlockState block) {
         ItemStack tool = player.inventory.getHeldItem();
         return getBlockDamage(player, tool, block.getType());

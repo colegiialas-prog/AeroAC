@@ -66,9 +66,15 @@ public class RotationPlace extends BlockPlaceCheck {
         // This can false with rapidly moving yaw in 1.8+ clients
         if (!hit) {
             flagBuffer = 1;
-            flag(V.write(verbose()).bool(false));
+            if (!ignorePost) { // Don't flag twice
+                flag(V.write(verbose()).bool(false));
+            }
         } else {
             flagBuffer = Math.max(0, flagBuffer - 0.1);
+        }
+
+        if (ignorePost) {
+            ignorePost = false;
         }
     }
 

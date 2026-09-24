@@ -80,6 +80,14 @@ public class Check extends AeroProcessor implements AbstractCheck {
                 && !exemptPermission;
     }
 
+    /**
+     * Evaluated once when CheckManager builds the dispatch arrays; an inapplicable check never sees a
+     * packet. Implementations must only depend on immutable connection properties (client/server version).
+     */
+    public boolean isApplicable() {
+        return true;
+    }
+
     public final void updatePermissions() {
         if (configName == null) return;
         final String id = configName.toLowerCase();
@@ -320,7 +328,7 @@ public class Check extends AeroProcessor implements AbstractCheck {
                     try {
                         value = supplier.get();
                         if (value == null) value = "";
-                    } catch (Throwable ignored) {
+                    } catch (RuntimeException ignored) {
                         value = "";
                     }
                     computed = true;
