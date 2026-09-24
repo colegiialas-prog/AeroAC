@@ -308,6 +308,8 @@ neural:
         max-snapshots-per-hour: 12
         snapshot-before: 64
         snapshot-after: 32
+        # Keep a disconnected player's risk this long, so a relog is not a reset. 0 disables.
+        carry-over-seconds: 300
     mitigation:
         # Phase 6. Turn on only after measuring the false positive rate on your own server.
         enabled: false

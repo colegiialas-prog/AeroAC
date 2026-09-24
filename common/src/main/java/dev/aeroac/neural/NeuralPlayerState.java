@@ -29,6 +29,7 @@ public final class NeuralPlayerState {
     public PlayerRiskProfile risk;
     public PendingSnapshot pendingSnapshot;
     public long snapshotWindowStartNanos;
+    public boolean snapshotWindowOpen;
     public int snapshotsInWindow;
 
     public PlayerMitigationState mitigation;

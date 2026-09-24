@@ -420,7 +420,10 @@ public final class NeuralManager implements StartableInitable, StoppableInitable
         state.disconnected = true;
         state.stop("DISCONNECT");
         NeuralRuntime active = runtime;
-        if (active != null) active.monitor().clear(player.getUniqueId());
+        if (active != null) {
+            active.monitor().clear(player.getUniqueId());
+            active.park(player.getUniqueId(), state.risk, System.nanoTime());
+        }
         state.resetRuntime();
     }
 

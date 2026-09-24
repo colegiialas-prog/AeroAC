@@ -13,6 +13,8 @@ import dev.aeroac.neural.telemetry.CombatTelemetryCollector;
 import dev.aeroac.neural.telemetry.FrameField;
 import dev.aeroac.player.AeroPlayer;
 
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 /**
@@ -24,6 +26,8 @@ public final class NeuralRuntime implements AutoCloseable {
     private static final int EVIDENCE_HISTORY = 64;
     private static final int MITIGATION_HISTORY = 16;
     private static final int TRAIL_SIZE = 32;
+    /** Upper bound on remembered profiles of players who just left; beyond it nothing more is kept. */
+    private static final int MAX_PARKED = 4096;
 
     private final long generation;
     private final NeuralConfig config;
@@ -33,6 +37,15 @@ public final class NeuralRuntime implements AutoCloseable {
     private final MitigationManager mitigation;
     private final NeuralMonitor monitor;
     private final Supplier<DatasetManager> datasets;
+    /**
+     * Risk of players who disconnected less than {@code risk.carry-over-seconds} ago. Without it a
+     * relog wiped a SUSPICIOUS player back to CLEAN in two seconds, which made "leave before it adds
+     * up" the cheapest way around the whole engine. The profile keeps its own evidence and its last
+     * update time, so the offline minutes decay it exactly as if the player had stayed.
+     */
+    private final ConcurrentHashMap<UUID, Parked> parked = new ConcurrentHashMap<>();
+
+    private record Parked(PlayerRiskProfile profile, long nanoTime) { }
 
     public NeuralRuntime(long generation, NeuralConfig config, InferenceClient client, Supplier<DatasetManager> datasets) {
         this.generation = generation;
@@ -76,10 +89,10 @@ public final class NeuralRuntime implements AutoCloseable {
         if (state.trail == null) state.trail = new PredictionTrail(TRAIL_SIZE);
         if (!state.trail.add(result)) return;
         if (riskEngine == null) return;
-        if (state.risk == null) state.risk = new PlayerRiskProfile(EVIDENCE_HISTORY, result.nanoTime());
+        PlayerRiskProfile profile = riskProfile(player.getUniqueId(), state, result.nanoTime());
         Evidence evidence = riskEngine.fromPrediction(result, result.nanoTime());
         if (evidence == null) {
-            riskEngine.decay(state.risk, result.nanoTime());
+            riskEngine.decay(profile, result.nanoTime());
             return;
         }
         apply(player, state, collector, evidence, result);
@@ -93,9 +106,36 @@ public final class NeuralRuntime implements AutoCloseable {
         if (riskEngine == null) return;
         Evidence evidence = riskEngine.fromCheck(checkName, nowNanos);
         if (evidence == null) return;
-        if (state.risk == null) state.risk = new PlayerRiskProfile(EVIDENCE_HISTORY, nowNanos);
+        riskProfile(player.getUniqueId(), state, nowNanos);
         apply(player, state, state.collector, evidence, null);
     }
+
+    /** The player's profile, restored from a recent disconnect when there is one. Player event loop. */
+    PlayerRiskProfile riskProfile(UUID player, NeuralPlayerState state, long nowNanos) {
+        if (state.risk != null) return state.risk;
+        Parked back = player == null ? null : parked.remove(player);
+        state.risk = back != null && nowNanos - back.nanoTime() <= carryOverNanos()
+                ? back.profile()
+                : new PlayerRiskProfile(EVIDENCE_HISTORY, nowNanos);
+        return state.risk;
+    }
+
+    /**
+     * Keeps a disconnecting player's profile for {@code risk.carry-over-seconds}. Called once, after
+     * the player's event loop has stopped applying anything to it (the state is marked disconnected).
+     */
+    public void park(UUID player, PlayerRiskProfile profile, long nowNanos) {
+        long ttl = carryOverNanos();
+        if (player == null || profile == null || ttl <= 0 || riskEngine == null || !(profile.risk() > 0)) return;
+        parked.values().removeIf(entry -> nowNanos - entry.nanoTime() > ttl);
+        if (parked.size() >= MAX_PARKED && !parked.containsKey(player)) return;
+        parked.put(player, new Parked(profile, nowNanos));
+    }
+
+    /** Players whose risk is currently being remembered across a disconnect. */
+    public int parkedCount() { return parked.size(); }
+
+    private long carryOverNanos() { return config.risk().carryOverSeconds() * 1_000_000_000L; }
 
     private void apply(AeroPlayer player, NeuralPlayerState state, CombatTelemetryCollector collector,
                        Evidence evidence, PredictionResult result) {
@@ -130,9 +170,11 @@ public final class NeuralRuntime implements AutoCloseable {
                                RiskState stateBefore, RiskState stateAfter) {
         if (state.pendingSnapshot != null || datasets.get() == null) return;
         long now = evidence.nanoTime();
-        if (now - state.snapshotWindowStartNanos >= 3_600_000_000_000L) {
+        // nanoTime has an arbitrary origin, so the first window opens at the first snapshot, not at 0.
+        if (!state.snapshotWindowOpen || now - state.snapshotWindowStartNanos >= 3_600_000_000_000L) {
             state.snapshotWindowStartNanos = now;
             state.snapshotsInWindow = 0;
+            state.snapshotWindowOpen = true;
         }
         if (state.snapshotsInWindow >= config.risk().maxSnapshotsPerHour()) return;
         state.snapshotsInWindow++;

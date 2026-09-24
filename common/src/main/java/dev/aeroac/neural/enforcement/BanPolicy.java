@@ -115,7 +115,7 @@ public record BanPolicy(Mode mode, RiskState minState, int minEvidence, int minP
         String prefix = "neural.enforcement.animation.";
         return new BanPolicy(
                 Mode.parse(config.getStringElse("neural.enforcement.mode", "announce"), Mode.ANNOUNCE),
-                RiskState.parse(config.getStringElse("neural.enforcement.min-state", "CONFIRMED")),
+                RiskState.parse(config.getStringElse("neural.enforcement.min-state", "CONFIRMED"), RiskState.CONFIRMED),
                 bounded(config, "neural.enforcement.min-evidence", 12, 1, 4096),
                 bounded(config, "neural.enforcement.min-predictions", 10, 1, 4096),
                 bounded(config, "neural.enforcement.cooldown-seconds", 600, 1, 86400),

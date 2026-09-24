@@ -307,6 +307,8 @@ neural:
         max-snapshots-per-hour: 12
         snapshot-before: 64
         snapshot-after: 32
+        # Столько секунд риск вышедшего игрока помнится, чтобы перезаход не обнулял его. 0 — выключено.
+        carry-over-seconds: 300
     mitigation:
         # Phase 6. Turn on only after measuring the false positive rate on your own server.
         enabled: false

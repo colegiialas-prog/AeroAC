@@ -72,7 +72,7 @@ public record AdminConfig(boolean enabled, int refreshMs, Floating floating, Ale
                         AdminViewMode.parse(config.getStringElse("neural.gui.floating.default-mode", "suspicious"),
                                 AdminViewMode.SUSPICIOUS)),
                 new Alerts(config.getBooleanElse("neural.gui.alerts.enabled", true),
-                        RiskState.parse(config.getStringElse("neural.gui.alerts.min-state", "WATCH")),
+                        RiskState.parse(config.getStringElse("neural.gui.alerts.min-state", "WATCH"), RiskState.WATCH),
                         bounded(config, "gui.alerts.throttle-seconds", 30, 1, 3600)),
                 new Training(bounded(config, "gui.training.target-duration-seconds", 300, 10, 14400),
                         bounded(config, "gui.training.target-attack-windows", 150, 1, 100000),

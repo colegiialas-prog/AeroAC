@@ -100,4 +100,12 @@ class BanPolicyTest {
                 "neural.enforcement.animation.ban-sounds", many))).animation();
         assertEquals(8, animation.bang().size(), "fifty simultaneous sounds is a config mistake, not a bang");
     }
+
+    @Test void aMisspelledMinimumStateKeepsTheBanBarAtConfirmed() {
+        // Parsing an unknown state used to yield MITIGATED, which is below CONFIRMED.
+        BanPolicy policy = BanPolicy.read(BanServiceTest.config(Map.of("neural.enforcement.min-state", "CONFIRMD")));
+        assertEquals(dev.aeroac.neural.risk.RiskState.CONFIRMED, policy.minState());
+        assertFalse(policy.admits(dev.aeroac.neural.risk.RiskState.MITIGATED, 1000, 1000));
+        assertTrue(policy.admits(dev.aeroac.neural.risk.RiskState.CONFIRMED, 1000, 1000));
+    }
 }
