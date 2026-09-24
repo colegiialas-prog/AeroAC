@@ -66,8 +66,8 @@ public class UncertaintyHandler {
     public boolean lastMovementWasUnknown003VectorReset = false;
     // Handles 0.03 vertical false where actual velocity is greater than predicted because of previous lenience
     public boolean wasZeroPointThreeVertically = false;
-    // How many entities are within 0.5 blocks of the player's bounding box that are pushable?
-    public final EvictingQueue<Integer> collidingEntities = new EvictingQueue<>(3);
+    // How many pushable entities within 0.5 blocks of the player's bounding box could push towards each direction?
+    public final EvictingQueue<EntityPushBounds> entityPushes = new EvictingQueue<>(3);
     // How many entities are within 0.5 blocks of the player's bounding box? Should only exclude entities in spectator
     public final EvictingQueue<Integer> riptideEntities = new EvictingQueue<>(3);
     // Fishing rod pulling is another method of adding to a player's velocity
@@ -113,7 +113,7 @@ public class UncertaintyHandler {
         tick();
 
         this.riptideEntities.add(0);
-        this.collidingEntities.add(0);
+        this.entityPushes.add(EntityPushBounds.NONE);
     }
 
     public void tick() {
@@ -134,6 +134,10 @@ public class UncertaintyHandler {
 
         slimePistonBounces = new HashSet<>();
         tickFireworksBox();
+    }
+
+    public EntityPushBounds getEntityPushBounds() {
+        return EntityPushBounds.max(entityPushes);
     }
 
     public boolean wasAffectedByStuckSpeed() {

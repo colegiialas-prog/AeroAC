@@ -1,6 +1,7 @@
 package dev.aeroac.predictionengine.predictions;
 
 import dev.aeroac.player.AeroPlayer;
+import dev.aeroac.predictionengine.EntityPushBounds;
 import dev.aeroac.predictionengine.SneakingEstimator;
 import dev.aeroac.predictionengine.movementtick.MovementTickerPlayer;
 import dev.aeroac.predictionengine.predictions.input.Input;
@@ -29,6 +30,8 @@ import java.util.Objects;
 import java.util.Set;
 
 public class PredictionEngine {
+    // How far one pushing entity may move the player on an axis within the colliding window
+    private static final double ENTITY_PUSH = 0.08;
 
     public static Vector3dm clampMovementToHardBorder(AeroPlayer player, Vector3dm outputVel) {
         // TODO: Reimplement
@@ -497,7 +500,7 @@ public class PredictionEngine {
     }
 
     public Vector3dm handleStartingVelocityUncertainty(AeroPlayer player, VectorData vector, Vector3dm targetVec) {
-        double avgColliding = Collections.max(player.uncertaintyHandler.collidingEntities);
+        EntityPushBounds pushes = player.uncertaintyHandler.getEntityPushBounds();
 
         double additionHorizontal = player.uncertaintyHandler.getOffsetHorizontal(vector);
         double additionVertical = player.uncertaintyHandler.getVerticalOffset(vector);
@@ -541,19 +544,22 @@ public class PredictionEngine {
         double horizontalFluid = player.pointThreeEstimator.getHorizontalFluidPushingUncertainty(vector);
         additionHorizontal += horizontalFluid;
 
-        // Be somewhat careful as there is an antikb (for horizontal) that relies on this lenience
+        // Entity pushing, per entity that could push in that direction
         // 0.03 was falsing when colliding with https://i.imgur.com/7obfxG6.png
         // 0.065 was causing issues with fast moving dolphins
         // 0.075 seems safe?
         //
-        // Be somewhat careful as there is an antikb (for horizontal) that relies on this lenience
-        Vector3dm uncertainty = new Vector3dm(avgColliding * 0.08, additionVertical, avgColliding * 0.08);
+        // An entity only ever pushes the player away from its centre, so the lenience is only given towards the
+        // sides the player could have been pushed to. Giving it in every direction let "collide" speeds boost
+        // towards the entity being chased, and antikb absorb knockback aimed away from nearby entities.
+        Vector3dm uncertaintyMin = new Vector3dm(pushes.negativeX() * ENTITY_PUSH, additionVertical, pushes.negativeZ() * ENTITY_PUSH);
+        Vector3dm uncertaintyMax = new Vector3dm(pushes.positiveX() * ENTITY_PUSH, additionVertical, pushes.positiveZ() * ENTITY_PUSH);
 
         Vector3dm min = new Vector3dm(player.uncertaintyHandler.xNegativeUncertainty - additionHorizontal, -bonusY + player.uncertaintyHandler.yNegativeUncertainty, player.uncertaintyHandler.zNegativeUncertainty - additionHorizontal);
         Vector3dm max = new Vector3dm(player.uncertaintyHandler.xPositiveUncertainty + additionHorizontal, bonusY + player.uncertaintyHandler.yPositiveUncertainty, player.uncertaintyHandler.zPositiveUncertainty + additionHorizontal);
 
-        Vector3dm minVector = vector.vector.clone().add(min.subtract(uncertainty));
-        Vector3dm maxVector = vector.vector.clone().add(max.add(uncertainty));
+        Vector3dm minVector = vector.vector.clone().add(min.subtract(uncertaintyMin));
+        Vector3dm maxVector = vector.vector.clone().add(max.add(uncertaintyMax));
 
         // Handle the player landing within 0.03 movement, which resets Y velocity
         if (player.uncertaintyHandler.onGroundUncertain && vector.vector.getY() < 0 && !player.uncertaintyHandler.influencedByBouncyBlock()) {

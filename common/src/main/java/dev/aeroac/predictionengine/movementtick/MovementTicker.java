@@ -1,6 +1,7 @@
 package dev.aeroac.predictionengine.movementtick;
 
 import dev.aeroac.player.AeroPlayer;
+import dev.aeroac.predictionengine.EntityPushBounds;
 import dev.aeroac.predictionengine.PlayerBaseTick;
 import dev.aeroac.predictionengine.blockeffects.PotentSulfurGeyser;
 import dev.aeroac.predictionengine.predictions.PredictionEngine;
@@ -54,6 +55,7 @@ public class MovementTicker {
 
         int possibleCollidingEntities = 0;
         int possibleRiptideEntities = 0;
+        EntityPushBounds.Builder pushes = new EntityPushBounds.Builder();
 
         // Players in vehicles do not have collisions
         if (!player.inVehicle() && player.gamemode != GameMode.SPECTATOR) {
@@ -61,6 +63,14 @@ public class MovementTicker {
             SimpleCollisionBox playerBox = GetBoundingBox.getBoundingBoxFromPosAndSize(player, player.lastX, player.lastY, player.lastZ, 0.6f, 1.8f);
             playerBox.encompass(GetBoundingBox.getBoundingBoxFromPosAndSize(player, player.x, player.y, player.z, 0.6f, 1.8f).expand(player.getMovementThreshold()));
             playerBox.expand(0.2);
+
+            // Where the player's centre was when it was pushed: vanilla pushes after moving, so the push felt
+            // this tick came from the last position, known to within the movement threshold
+            final double threshold = player.getMovementThreshold();
+            final double playerMinX = Math.min(player.lastX, player.x) - threshold;
+            final double playerMaxX = Math.max(player.lastX, player.x) + threshold;
+            final double playerMinZ = Math.min(player.lastZ, player.z) - threshold;
+            final double playerMaxZ = Math.max(player.lastZ, player.z) + threshold;
 
             final TeamHandler teamHandler = player.checkManager.getPacketCheck(TeamHandler.class);
             final EntityTeam playerTeam = teamHandler != null ? teamHandler.getPlayerTeam() : null;
@@ -81,6 +91,12 @@ public class MovementTicker {
                 }
 
                 possibleCollidingEntities++;
+
+                // Every position the entity's centre could have been at, padded for relative move precision
+                SimpleCollisionBox entityPositions = entity.getPossibleLocationBoxes().expand(0.03125, 0, 0.03125);
+                pushes.add(
+                        EntityPushBounds.pushSide(playerMinX, playerMaxX, entityPositions.minX, entityPositions.maxX),
+                        EntityPushBounds.pushSide(playerMinZ, playerMaxZ, entityPositions.minZ, entityPositions.maxZ));
             }
         }
 
@@ -92,7 +108,7 @@ public class MovementTicker {
         }
 
         player.uncertaintyHandler.riptideEntities.add(possibleRiptideEntities);
-        player.uncertaintyHandler.collidingEntities.add(possibleCollidingEntities);
+        player.uncertaintyHandler.entityPushes.add(pushes.build());
     }
 
     private boolean isHorizontalCollisionSoft(Vector3dm collide) {

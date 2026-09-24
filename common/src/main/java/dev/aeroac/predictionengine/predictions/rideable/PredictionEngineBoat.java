@@ -1,6 +1,7 @@
 package dev.aeroac.predictionengine.predictions.rideable;
 
 import dev.aeroac.player.AeroPlayer;
+import dev.aeroac.predictionengine.EntityPushBounds;
 import dev.aeroac.predictionengine.blockeffects.PotentSulfurGeyser;
 import dev.aeroac.predictionengine.predictions.PredictionEngine;
 import dev.aeroac.utils.collisions.CollisionData;
@@ -26,7 +27,7 @@ import java.util.Set;
 
 public class PredictionEngineBoat extends PredictionEngine {
     public PredictionEngineBoat(AeroPlayer player) {
-        player.uncertaintyHandler.collidingEntities.add(0); // We don't do collisions like living entities
+        player.uncertaintyHandler.entityPushes.add(EntityPushBounds.NONE); // We don't do collisions like living entities
         player.vehicleData.midTickY = 0;
 
         // This does stuff like getting the boat's movement on the water
