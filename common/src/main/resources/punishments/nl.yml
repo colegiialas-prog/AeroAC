@@ -19,7 +19,6 @@ Punishments:
       - "Timer"
       - "TimerLimit"
       - "NoFall"
-      - "AirStuck"
     # Drempel: Interval-commando
     #
     # Voorbeeld, om de speler te schoppen met het bericht "verkeerde beweging!" na 100 overtredingen, zonder interval
@@ -34,6 +33,15 @@ Punishments:
       - "1:1 [log]"
       - "100:100 [webhook]"
       - "100:100 [proxy]"
+  AirStuck:
+    remove-violations-after: 300
+    checks:
+      - "AirStuck"
+    commands:
+      - "3:5 [alert]"
+      - "1:1 [log]"
+      - "5:10 [webhook]"
+      - "5:10 [proxy]"
   Knockback:
     remove-violations-after: 300
     checks:

@@ -19,7 +19,6 @@ Punishments:
       - "Timer"
       - "TimerLimit"
       - "NoFall"
-      - "AirStuck"
     # Eşik:Aralık Komutu
     #
     # Örnek: 100 ihlalde "yanlış hareket!" mesajıyla oyuncuyu atmak için, aralık komutu olmadan:
@@ -32,6 +31,15 @@ Punishments:
       - "1:1 [log]"
       - "100:100 [webhook]"
       - "100:100 [proxy]"
+  AirStuck:
+    remove-violations-after: 300
+    checks:
+      - "AirStuck"
+    commands:
+      - "3:5 [alert]"
+      - "1:1 [log]"
+      - "5:10 [webhook]"
+      - "5:10 [proxy]"
   Knockback:
     remove-violations-after: 300
     checks:

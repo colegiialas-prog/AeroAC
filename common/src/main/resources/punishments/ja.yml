@@ -19,7 +19,6 @@ Punishments:
       - "Timer"
       - "TimerLimit"
       - "NoFall"
-      - "AirStuck"
     # しきい値:間隔 コマンド
     #
     # 例: 100回の違反で「incorrect movement!」と表示しプレイヤーをキックする場合
@@ -34,6 +33,15 @@ Punishments:
       - "1:1 [log]"
       - "100:100 [webhook]"
       - "100:100 [proxy]"
+  AirStuck:
+    remove-violations-after: 300
+    checks:
+      - "AirStuck"
+    commands:
+      - "3:5 [alert]"
+      - "1:1 [log]"
+      - "5:10 [webhook]"
+      - "5:10 [proxy]"
   Knockback:
     remove-violations-after: 300
     checks:
