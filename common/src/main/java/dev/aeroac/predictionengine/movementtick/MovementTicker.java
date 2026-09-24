@@ -18,6 +18,7 @@ import dev.aeroac.utils.nmsutil.EntityTypeTags;
 import dev.aeroac.utils.nmsutil.FluidFallingAdjustedMovement;
 import dev.aeroac.utils.nmsutil.GetBoundingBox;
 import dev.aeroac.utils.nmsutil.MainSupportingBlockPosFinder;
+import dev.aeroac.utils.nmsutil.StuckSpeed;
 import dev.aeroac.utils.team.EntityPredicates;
 import dev.aeroac.utils.team.EntityTeam;
 import dev.aeroac.utils.team.TeamHandler;
@@ -237,7 +238,7 @@ public class MovementTicker {
             player.uncertaintyHandler.lastStuckSpeedMultiplier.reset();
         }
 
-        player.stuckSpeedMultiplier = AeroPlayer.DEFAULT_STUCK_SPEED;
+        player.resetStuckSpeedMultiplier();
 
         // 1.15 and older clients use the handleInsideBlocks method for lava
         if (player.getClientVersion().isOlderThan(ClientVersion.V_1_16))
@@ -252,7 +253,7 @@ public class MovementTicker {
 
         // Flying players are not affected by cobwebs/sweet berry bushes
         if (player.isFlying) {
-            player.stuckSpeedMultiplier = AeroPlayer.DEFAULT_STUCK_SPEED;
+            player.setStuckSpeedMultiplier(StuckSpeed.NONE);
         }
     }
 

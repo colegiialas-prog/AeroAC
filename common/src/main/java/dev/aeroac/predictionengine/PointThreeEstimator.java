@@ -369,7 +369,7 @@ public class PointThreeEstimator {
             return false;
         }
 
-        if (isNearClimbable() || isPushing || player.uncertaintyHandler.wasAffectedByStuckSpeed() || player.fireworks.getMaxFireworksAppliedPossible() > 0) {
+        if (isNearClimbable() || isPushing || player.fireworks.getMaxFireworksAppliedPossible() > 0) {
             return true;
         }
 
@@ -431,14 +431,6 @@ public class PointThreeEstimator {
             // Head hitters return the vector to 0, and then apply gravity to it.
             // Not much room for abuse for this, so keep it lenient
             return -Math.max(0, vector.vector.getY()) - 0.1 - fluidAddition;
-        } else if (player.uncertaintyHandler.wasAffectedByStuckSpeed()
-                && (player.isPointThree() || vector.isZeroPointZeroThree() || player.uncertaintyHandler.claimingLeftStuckSpeed)) {
-            wasAlwaysCertain = false;
-            // This shouldn't be needed but stuck speed can desync very easily with 0.03...
-            // Especially now that both sweet berries and cobwebs are affected by stuck speed and overwrite each other
-            // A 1.18.2+ client sends every movement above 0.0002, so deep inside the block there is no 0.03 to
-            // desync: only the edge keeps this lenience, and NoWeb can no longer sink at will through a web.
-            return -0.1 - fluidAddition;
         }
 
         // The player couldn't have skipped their Y tick here... no point to simulate (and stop a bypass)

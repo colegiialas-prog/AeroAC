@@ -6,6 +6,7 @@ import dev.aeroac.predictionengine.movementtick.MovementTickerPlayer;
 import dev.aeroac.predictionengine.predictions.input.Input;
 import dev.aeroac.predictionengine.predictions.input.InputTransformer;
 import dev.aeroac.utils.collisions.datatypes.SimpleCollisionBox;
+import dev.aeroac.utils.data.IndexedVector3d;
 import dev.aeroac.utils.data.KnownInput;
 import dev.aeroac.utils.data.Triple;
 import dev.aeroac.utils.data.VectorData;
@@ -16,6 +17,7 @@ import dev.aeroac.utils.nmsutil.Collisions;
 import dev.aeroac.utils.nmsutil.GetBoundingBox;
 import dev.aeroac.utils.nmsutil.JumpPower;
 import dev.aeroac.utils.nmsutil.Riptide;
+import dev.aeroac.utils.nmsutil.StuckSpeed;
 import com.github.retrooper.packetevents.protocol.attribute.Attributes;
 import com.github.retrooper.packetevents.protocol.player.ClientVersion;
 
@@ -183,6 +185,7 @@ public class PredictionEngine {
 
         player.clientVelocity = realBeforeCollisionMovement.clone();
         player.predictedVelocity = bestCollisionVel; // Set predicted vel to get the vector types later in the move method
+        player.setStuckSpeedMultiplier(bestCollisionVel.stuckSpeedMultiplier);
         player.boundingBox = originalBB;
 
         // If the closest vector is 0.03, consider it 0.03.
@@ -781,22 +784,24 @@ public class PredictionEngine {
                         continue;
                     for (int strafe = strafeMin; strafe <= strafeMax; strafe++) {
                         for (int forward = forwardMin; forward <= forwardMax; forward++) {
-                            for (int applyStuckSpeed = 1; applyStuckSpeed >= 0; applyStuckSpeed--) {
-                                if (applyStuckSpeed == 0 && player.isForceStuckSpeed()) break;
+                            Input input = inputTransformer.transformInputsToVector(player, strafe, 0, forward);
+                            VectorData result = new VectorData.MoveVectorData(possibleLastTickOutput.vector.clone()
+                                    .add(inputTransformer.getMovementResultFromInput(player, input, speed, player.yaw)),
+                                    possibleLastTickOutput, VectorData.VectorType.InputResult, forward, strafe);
+                            result.input = input.vector();
 
-                                Input input = inputTransformer.transformInputsToVector(player, strafe, 0, forward);
-                                VectorData result = new VectorData.MoveVectorData(possibleLastTickOutput.vector.clone()
-                                        .add(inputTransformer.getMovementResultFromInput(player, input, speed, player.yaw)),
-                                        possibleLastTickOutput, VectorData.VectorType.InputResult, forward, strafe);
-                                result.input = input.vector();
-                                if (applyStuckSpeed != 0) {
-                                    result = result.returnNewModified(result.vector.clone().multiply(player.stuckSpeedMultiplier), VectorData.VectorType.StuckMultiplier);
+                            if (player.uncertaintyHandler.shouldSimulateStuckSpeed) {
+                                // only simulate no stuck speed if player is leaving
+                                if (player.uncertaintyHandler.stuckSpeedMultiplierMask == 0 || !player.isForceStuckSpeed())
+                                    addStuckSpeedResult(player, returnVectors, result, null, loopUsingItem == 1);
+                                addStuckSpeedResult(player, returnVectors, result, player.stuckSpeedMultiplier, loopUsingItem == 1);
+                                addPossibleStuckSpeedResults(player, returnVectors, result, loopUsingItem == 1);
+                            } else {
+                                for (int applyStuckSpeed = 1; applyStuckSpeed >= 0; applyStuckSpeed--) {
+                                    if (applyStuckSpeed == 0 && player.isForceStuckSpeed()) break;
+
+                                    addStuckSpeedResult(player, returnVectors, result, applyStuckSpeed != 0 ? player.stuckSpeedMultiplier : null, loopUsingItem == 1);
                                 }
-                                result = result.returnNewModified(handleOnClimbable(result.vector.clone(), player), VectorData.VectorType.Climbable);
-                                // Signal that we need to flip sneaking bounding box
-                                if (loopUsingItem == 1)
-                                    result = result.returnNewModified(VectorData.VectorType.Flip_Use_Item);
-                                returnVectors.add(result);
                             }
                         }
                     }
@@ -809,6 +814,27 @@ public class PredictionEngine {
             // Who would notice a tick of non-slow movement when netcode is so terrible that it just looks normal
             player.isSlowMovement = !player.isSlowMovement;
         }
+    }
+
+    private void addPossibleStuckSpeedResults(AeroPlayer player, List<VectorData> returnVectors, VectorData result, boolean flipUsingItem) {
+        int possibleStuckSpeedMultipliers = player.uncertaintyHandler.stuckSpeedMultiplierMask;
+        for (IndexedVector3d stuckSpeedMultiplier : StuckSpeed.POSSIBILITIES) {
+            if ((possibleStuckSpeedMultipliers & stuckSpeedMultiplier.getIndex()) != 0 && stuckSpeedMultiplier.getIndex() != player.stuckSpeedMultiplier.getIndex()) {
+                addStuckSpeedResult(player, returnVectors, result, stuckSpeedMultiplier, flipUsingItem);
+            }
+        }
+    }
+
+    private void addStuckSpeedResult(AeroPlayer player, List<VectorData> returnVectors, VectorData result, IndexedVector3d stuckSpeedMultiplier, boolean flipUsingItem) {
+        if (stuckSpeedMultiplier != null) {
+            result = result.returnNewModified(result.vector.clone().multiply(stuckSpeedMultiplier), VectorData.VectorType.StuckMultiplier);
+        }
+        result.stuckSpeedMultiplier = stuckSpeedMultiplier == null ? StuckSpeed.NONE : stuckSpeedMultiplier;
+
+        result = result.returnNewModified(handleOnClimbable(result.vector.clone(), player), VectorData.VectorType.Climbable);
+        if (flipUsingItem)
+            result = result.returnNewModified(VectorData.VectorType.Flip_Use_Item);
+        returnVectors.add(result);
     }
 
     public boolean canSwimHop(AeroPlayer player) {

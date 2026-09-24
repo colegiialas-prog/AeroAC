@@ -20,6 +20,7 @@ import dev.aeroac.predictionengine.predictions.rideable.PredictionEngineRideable
 import dev.aeroac.utils.anticheat.update.PositionUpdate;
 import dev.aeroac.utils.anticheat.update.PredictionComplete;
 import dev.aeroac.utils.collisions.datatypes.SimpleCollisionBox;
+import dev.aeroac.utils.data.IndexedVector3d;
 import dev.aeroac.utils.data.SetBackData;
 import dev.aeroac.utils.data.VectorData;
 import dev.aeroac.utils.data.packetentity.PacketEntity;
@@ -38,6 +39,7 @@ import dev.aeroac.utils.nmsutil.BoundingBoxSize;
 import dev.aeroac.utils.nmsutil.Collisions;
 import dev.aeroac.utils.nmsutil.GetBoundingBox;
 import dev.aeroac.utils.nmsutil.Riptide;
+import dev.aeroac.utils.nmsutil.StuckSpeed;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.manager.server.ServerVersion;
 import com.github.retrooper.packetevents.protocol.attribute.Attributes;
@@ -452,15 +454,19 @@ public class MovementCheckRunner extends Check implements PositionCheck {
             player.uncertaintyHandler.lastUnderwaterFlyingHack.reset();
         }
 
-        boolean couldBeStuckSpeed = Collisions.checkStuckSpeed(player, player.getMovementThreshold());
-        // True when even a box shrunk by 0.03 still touches the stuck block: the player is certainly inside
-        // it, so there is nothing to have "left". The lenience below (0.15 horizontal, 0.06 vertical) is
-        // for the thin shell at the block's edge where they may have. This used to be gated on
-        // isPointThree(), which is false for every 1.18.2+ client, so every tick a modern client spent
-        // inside a cobweb got the full edge lenience — enough for NoWeb to walk at several times web
-        // speed and to fly up and down through the web. The 0.03 shell is the same for all versions.
-        boolean couldLeaveStuckSpeed = Collisions.checkStuckSpeed(player, -0.03);
-        player.uncertaintyHandler.claimingLeftStuckSpeed = !player.inVehicle() && player.stuckSpeedMultiplier.getX() < 1 && !couldLeaveStuckSpeed;
+        IndexedVector3d stuckSpeed = player.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_21_2) ? player.lastStuckSpeedMultiplier : player.stuckSpeedMultiplier;
+
+        int stuckSpeedIndex = stuckSpeed.getIndex();
+        int maxStuckSpeed = StuckSpeed.checkStuckSpeed(player, player.getMovementThreshold());
+        int minStuckSpeed = StuckSpeed.checkStuckSpeed(player, -player.getMovementThreshold());
+
+        boolean couldBeStuckSpeed = maxStuckSpeed != StuckSpeed.NONE.getIndex();
+        boolean hasDifferentStuckSpeeds = maxStuckSpeed != minStuckSpeed; // if 0.03 does not equal
+        boolean hasMultipleStuckSpeeds = Integer.bitCount(maxStuckSpeed) > 1; // or there are multiple possible stuck speeds
+        boolean lastStuckSpeedNotIncluded = (minStuckSpeed & stuckSpeedIndex) == 0 && (stuckSpeed != StuckSpeed.NONE); // or there is possibility of change since last tick
+
+        player.uncertaintyHandler.shouldSimulateStuckSpeed = hasDifferentStuckSpeeds || hasMultipleStuckSpeeds || lastStuckSpeedNotIncluded;
+        player.uncertaintyHandler.stuckSpeedMultiplierMask = maxStuckSpeed;
 
         if (couldBeStuckSpeed) {
             player.uncertaintyHandler.lastStuckSpeedMultiplier.reset();
@@ -523,6 +529,7 @@ public class MovementCheckRunner extends Check implements PositionCheck {
             PlayerBaseTick.updatePlayerPose(player);
         } else if (PacketEvents.getAPI().getServerManager().getVersion().isNewerThanOrEquals(ServerVersion.V_1_9) && player.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_9)) {
             wasChecked = true;
+            player.depthStriderLevel = 0f;
             // The player and server are both on a version with client controlled entities
             // If either or both of the client server version has server controlled entities
             // The player can't use entities (or the server just checks the entities)
