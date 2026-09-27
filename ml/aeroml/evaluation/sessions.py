@@ -19,7 +19,7 @@ import numpy as np
 
 from ..dataset.windows import WindowIndex
 from ..dataset.exposure import combat_seconds, sample_seconds
-from .risk_sim import CONFIRMED, Prediction, RiskConfig, SUSPICIOUS, Trace, WATCH, simulate
+from .risk_sim import CONFIRMED, Prediction, RiskConfig, SUSPICIOUS, Trace, WATCH, overlap_share, simulate
 
 
 @dataclass
@@ -117,12 +117,15 @@ def evaluate_sessions(index: WindowIndex, rows: Sequence[int], scores: Sequence[
                       consecutive: int = 1, top_k: int = 10,
                       holdout_clients: Sequence[str] = (),
                       calibrated: bool = True, head_scores: dict[str, Sequence[float]] | None = None,
-                      inference_interval_seconds: float = 0.5) -> list[SessionEvaluation]:
+                      inference_interval_seconds: float = 0.5,
+                      prior: float | None = None) -> list[SessionEvaluation]:
     """
     Groups windows by session, replays them in chronological order and simulates the risk engine.
 
     ``threshold`` is the window-level alarm level (usually taken from a TPR@FPR operating point);
     ``consecutive`` mirrors the risk engine's refusal to treat one spike as a detection.
+    ``prior`` is the base rate the model's calibration reported; log-odds scoring uses it as the
+    server does. Each prediction carries the share of its window not already scored.
     """
     rows = list(rows)
     scores = np.asarray(scores, dtype=np.float64)
@@ -167,12 +170,16 @@ def evaluate_sessions(index: WindowIndex, rows: Sequence[int], scores: Sequence[
         top = np.sort(session_scores)[::-1][:max(1, top_k)]
         predictions = []
         last_sent = -math.inf
+        previous_end = None
         for position in order:
             if offsets[position] - last_sent + 1e-9 < inference_interval_seconds:
                 continue
             last_sent = offsets[position]
             heads = {name: float(values[position]) for name, values in head_scores.items()} if head_scores else {"overall": float(scores[position])}
-            predictions.append(Prediction(int(round(last_sent * 1e9)), heads, calibrated))
+            span = index.refs[rows[position]].length * 0.05
+            share = overlap_share(previous_end, float(last_sent), span)
+            previous_end = float(last_sent)
+            predictions.append(Prediction(int(round(last_sent * 1e9)), heads, calibrated, share, prior))
         trace = simulate(predictions, risk_config, start_nanos=0)
         end_nanos = metadata.duration_ms * 1_000_000
         above_watch = trace.seconds_at_or_above(WATCH, end_nanos)

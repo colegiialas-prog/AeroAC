@@ -253,8 +253,49 @@ class RiskEngineTest {
         return profile;
     }
 
+    /** The original tests describe the threshold rule; log-odds tests opt in explicitly. */
     private static RiskEngine engine(Map<String, Object> overrides) {
-        return new RiskEngine(NeuralConfig.read(NeuralConfigTest.config(overrides)).risk());
+        Map<String, Object> settings = new java.util.HashMap<>();
+        settings.put("neural.risk.ai-scoring", "threshold");
+        settings.putAll(overrides);
+        return new RiskEngine(NeuralConfig.read(NeuralConfigTest.config(settings)).risk());
+    }
+
+    private static RiskEngine logOdds(Map<String, Object> overrides) {
+        Map<String, Object> settings = new java.util.HashMap<>(overrides);
+        settings.put("neural.risk.ai-scoring", "log-odds");
+        return new RiskEngine(NeuralConfig.read(NeuralConfigTest.config(settings)).risk());
+    }
+
+    @Test void logOddsIsTheDefaultScoring() {
+        assertTrue(NeuralConfig.read(NeuralConfigTest.config(Map.of())).risk().logOdds());
+    }
+
+    @Test void logOddsCountsTheOldDeadBandAndIsZeroAtTheNeutralRate() {
+        RiskEngine engine = logOdds(Map.of());
+        assertNull(engine.fromPrediction(prediction(1, 0.5, 0.5), SECOND), "p = prior carries no evidence");
+        Evidence moderate = engine.fromPrediction(prediction(2, 0.7, 0.7), SECOND);
+        assertEquals(EvidenceType.AI_OVERALL, moderate.type());
+        assertEquals(0.5 * Math.log(0.7 / 0.3), moderate.strength(), 1.0E-12);
+    }
+
+    @Test void logOddsHonoursOverlapShareClampAndReportedPrior() {
+        RiskEngine engine = logOdds(Map.of());
+        double full = engine.fromPrediction(prediction(1, 1.0, 1.0), 1.0, SECOND).strength();
+        assertEquals(0.5 * Math.log(0.98 / 0.02), full, 1.0E-12, "1.0 is clamped to 0.98");
+        assertEquals(full / 3, engine.fromPrediction(prediction(2, 1.0, 1.0), 1.0 / 3, SECOND).strength(), 1.0E-12);
+        assertNull(engine.fromPrediction(prediction(3, 1.0, 1.0), 0.0, SECOND), "a fully overlapped window adds nothing");
+        PredictionResult withPrior = new PredictionResult(4, SECOND, ModelKind.FLASH, "v", true,
+                new String[]{"overall"}, new double[]{0.2}, 1, 0.2);
+        assertNull(engine.fromPrediction(withPrior, SECOND), "p equal to the reported base rate is neutral");
+    }
+
+    @Test void logOddsReliefIsScaledAndNeverRaisesRisk() {
+        RiskEngine engine = logOdds(Map.of("neural.risk.relief-scale", 0.25));
+        Evidence relief = engine.fromPrediction(prediction(1, 0.1, 0.1), SECOND);
+        assertEquals(EvidenceType.AI_RELIEF, relief.type());
+        assertEquals(0.25 * 0.5 * (Math.log(0.1 / 0.9)), relief.strength(), 1.0E-12);
+        assertNull(logOdds(Map.of()).fromPrediction(uncalibrated(2, 0.99), SECOND));
     }
 
     private static MitigationManager mitigation(Map<String, Object> overrides) {

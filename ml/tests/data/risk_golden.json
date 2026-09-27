@@ -2,6 +2,7 @@
  "note": "Canonical risk trace. Java RiskSimulationGoldenTest and the Python simulator must both reproduce every step from the same predictions and the same config.",
  "config": {
   "acceptUncalibrated": false,
+  "aiScoring": "threshold",
   "decayPerSecond": 0.01,
   "maxRisk": 20.0,
   "aiWeight": 0.5,
@@ -11,7 +12,12 @@
   "grimWeight": 0.5,
   "watch": 2.0,
   "suspicious": 6.0,
-  "confirmed": 12.0
+  "confirmed": 12.0,
+  "logOddsWeight": 0.5,
+  "aiNeutral": 0.5,
+  "aiClampLow": 0.02,
+  "aiClampHigh": 0.98,
+  "reliefScale": 0.5
  },
  "predictions": [
   {
@@ -20,7 +26,9 @@
    "heads": {
     "overall": 0.5,
     "aimAssist": 0.4
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 500000000,
@@ -28,7 +36,9 @@
    "heads": {
     "overall": 0.79,
     "aimAssist": 0.79
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 1000000000,
@@ -36,7 +46,9 @@
    "heads": {
     "overall": 0.8,
     "aimAssist": 0.8
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 1500000000,
@@ -44,7 +56,9 @@
    "heads": {
     "overall": 0.99,
     "aimAssist": 0.9
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 2000000000,
@@ -53,7 +67,9 @@
     "overall": 0.95,
     "aimAssist": 0.1,
     "killAura": 0.93
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 2500000000,
@@ -61,7 +77,9 @@
    "heads": {
     "overall": 0.95,
     "aimAssist": 0.1
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 3000000000,
@@ -69,7 +87,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 3500000000,
@@ -77,7 +97,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 4000000000,
@@ -85,7 +107,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 4500000000,
@@ -93,7 +117,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 5000000000,
@@ -101,7 +127,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 5500000000,
@@ -109,7 +137,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 6000000000,
@@ -117,7 +147,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 6500000000,
@@ -125,7 +157,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 7000000000,
@@ -133,7 +167,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 7500000000,
@@ -141,7 +177,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 8000000000,
@@ -149,7 +187,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 8500000000,
@@ -157,7 +197,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 9000000000,
@@ -165,7 +207,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 9500000000,
@@ -173,7 +217,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 10000000000,
@@ -181,7 +227,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 10500000000,
@@ -189,7 +237,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 11000000000,
@@ -197,7 +247,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 11500000000,
@@ -205,7 +257,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 12000000000,
@@ -213,7 +267,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 12500000000,
@@ -221,7 +277,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 13000000000,
@@ -229,7 +287,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 13500000000,
@@ -237,7 +297,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 14000000000,
@@ -245,7 +307,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 14500000000,
@@ -253,7 +317,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 15000000000,
@@ -261,7 +327,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 15500000000,
@@ -269,7 +337,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 16000000000,
@@ -277,7 +347,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 16500000000,
@@ -285,7 +357,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 17000000000,
@@ -293,7 +367,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 17500000000,
@@ -301,7 +377,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 18000000000,
@@ -309,7 +387,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 18500000000,
@@ -317,7 +397,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 19000000000,
@@ -325,7 +407,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 19500000000,
@@ -333,7 +417,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 20000000000,
@@ -341,7 +427,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 20500000000,
@@ -349,7 +437,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 21000000000,
@@ -357,7 +447,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 21500000000,
@@ -365,7 +457,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 22000000000,
@@ -373,7 +467,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 22500000000,
@@ -381,7 +477,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 23000000000,
@@ -389,7 +487,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 23500000000,
@@ -397,7 +497,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 24000000000,
@@ -405,7 +507,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 24500000000,
@@ -413,7 +517,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 25000000000,
@@ -421,7 +527,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 25500000000,
@@ -429,7 +537,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 26000000000,
@@ -437,7 +547,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 26500000000,
@@ -445,7 +557,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 27000000000,
@@ -453,7 +567,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 27500000000,
@@ -461,7 +577,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 28000000000,
@@ -469,7 +587,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 28500000000,
@@ -477,7 +597,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 29000000000,
@@ -485,7 +607,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 29500000000,
@@ -493,7 +617,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 30000000000,
@@ -501,7 +627,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 30500000000,
@@ -509,7 +637,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 31000000000,
@@ -517,7 +647,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 31500000000,
@@ -525,7 +657,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 32000000000,
@@ -533,7 +667,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 32500000000,
@@ -541,7 +677,9 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 33000000000,
@@ -549,21 +687,27 @@
    "heads": {
     "overall": 1.0,
     "aimAssist": 1.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 120000000000,
    "calibrated": true,
    "heads": {
     "overall": 0.5
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 300000000000,
    "calibrated": true,
    "heads": {
     "overall": 0.5
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 310000000000,
@@ -571,7 +715,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 312000000000,
@@ -579,7 +725,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 314000000000,
@@ -587,7 +735,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 316000000000,
@@ -595,7 +745,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 318000000000,
@@ -603,7 +755,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 320000000000,
@@ -611,7 +765,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 322000000000,
@@ -619,7 +775,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 324000000000,
@@ -627,7 +785,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 326000000000,
@@ -635,7 +795,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 328000000000,
@@ -643,7 +805,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 330000000000,
@@ -651,7 +815,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 332000000000,
@@ -659,7 +825,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 334000000000,
@@ -667,7 +835,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 336000000000,
@@ -675,7 +845,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 338000000000,
@@ -683,7 +855,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 340000000000,
@@ -691,7 +865,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 342000000000,
@@ -699,7 +875,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 344000000000,
@@ -707,7 +885,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 346000000000,
@@ -715,7 +895,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 348000000000,
@@ -723,7 +905,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 350000000000,
@@ -731,7 +915,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 352000000000,
@@ -739,7 +925,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 354000000000,
@@ -747,7 +935,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 356000000000,
@@ -755,7 +945,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 358000000000,
@@ -763,7 +955,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 360000000000,
@@ -771,7 +965,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 362000000000,
@@ -779,7 +975,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 364000000000,
@@ -787,7 +985,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 366000000000,
@@ -795,7 +995,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 368000000000,
@@ -803,7 +1005,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 370000000000,
@@ -811,7 +1015,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 372000000000,
@@ -819,7 +1025,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 374000000000,
@@ -827,7 +1035,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 376000000000,
@@ -835,7 +1045,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 378000000000,
@@ -843,7 +1055,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 380000000000,
@@ -851,7 +1065,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 382000000000,
@@ -859,7 +1075,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 384000000000,
@@ -867,7 +1085,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 386000000000,
@@ -875,7 +1095,9 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 388000000000,
@@ -883,14 +1105,18 @@
    "heads": {
     "overall": 0.0,
     "aimAssist": 0.0
-   }
+   },
+   "share": 1.0,
+   "prior": null
   },
   {
    "nanoTime": 400000000000,
    "calibrated": true,
    "heads": {
     "overall": 0.85
-   }
+   },
+   "share": 1.0,
+   "prior": null
   }
  ],
  "steps": [

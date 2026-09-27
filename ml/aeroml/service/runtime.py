@@ -97,6 +97,10 @@ class LoadedModel:
         out = np.where(np.arange(windows.shape[-1]) < schema.value_count, scaled * known, windows)
         return out.astype(np.float32)
 
+    def calibration_prior(self, head: str = "overall") -> float | None:
+        prior = getattr(self.calibration, "prior", None)
+        return prior(head) if callable(prior) else None
+
     def predict(self, windows: np.ndarray, schema: FeatureSchema) -> dict[str, float]:
         logits = np.asarray(self.backend.run(self.normalize(windows, schema)), dtype=np.float64)
         heads = self.bundle.manifest.heads
@@ -143,7 +147,7 @@ class InferenceService:
         heads = model.predict(windows, self.schema)
         if "overall" not in heads:
             raise ProtocolError(503, "model does not publish an 'overall' head")
-        return {
+        response = {
             "protocolVersion": PROTOCOL_VERSION,
             "featureSchemaVersion": self.schema.version,
             "requestId": int(payload["requestId"]),
@@ -152,6 +156,12 @@ class InferenceService:
             "calibrated": model.calibration is not None,
             "heads": heads,
         }
+        prior = model.calibration_prior()
+        if prior is not None:
+            # Optional: the base rate the calibrated overall head is a posterior under. Older Java
+            # clients ignore it; newer ones score logit(p) - logit(prior) instead of a guessed neutral.
+            response["calibrationPrior"] = prior
+        return response
 
     def _validate(self, payload: Mapping) -> tuple[LoadedModel, np.ndarray]:
         if not isinstance(payload, Mapping):

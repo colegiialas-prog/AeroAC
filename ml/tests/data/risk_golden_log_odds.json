@@ -1,0 +1,2157 @@
+{
+ "note": "Canonical risk trace. Java RiskSimulationGoldenTest and the Python simulator must both reproduce every step from the same predictions and the same config.",
+ "config": {
+  "acceptUncalibrated": false,
+  "aiScoring": "log-odds",
+  "decayPerSecond": 0.001,
+  "maxRisk": 20.0,
+  "aiWeight": 0.5,
+  "aiThreshold": 0.8,
+  "aiClearThreshold": 0.2,
+  "aiRelief": 0.15,
+  "grimWeight": 0.5,
+  "watch": 2.0,
+  "suspicious": 6.0,
+  "confirmed": 12.0,
+  "logOddsWeight": 0.5,
+  "aiNeutral": 0.5,
+  "aiClampLow": 0.02,
+  "aiClampHigh": 0.98,
+  "reliefScale": 0.5
+ },
+ "predictions": [
+  {
+   "nanoTime": 0,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.5
+   },
+   "share": 1.0,
+   "prior": null
+  },
+  {
+   "nanoTime": 500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.7,
+    "aimAssist": 0.7
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 1000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.99,
+    "aimAssist": 0.95
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 1500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.9,
+    "aimAssist": 0.1,
+    "killAura": 0.93
+   },
+   "share": 1.0,
+   "prior": null
+  },
+  {
+   "nanoTime": 2000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.6
+   },
+   "share": 1.0,
+   "prior": 0.2
+  },
+  {
+   "nanoTime": 2500000000,
+   "calibrated": false,
+   "heads": {
+    "overall": 1.0
+   },
+   "share": 1.0,
+   "prior": null
+  },
+  {
+   "nanoTime": 3000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 3500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 4000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 4500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 5000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 5500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 6000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 6500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 7000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 7500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 8000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 8500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 9000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 9500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 10000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 10500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 11000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 11500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 12000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 12500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 13000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 13500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 14000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 14500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 15000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 15500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 16000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 16500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 17000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 17500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 18000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 18500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 19000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 19500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 20000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 20500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 21000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 21500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 22000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 22500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 23000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 23500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 24000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 24500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 25000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 25500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 26000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 26500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 27000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 27500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 28000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 28500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 29000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 29500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 30000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 30500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 31000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 31500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 32000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 32500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 33000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 33500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 34000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 34500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 35000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 35500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 36000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 36500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 37000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 37500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 38000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 38500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 39000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 39500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 40000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 40500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 41000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 41500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 42000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 42500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.75,
+    "aimAssist": 0.75
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 600000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.5
+   },
+   "share": 1.0,
+   "prior": null
+  },
+  {
+   "nanoTime": 610000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 610500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 611000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 611500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 612000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 612500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 613000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 613500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 614000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 614500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 615000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 615500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 616000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 616500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 617000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 617500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 618000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 618500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 619000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 619500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 620000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 620500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 621000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 621500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 622000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 622500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 623000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 623500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 624000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 624500000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.01,
+    "aimAssist": 0.01
+   },
+   "share": 0.3333333333333333,
+   "prior": null
+  },
+  {
+   "nanoTime": 700000000000,
+   "calibrated": true,
+   "heads": {
+    "overall": 0.85
+   },
+   "share": 0.0,
+   "prior": null
+  }
+ ],
+ "steps": [
+  {
+   "nanoTime": 0,
+   "risk": 0.0,
+   "state": "CLEAN",
+   "evidence": null,
+   "strength": 0.0,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 500000000,
+   "risk": 0.1412163100645339,
+   "state": "CLEAN",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1412163100645339,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 1000000000,
+   "risk": 0.7897824359103697,
+   "state": "CLEAN",
+   "evidence": "AI_AIM",
+   "strength": 0.6486367163517709,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 1500000000,
+   "risk": 1.887999932066877,
+   "state": "CLEAN",
+   "evidence": "AI_KILLAURA",
+   "strength": 1.0986122886681098,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 2000000000,
+   "risk": 2.782935902675534,
+   "state": "WATCH",
+   "evidence": "AI_OVERALL",
+   "strength": 0.8958797346140274,
+   "transitioned": true
+  },
+  {
+   "nanoTime": 2500000000,
+   "risk": 2.7815447825332136,
+   "state": "WATCH",
+   "evidence": null,
+   "strength": 0.0,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 3000000000,
+   "risk": 2.9632564058884547,
+   "state": "WATCH",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 3500000000,
+   "risk": 3.144877196142186,
+   "state": "WATCH",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 4000000000,
+   "risk": 3.326407198699606,
+   "state": "WATCH",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 4500000000,
+   "risk": 3.5078464589432166,
+   "state": "WATCH",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 5000000000,
+   "risk": 3.689195022232833,
+   "state": "WATCH",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 5500000000,
+   "risk": 3.8704529339055975,
+   "state": "WATCH",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 6000000000,
+   "risk": 4.051620239275989,
+   "state": "WATCH",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 6500000000,
+   "risk": 4.232696983635834,
+   "state": "WATCH",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 7000000000,
+   "risk": 4.41368321225432,
+   "state": "WATCH",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 7500000000,
+   "risk": 4.594578970378005,
+   "state": "WATCH",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 8000000000,
+   "risk": 4.77538430323083,
+   "state": "WATCH",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 8500000000,
+   "risk": 4.956099256014129,
+   "state": "WATCH",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 9000000000,
+   "risk": 5.136723873906641,
+   "state": "WATCH",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 9500000000,
+   "risk": 5.317258202064521,
+   "state": "WATCH",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 10000000000,
+   "risk": 5.4977022856213535,
+   "state": "WATCH",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 10500000000,
+   "risk": 5.678056169688158,
+   "state": "WATCH",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 11000000000,
+   "risk": 5.8583198993534085,
+   "state": "WATCH",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 11500000000,
+   "risk": 6.038493519683038,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": true
+  },
+  {
+   "nanoTime": 12000000000,
+   "risk": 6.218577075720451,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 12500000000,
+   "risk": 6.398570612486539,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 13000000000,
+   "risk": 6.578474174979687,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 13500000000,
+   "risk": 6.758287808175786,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 14000000000,
+   "risk": 6.938011557028245,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 14500000000,
+   "risk": 7.117645466468003,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 15000000000,
+   "risk": 7.297189581403538,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 15500000000,
+   "risk": 7.47664394672088,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 16000000000,
+   "risk": 7.65600860728362,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 16500000000,
+   "risk": 7.835283607932925,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 17000000000,
+   "risk": 8.014468993487547,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 17500000000,
+   "risk": 8.193564808743831,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 18000000000,
+   "risk": 8.372571098475733,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 18500000000,
+   "risk": 8.551487907434828,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 19000000000,
+   "risk": 8.730315280350316,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 19500000000,
+   "risk": 8.909053261929044,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 20000000000,
+   "risk": 9.087701896855506,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 20500000000,
+   "risk": 9.266261229791864,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 21000000000,
+   "risk": 9.44473130537795,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 21500000000,
+   "risk": 9.623112168231284,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 22000000000,
+   "risk": 9.801403862947085,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 22500000000,
+   "risk": 9.979606434098276,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 23000000000,
+   "risk": 10.157719926235501,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 23500000000,
+   "risk": 10.335744383887132,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 24000000000,
+   "risk": 10.513679851559287,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 24500000000,
+   "risk": 10.691526373735833,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 25000000000,
+   "risk": 10.869283994878401,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 25500000000,
+   "risk": 11.046952759426398,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 26000000000,
+   "risk": 11.224532711797016,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 26500000000,
+   "risk": 11.402023896385243,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 27000000000,
+   "risk": 11.579426357563877,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 27500000000,
+   "risk": 11.756740139683533,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 28000000000,
+   "risk": 11.933965287072658,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 28500000000,
+   "risk": 12.11110184403754,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": true
+  },
+  {
+   "nanoTime": 29000000000,
+   "risk": 12.28814985486232,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 29500000000,
+   "risk": 12.465109363809,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 30000000000,
+   "risk": 12.64198041511746,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 30500000000,
+   "risk": 12.818763053005464,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 31000000000,
+   "risk": 12.99545732166867,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 31500000000,
+   "risk": 13.172063265280649,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 32000000000,
+   "risk": 13.348580927992884,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 32500000000,
+   "risk": 13.525010353934794,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 33000000000,
+   "risk": 13.701351587213736,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 33500000000,
+   "risk": 13.87760467191502,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 34000000000,
+   "risk": 14.053769652101916,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 34500000000,
+   "risk": 14.229846571815672,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 35000000000,
+   "risk": 14.40583547507552,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 35500000000,
+   "risk": 14.581736405878685,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 36000000000,
+   "risk": 14.757549408200399,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 36500000000,
+   "risk": 14.933274525993916,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 37000000000,
+   "risk": 15.108911803190516,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 37500000000,
+   "risk": 15.284461283699518,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 38000000000,
+   "risk": 15.459923011408293,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 38500000000,
+   "risk": 15.635297030182276,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 39000000000,
+   "risk": 15.810583383864971,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 39500000000,
+   "risk": 15.985782116277967,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 40000000000,
+   "risk": 16.16089327122095,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 40500000000,
+   "risk": 16.335916892471705,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 41000000000,
+   "risk": 16.510853023786144,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 41500000000,
+   "risk": 16.685701708898296,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 42000000000,
+   "risk": 16.860462991520336,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 42500000000,
+   "risk": 17.035136915342587,
+   "state": "CONFIRMED",
+   "evidence": "AI_OVERALL",
+   "strength": 0.1831020481113516,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 600000000000,
+   "risk": 9.75498160503202,
+   "state": "SUSPICIOUS",
+   "evidence": null,
+   "strength": 0.0,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 610000000000,
+   "risk": 9.33359955811226,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 610500000000,
+   "risk": 9.004615566662837,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 611000000000,
+   "risk": 8.675796026092993,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 611500000000,
+   "risk": 8.347140854197841,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 612000000000,
+   "risk": 8.018649968813587,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 612500000000,
+   "risk": 7.690323287817508,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 613000000000,
+   "risk": 7.36216072912793,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 613500000000,
+   "risk": 7.0341622107042125,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 614000000000,
+   "risk": 6.706327650546725,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 614500000000,
+   "risk": 6.378656966696825,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 615000000000,
+   "risk": 6.051150077236841,
+   "state": "SUSPICIOUS",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 615500000000,
+   "risk": 5.723806900290047,
+   "state": "WATCH",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": true
+  },
+  {
+   "nanoTime": 616000000000,
+   "risk": 5.396627354020648,
+   "state": "WATCH",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 616500000000,
+   "risk": 5.069611356633756,
+   "state": "WATCH",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 617000000000,
+   "risk": 4.74275882637537,
+   "state": "WATCH",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 617500000000,
+   "risk": 4.416069681532355,
+   "state": "WATCH",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 618000000000,
+   "risk": 4.089543840432424,
+   "state": "WATCH",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 618500000000,
+   "risk": 3.763181221444115,
+   "state": "WATCH",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 619000000000,
+   "risk": 3.43698174297677,
+   "state": "WATCH",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 619500000000,
+   "risk": 3.1109453234805198,
+   "state": "WATCH",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 620000000000,
+   "risk": 2.785071881446256,
+   "state": "WATCH",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 620500000000,
+   "risk": 2.4593613354056174,
+   "state": "WATCH",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 621000000000,
+   "risk": 2.1338136039309656,
+   "state": "WATCH",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 621500000000,
+   "risk": 1.8084286056353662,
+   "state": "CLEAN",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": true
+  },
+  {
+   "nanoTime": 622000000000,
+   "risk": 1.4832062591725679,
+   "state": "CLEAN",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 622500000000,
+   "risk": 1.1581464832369823,
+   "state": "CLEAN",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 623000000000,
+   "risk": 0.8332491965636637,
+   "state": "CLEAN",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 623500000000,
+   "risk": 0.5085143179282887,
+   "state": "CLEAN",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 624000000000,
+   "risk": 0.1839417661471361,
+   "state": "CLEAN",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 624500000000,
+   "risk": 0.0,
+   "state": "CLEAN",
+   "evidence": "AI_RELIEF",
+   "strength": -0.3243183581758855,
+   "transitioned": false
+  },
+  {
+   "nanoTime": 700000000000,
+   "risk": 0.0,
+   "state": "CLEAN",
+   "evidence": null,
+   "strength": 0.0,
+   "transitioned": false
+  }
+ ],
+ "peakRisk": 17.035136915342587,
+ "counts": {
+  "CLEAN": 1,
+  "WATCH": 2,
+  "SUSPICIOUS": 1,
+  "MITIGATED": 0,
+  "CONFIRMED": 1
+ },
+ "timeToWatchSeconds": 2.0,
+ "timeToSuspiciousSeconds": 11.5,
+ "timeToConfirmedSeconds": 28.5
+}

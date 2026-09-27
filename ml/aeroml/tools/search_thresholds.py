@@ -12,9 +12,12 @@ from ..dataset.records import load_dataset
 from ..dataset.lineage import restore_index
 from ..reporting import write_json, dumps
 
-GRID_KEYS = {"aiThreshold", "aiClearThreshold", "aiWeight", "decayPerSecond", "watch", "suspicious", "confirmed"}
-DEFAULT_GRID = {"aiThreshold": [0.8, 0.9], "aiClearThreshold": [0.1, 0.2], "aiWeight": [0.25, 0.5],
-                "decayPerSecond": [0.01, 0.05], "watch": [2.0], "suspicious": [6.0], "confirmed": [12.0]}
+GRID_KEYS = {"aiScoring", "aiThreshold", "aiClearThreshold", "aiWeight", "decayPerSecond", "watch", "suspicious",
+             "confirmed", "logOddsWeight", "reliefScale", "aiNeutral"}
+#: Log-odds is the engine's default; its knobs are the evidence weight, how hard honest windows pull
+#: risk down, and time decay. The threshold rule's parameters are searched only if a grid names them.
+DEFAULT_GRID = {"logOddsWeight": [0.25, 0.5], "reliefScale": [0.25, 0.5, 1.0],
+                "decayPerSecond": [0.001, 0.01], "watch": [2.0], "suspicious": [6.0], "confirmed": [12.0]}
 
 
 def poisson_upper95(events):
@@ -38,7 +41,7 @@ def poisson_upper95(events):
 
 
 def search(index, rows, scores, *, grid, max_confirmed_per_100h, calibrated=True, head_scores=None,
-           require_upper95=True, max_candidates=256):
+           require_upper95=True, max_candidates=256, prior=None):
     if set(grid) - GRID_KEYS or not grid or any(not isinstance(v, list) or not v for v in grid.values()):
         raise ValueError("grid must contain nonempty lists of supported risk parameters")
     if not math.isfinite(max_confirmed_per_100h) or max_confirmed_per_100h < 0:
@@ -54,7 +57,7 @@ def search(index, rows, scores, *, grid, max_confirmed_per_100h, calibrated=True
         if cfg.to_dict() != cfg.normalised().to_dict():
             raise ValueError("invalid grid point: thresholds must be ordered and parameters in range")
         evaluations = evaluate_sessions(index, rows, scores, threshold=cfg.ai_threshold, risk_config=cfg,
-                                       calibrated=calibrated, head_scores=head_scores)
+                                       calibrated=calibrated, head_scores=head_scores, prior=prior)
         fp = false_positive_simulation(evaluations)
         detection = detection_simulation(evaluations)
         hours = fp.get("combatHours", 0)
@@ -95,7 +98,8 @@ def main():
     grid = json.loads(a.grid.read_text()) if a.grid else DEFAULT_GRID
     result = search(index, rows, scores[:, model.bundle.manifest.heads.index("overall")], grid=grid,
                     max_confirmed_per_100h=a.max_confirmed_per_100h, calibrated=model.calibration is not None,
-                    head_scores={h: scores[:, i] for i, h in enumerate(model.bundle.manifest.heads)}, require_upper95=not a.empirical_only)
+                    head_scores={h: scores[:, i] for i, h in enumerate(model.bundle.manifest.heads)}, require_upper95=not a.empirical_only,
+                    prior=model.calibration_prior())
     result["fold"] = "validation"
     result["modelVersion"] = model.bundle.manifest.model_version
     write_json(a.output, result)

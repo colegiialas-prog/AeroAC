@@ -299,7 +299,20 @@ neural:
         enabled: false
         # An uncalibrated model output is not a probability; leave this false unless you know why.
         accept-uncalibrated: false
-        decay-per-second: 0.01
+        # log-odds: each window adds log-odds-weight * (logit(p) - logit(prior)), shared out over
+        # overlapping windows; honest windows lower risk by the evidence they carry. threshold: the
+        # older rule, only p >= ai-threshold raises risk and p <= ai-clear-threshold relieves it.
+        ai-scoring: log-odds
+        log-odds-weight: 0.5
+        # Base rate used when the model service does not report the one it was calibrated under.
+        ai-neutral: 0.5
+        ai-clamp-low: 0.02
+        ai-clamp-high: 0.98
+        # Multiplier on negative (legitimate-looking) evidence. 1 = symmetric.
+        relief-scale: 0.5
+        # Half-life ~11.5 minutes. Honest play already walks risk down in log-odds mode, so time
+        # decay no longer has to be fast enough to forgive short bursts of fighting.
+        decay-per-second: 0.001
         max-risk: 20.0
         ai-weight: 0.5
         ai-threshold: 0.80

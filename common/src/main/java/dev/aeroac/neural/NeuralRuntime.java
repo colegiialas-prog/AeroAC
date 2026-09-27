@@ -90,12 +90,29 @@ public final class NeuralRuntime implements AutoCloseable {
         if (!state.trail.add(result)) return;
         if (riskEngine == null) return;
         PlayerRiskProfile profile = riskProfile(player.getUniqueId(), state, result.nanoTime());
-        Evidence evidence = riskEngine.fromPrediction(result, result.nanoTime());
+        Evidence evidence = riskEngine.fromPrediction(result, overlapShare(state, request), result.nanoTime());
         if (evidence == null) {
             riskEngine.decay(profile, result.nanoTime());
             return;
         }
         apply(player, state, collector, evidence, result);
+    }
+
+    /**
+     * Share of this window that no earlier window of the same model already covered. Windows are
+     * 31 samples sent every ~10, so without this each tick would be counted about three times.
+     * Mirrored by risk_sim.overlap_share, which assumes the same 50 ms nominal sample.
+     */
+    static double overlapShare(NeuralPlayerState state, InferenceRequest request) {
+        int kind = request.model().ordinal();
+        long end = request.windowEndNanos();
+        boolean seen = state.scoredWindowSeen[kind];
+        long previous = state.lastScoredWindowEndNanos[kind];
+        state.scoredWindowSeen[kind] = true;
+        state.lastScoredWindowEndNanos[kind] = end;
+        if (!seen) return 1.0;
+        double span = request.sequenceLength() * 50_000_000.0;
+        return Math.max(0, Math.min(1, (end - previous) / span));
     }
 
     /**

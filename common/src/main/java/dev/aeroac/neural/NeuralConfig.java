@@ -19,12 +19,19 @@ public record NeuralConfig(boolean enabled, boolean collectionEnabled, int conti
                             ModelWindow flashWindow, int flashSequence, boolean proEnabled, ModelWindow proWindow,
                             int proSequence, double proTrigger, int proMinIntervalMs) { }
 
-    /** acceptUncalibrated exists so an uncalibrated sigmoid cannot silently be treated as a probability. */
+    /**
+     * acceptUncalibrated exists so an uncalibrated sigmoid cannot silently be treated as a probability.
+     *
+     * <p>logOdds selects how a prediction becomes evidence. True (the default) adds the window's
+     * log-likelihood ratio, weight * share * (logit(p) - logit(prior)); false keeps the older rule
+     * that only counts probabilities above aiThreshold and relieves below aiClearThreshold.
+     */
     public record Risk(boolean enabled, boolean acceptUncalibrated, double decayPerSecond, double maxRisk,
                        double aiWeight, double aiThreshold, double aiClearThreshold, double aiRelief,
                        double grimWeight, double watch, double suspicious, double confirmed,
                        double snapshotThreshold, int maxSnapshotsPerHour, int snapshotBefore, int snapshotAfter,
-                       int carryOverSeconds) { }
+                       int carryOverSeconds, boolean logOdds, double logOddsWeight, double aiNeutral,
+                       double aiClampLow, double aiClampHigh, double reliefScale) { }
 
     public record Mitigation(boolean enabled, RiskState minState, boolean cancelAttacks, int durationSeconds,
                              int maxPerHour) { }
@@ -79,9 +86,12 @@ public record NeuralConfig(boolean enabled, boolean collectionEnabled, int conti
         double confirmed = Math.max(suspicious, positive(config, "risk.confirmed", 12.0));
         double aiThreshold = fraction(config, "risk.ai-threshold", 0.80);
         int after = Math.min(continuous - 1, bounded(config, "risk.snapshot-after", 32, 0, 512));
+        boolean logOdds = !"threshold".equalsIgnoreCase(config.getStringElse("neural.risk.ai-scoring", "log-odds").trim());
+        double low = Math.max(1.0E-6, Math.min(0.5, positive(config, "risk.ai-clamp-low", 0.02)));
+        double high = Math.max(0.5, Math.min(1 - 1.0E-6, positive(config, "risk.ai-clamp-high", 0.98)));
         return new Risk(config.getBooleanElse("neural.risk.enabled", false),
                 config.getBooleanElse("neural.risk.accept-uncalibrated", false),
-                positive(config, "risk.decay-per-second", 0.01),
+                positive(config, "risk.decay-per-second", 0.001),
                 Math.max(confirmed, positive(config, "risk.max-risk", 20.0)),
                 positive(config, "risk.ai-weight", 0.5), aiThreshold,
                 Math.min(aiThreshold, fraction(config, "risk.ai-clear-threshold", 0.20)),
@@ -89,7 +99,10 @@ public record NeuralConfig(boolean enabled, boolean collectionEnabled, int conti
                 watch, suspicious, confirmed, Math.max(watch, positive(config, "risk.snapshot-threshold", 8.0)),
                 bounded(config, "risk.max-snapshots-per-hour", 12, 0, 1000),
                 Math.min(continuous - after, bounded(config, "risk.snapshot-before", 64, 0, 512)), after,
-                bounded(config, "risk.carry-over-seconds", 300, 0, 3600));
+                bounded(config, "risk.carry-over-seconds", 300, 0, 3600),
+                logOdds, positive(config, "risk.log-odds-weight", 0.5),
+                Math.max(low, Math.min(high, positive(config, "risk.ai-neutral", 0.5))), low, high,
+                positive(config, "risk.relief-scale", 0.5));
     }
 
     private static Mitigation mitigation(ConfigManager config) {

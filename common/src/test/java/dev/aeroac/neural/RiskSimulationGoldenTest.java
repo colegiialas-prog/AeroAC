@@ -31,9 +31,23 @@ class RiskSimulationGoldenTest {
     private static final double TOLERANCE = 1.0E-9;
 
     @Test void javaReproducesTheCanonicalRiskTrace() throws Exception {
-        JsonObject fixture = fixture();
+        replay(fixture("risk_golden.json"));
+    }
+
+    @Test void javaReproducesTheLogOddsRiskTrace() throws Exception {
+        replay(fixture("risk_golden_log_odds.json"));
+    }
+
+    private static void replay(JsonObject fixture) {
         JsonObject config = fixture.getAsJsonObject("config");
-        RiskEngine engine = new RiskEngine(NeuralConfig.read(NeuralConfigTest.config(Map.of(
+        Map<String, Object> settings = new java.util.HashMap<>(Map.of(
+                "neural.risk.ai-scoring", config.get("aiScoring").getAsString(),
+                "neural.risk.log-odds-weight", config.get("logOddsWeight").getAsDouble(),
+                "neural.risk.ai-neutral", config.get("aiNeutral").getAsDouble(),
+                "neural.risk.ai-clamp-low", config.get("aiClampLow").getAsDouble(),
+                "neural.risk.ai-clamp-high", config.get("aiClampHigh").getAsDouble(),
+                "neural.risk.relief-scale", config.get("reliefScale").getAsDouble()));
+        settings.putAll(Map.of(
                 "neural.risk.accept-uncalibrated", config.get("acceptUncalibrated").getAsBoolean(),
                 "neural.risk.decay-per-second", config.get("decayPerSecond").getAsDouble(),
                 "neural.risk.max-risk", config.get("maxRisk").getAsDouble(),
@@ -43,7 +57,8 @@ class RiskSimulationGoldenTest {
                 "neural.risk.ai-relief", config.get("aiRelief").getAsDouble(),
                 "neural.risk.watch", config.get("watch").getAsDouble(),
                 "neural.risk.suspicious", config.get("suspicious").getAsDouble(),
-                "neural.risk.confirmed", config.get("confirmed").getAsDouble()))).risk());
+                "neural.risk.confirmed", config.get("confirmed").getAsDouble()));
+        RiskEngine engine = new RiskEngine(NeuralConfig.read(NeuralConfigTest.config(settings)).risk());
 
         JsonArray predictions = fixture.getAsJsonArray("predictions");
         JsonArray steps = fixture.getAsJsonArray("steps");
@@ -58,7 +73,9 @@ class RiskSimulationGoldenTest {
             long now = result.nanoTime();
 
             // NeuralRuntime applies exactly this: evidence when there is any, decay otherwise.
-            Evidence evidence = engine.fromPrediction(result, now);
+            JsonObject input = predictions.get(index).getAsJsonObject();
+            double share = input.has("share") ? input.get("share").getAsDouble() : 1.0;
+            Evidence evidence = engine.fromPrediction(result, share, now);
             if (evidence == null) {
                 engine.decay(profile, now);
                 assertTrue(expected.get("evidence").isJsonNull(),
@@ -88,7 +105,7 @@ class RiskSimulationGoldenTest {
     }
 
     @Test void theFixtureExercisesEveryEvidenceBranch() throws Exception {
-        JsonArray steps = fixture().getAsJsonArray("steps");
+        JsonArray steps = fixture("risk_golden.json").getAsJsonArray("steps");
         List<String> kinds = new ArrayList<>();
         for (JsonElement element : steps) {
             JsonElement evidence = element.getAsJsonObject().get("evidence");
@@ -108,15 +125,16 @@ class RiskSimulationGoldenTest {
             names[index] = head.getKey();
             values[index++] = head.getValue().getAsDouble();
         }
+        double prior = json.has("prior") && !json.get("prior").isJsonNull() ? json.get("prior").getAsDouble() : Double.NaN;
         return new PredictionResult(index, json.get("nanoTime").getAsLong(), ModelKind.FLASH, "golden-v1",
-                json.get("calibrated").getAsBoolean(), names, values, 0);
+                json.get("calibrated").getAsBoolean(), names, values, 0, prior);
     }
 
-    private static JsonObject fixture() throws Exception {
+    private static JsonObject fixture(String name) throws Exception {
         Path root = Path.of("").toAbsolutePath();
         while (root != null && !Files.exists(root.resolve("settings.gradle.kts"))) root = root.getParent();
         assertNotNull(root, "repository root not found");
-        Path path = root.resolve("ml/tests/data/risk_golden.json");
+        Path path = root.resolve("ml/tests/data/" + name);
         assertTrue(Files.exists(path), "missing " + path + "; run python -m aeroml.tools.make_risk_golden");
         return new JsonParser().parse(Files.readString(path)).getAsJsonObject();
     }

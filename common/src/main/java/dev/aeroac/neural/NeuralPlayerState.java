@@ -25,6 +25,9 @@ public final class NeuralPlayerState {
     public long lastFlashNanos;
     public long lastProNanos;
     public long inferenceSkipped;
+    /** End of the last window that produced evidence, per ModelKind ordinal; 0 = none yet. */
+    public final long[] lastScoredWindowEndNanos = new long[2];
+    public final boolean[] scoredWindowSeen = new boolean[2];
 
     public PlayerRiskProfile risk;
     public PendingSnapshot pendingSnapshot;
@@ -54,5 +57,7 @@ public final class NeuralPlayerState {
         pendingSnapshot = null;
         mitigation = null;
         lastFlashNanos = lastProNanos = 0;
+        java.util.Arrays.fill(lastScoredWindowEndNanos, 0);
+        java.util.Arrays.fill(scoredWindowSeen, false);
     }
 }
