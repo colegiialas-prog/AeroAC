@@ -336,6 +336,11 @@ neural:
         snapshot-after: 32
         # Keep a disconnected player's risk this long, so a relog is not a reset. 0 disables.
         carry-over-seconds: 300
+        # Remember risk across restarts and reloads in plugins/AeroAC/neural/risk-store.json for this
+        # many hours (0 disables). It decays for the time the player was away and is restored at most
+        # to restore-cap: the evidence behind it is gone, so it can start a watch but not a verdict.
+        persist-hours: 72
+        restore-cap: 4.0
     mitigation:
         # Phase 6. Turn on only after measuring the false positive rate on your own server.
         enabled: false

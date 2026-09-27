@@ -28,6 +28,26 @@ public final class RiskEngine {
         profile.state(stateFor(profile.risk()), nowNanos);
     }
 
+    /**
+     * Time passes without decay: the player is in a vehicle and the model cannot see their aim, so
+     * silence there is not evidence of honest play.
+     */
+    public void hold(PlayerRiskProfile profile, long nowNanos) {
+        if (nowNanos > profile.lastUpdateNanos()) profile.risk(profile.risk(), nowNanos);
+    }
+
+    /**
+     * Seeds a fresh profile with risk remembered from an earlier connection, decayed for the time
+     * the player was away and capped: the evidence behind it is gone, so it may start a watch but
+     * never a verdict on its own.
+     */
+    public void restore(PlayerRiskProfile profile, double stored, double awaySeconds, long nowNanos) {
+        if (!(stored > 0) || !Double.isFinite(stored) || !(awaySeconds >= 0)) return;
+        double decayed = stored * Math.exp(-config.decayPerSecond() * awaySeconds);
+        profile.risk(clamp(Math.min(config.restoreCap(), decayed)), nowNanos);
+        profile.state(stateFor(profile.risk()), nowNanos);
+    }
+
     /** Applies decay up to now, then the evidence. Returns true when the state boundary moved. */
     public boolean accept(PlayerRiskProfile profile, Evidence evidence, long nowNanos) {
         decay(profile, nowNanos);

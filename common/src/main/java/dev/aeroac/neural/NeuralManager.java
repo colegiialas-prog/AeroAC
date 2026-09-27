@@ -111,7 +111,8 @@ public final class NeuralManager implements StartableInitable, StoppableInitable
         }
         try {
             runtime = replacement.telemetryEnabled()
-                    ? new NeuralRuntime(generation, replacement, buildClient(replacement), this::datasets)
+                    ? new NeuralRuntime(generation, replacement, buildClient(replacement), this::datasets,
+                            riskStore(replacement))
                     : null;
         } catch (Exception error) {
             runtime = null;
@@ -127,6 +128,19 @@ public final class NeuralManager implements StartableInitable, StoppableInitable
 
     private static boolean needsDisk(NeuralConfig settings) {
         return settings.enabled() && (settings.collectionEnabled() || settings.risk().enabled());
+    }
+
+    /** One store for the manager's lifetime, so reloads never lose remembered risk. */
+    private dev.aeroac.neural.risk.RiskStore riskStore;
+
+    private dev.aeroac.neural.risk.RiskStore riskStore(NeuralConfig settings) {
+        if (!settings.risk().enabled() || settings.risk().persistHours() <= 0) return null;
+        if (riskStore == null) {
+            Path folder = dataFolder();
+            if (folder == null) return null;
+            riskStore = new dev.aeroac.neural.risk.RiskStore(folder.resolve("neural").resolve("risk-store.json"), log::warn);
+        }
+        return riskStore;
     }
 
     private InferenceClient buildClient(NeuralConfig settings) throws IOException {
@@ -470,7 +484,22 @@ public final class NeuralManager implements StartableInitable, StoppableInitable
         NeuralRuntime active = runtime;
         runtime = null;
         long generation = ++generations;
-        if (active != null) active.close();
+        if (active != null) {
+            // A restart must not be a reset: remember everyone still online before the runtime goes.
+            try {
+                long now = System.nanoTime();
+                for (AeroPlayer player : AeroAPI.INSTANCE.getPlayerDataManager().getEntries()) {
+                    active.remember(player.getUniqueId(), player.getNeuralState().risk, now);
+                }
+            } catch (RuntimeException unavailable) {
+                log.warn("Aero AC: риск онлайн-игроков не сохранён при остановке: " + unavailable.getMessage());
+            }
+            active.close();
+        }
+        if (riskStore != null) {
+            riskStore.close();
+            riskStore = null;
+        }
         DatasetManager manager = datasets;
         datasets = null;
         // Stop runs on the server thread during plugin disable, so it may not wait for the disk: the
