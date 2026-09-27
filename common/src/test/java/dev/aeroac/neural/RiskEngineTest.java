@@ -267,6 +267,27 @@ class RiskEngineTest {
         return new RiskEngine(NeuralConfig.read(NeuralConfigTest.config(settings)).risk());
     }
 
+    @Test void riskReadsBackAsACheatProbabilityOnlyInLogOddsMode() {
+        NeuralConfig.Risk config = NeuralConfig.read(NeuralConfigTest.config(Map.of())).risk();
+        assertEquals(0.02, RiskEngine.cheatProbability(0, config), 1e-12, "no evidence: the base rate");
+        double watch = RiskEngine.cheatProbability(config.watch(), config);
+        double suspicious = RiskEngine.cheatProbability(config.suspicious(), config);
+        double confirmed = RiskEngine.cheatProbability(config.confirmed(), config);
+        assertTrue(watch < 0.1 && suspicious > 0.2 && suspicious < 0.4 && confirmed > 0.85 && confirmed < 0.95,
+                watch + " " + suspicious + " " + confirmed);
+        assertTrue(Double.isNaN(RiskEngine.cheatProbability(5, NeuralConfig.read(NeuralConfigTest.config(
+                Map.of("neural.risk.ai-scoring", "threshold"))).risk())));
+    }
+
+    @Test void theProfileRemembersTheRiskEachEvidenceLeftBehind() {
+        RiskEngine engine = engine(Map.of("neural.risk.decay-per-second", 0.0));
+        PlayerRiskProfile profile = new PlayerRiskProfile(3, 0);
+        for (int i = 1; i <= 4; i++) engine.accept(profile, Evidence.of(EvidenceType.AI_AIM, 1, i, "test"), i);
+        assertEquals(3, profile.evidenceSize());
+        assertEquals(2, profile.riskAfter(0), 1e-12);
+        assertEquals(4, profile.riskAfter(2), 1e-12);
+    }
+
     @Test void logOddsIsTheDefaultScoring() {
         assertTrue(NeuralConfig.read(NeuralConfigTest.config(Map.of())).risk().logOdds());
     }

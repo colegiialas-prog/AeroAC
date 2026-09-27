@@ -111,7 +111,13 @@ public final class AdminAlerts {
                         AeroMessages.tr("admin.open_the_full_profile_for") + alert.name(), NamedTextColor.AQUA))
                 .append(Component.text(" "))
                 .append(action(AeroMessages.tr("admin.watch"), "/aero watch " + alert.name(),
-                        AeroMessages.tr("admin.stream_live_telemetry_for") + alert.name(), NamedTextColor.YELLOW));
+                        AeroMessages.tr("admin.stream_live_telemetry_for") + alert.name(), NamedTextColor.YELLOW))
+                .append(Component.text(" "))
+                .append(action(AeroMessages.tr("admin.teleport"), "/aero tp " + alert.name(),
+                        AeroMessages.tr("admin.teleport_to") + alert.name(), NamedTextColor.GREEN))
+                .append(Component.text(" "))
+                .append(action(AeroMessages.tr("admin.spectate"), "/aero spectate " + alert.name(),
+                        AeroMessages.tr("admin.spectate_as") + alert.name(), NamedTextColor.LIGHT_PURPLE));
 
         return headline.append(Component.newline()).append(detail).append(Component.newline()).append(actions);
     }

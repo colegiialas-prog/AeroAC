@@ -115,7 +115,16 @@ public final class AdminViews {
         return new AdminDetailView(summary, predictions(state.trail, runtime, nowNanos), evidence(profile, nowNanos),
                 mitigations(state.mitigation, nowNanos), counts, timeline(state.trail),
                 state.trail == null ? 0 : state.trail.accepted(),
-                state.trail == null ? 0 : state.trail.rejectedStale());
+                state.trail == null ? 0 : state.trail.rejectedStale(), riskTimeline(profile));
+    }
+
+    /** Risk after each of the last evidence items, oldest first; how the verdict was reached. */
+    private static double[] riskTimeline(PlayerRiskProfile profile) {
+        if (profile == null || profile.evidenceSize() == 0) return new double[0];
+        int length = Math.min(TIMELINE_LENGTH, profile.evidenceSize());
+        double[] values = new double[length];
+        for (int i = 0; i < length; i++) values[i] = profile.riskAfter(profile.evidenceSize() - length + i);
+        return values;
     }
 
     private static List<AdminDetailView.Prediction> predictions(PredictionTrail trail, NeuralRuntime runtime, long nowNanos) {

@@ -58,6 +58,25 @@ public final class RiskEngine {
         return profile.state() != before;
     }
 
+    /**
+     * The accumulated risk read back as "how likely is this player a cheater", for operators.
+     *
+     * <p>In log-odds scoring the risk is a sum of weighted log-likelihood ratios, so dividing by the
+     * weight gives the evidence in log-odds, and adding the server's base rate of cheaters gives a
+     * posterior. It is an estimate, not a measurement: Grim flags add fixed units rather than
+     * likelihood ratios, relief is scaled, risk never drops below zero and it decays with time.
+     * And windows of one player are far from independent, so the summed evidence is trusted only
+     * at probabilityScale; without that a SUSPICIOUS player would read as 99.97%. Fit that scale on
+     * labelled sessions once they exist. NaN in threshold scoring.
+     */
+    public static double cheatProbability(double risk, NeuralConfig.Risk config) {
+        if (config == null || !config.logOdds() || !(config.logOddsWeight() > 0) || !Double.isFinite(risk)) return Double.NaN;
+        double prior = config.cheaterShare();
+        double logOdds = Math.log(prior / (1 - prior))
+                + config.probabilityScale() * Math.max(0, risk) / config.logOddsWeight();
+        return 1.0 / (1.0 + Math.exp(-logOdds));
+    }
+
     public RiskState stateFor(double risk) {
         if (risk >= config.confirmed()) return RiskState.CONFIRMED;
         if (risk >= config.suspicious()) return RiskState.SUSPICIOUS;

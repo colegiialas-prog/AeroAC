@@ -25,8 +25,8 @@ import java.util.UUID;
  * <p>One class for both because they differ by a filter and a title and nothing else, and two
  * copies of this lore would drift apart within a week.
  *
- * <p>Sorted by model output descending, so the row an operator opened this screen to find is the
- * first one. A player the model has never scored is not sorted to the top and is not shown as 0%:
+ * <p>Sorted by accumulated risk descending (AdminPlayerView.sortKey), so the row an operator opened
+ * this screen to find is the first one; a single high window does not jump a player to the top. A player the model has never scored is not sorted to the top and is not shown as 0%:
  * the lore says NO DATA, because "the model has not seen enough of this player" and "the model
  * thinks this player is clean" are different answers and only one of them is reassuring.
  */
@@ -89,8 +89,12 @@ public final class PlayerListMenu extends AeroMenu {
         RiskState state = view.state() == null ? RiskState.CLEAN : view.state();
         List<String> lore = new ArrayList<>();
         lore.add("");
-        lore.add(MenuItems.riskLine(view.overall()));
+        // The verdict first: state, accumulated risk and what it means. One window's score after it.
         lore.add(MenuItems.line(AeroMessages.tr("gui.state"), AdminLabels.state(state), MenuItems.colourOf(state)));
+        lore.add(MenuItems.line(AeroMessages.tr("gui.risk_score"), AdminStyle.number(view.risk(), 2)));
+        String cheat = cheatLine(view.risk());
+        if (cheat != null) lore.add(cheat);
+        lore.add(MenuItems.riskLine(view.overall()) + MenuItems.MUTED + " " + AeroMessages.tr("gui.last_window"));
         lore.add("");
         lore.add(MenuItems.headLine("Aim Assist", view.aimAssist()));
         lore.add(MenuItems.headLine("KillAura", view.killAura()));
@@ -99,7 +103,6 @@ public final class PlayerListMenu extends AeroMenu {
         lore.add(MenuItems.line(AeroMessages.tr("gui.ping"), view.ping() < 0 ? AdminStyle.NO_DATA : view.ping() + "ms"));
         lore.add(MenuItems.line(AeroMessages.tr("gui.combat"), AdminStyle.duration(view.combatSeconds())));
         lore.add("");
-        lore.add(MenuItems.line(AeroMessages.tr("gui.risk_score"), AdminStyle.number(view.risk(), 2)));
         lore.add(MenuItems.line(AeroMessages.tr("gui.evidence"), String.valueOf(view.evidenceCount())));
         if (view.mitigation() != null) {
             lore.add(MenuItems.line(AeroMessages.tr("gui.mitigation"), view.mitigation() + " "

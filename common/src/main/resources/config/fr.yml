@@ -324,6 +324,13 @@ neural:
         # to restore-cap: the evidence behind it is gone, so it can start a watch but not a verdict.
         persist-hours: 72
         restore-cap: 4.0
+        # Share of cheaters among fighting players you expect. Only used to turn risk into the
+        # "cheat probability over the whole fight" operators see; it never moves risk itself.
+        cheater-share: 0.02
+        # How much of the summed evidence that estimate trusts. Windows of one player are strongly
+        # correlated; at 1.0 SUSPICIOUS would read as 99.97%. 0.25 maps WATCH/SUSPICIOUS/CONFIRMED to
+        # roughly 5% / 29% / 89%. Fit it on labelled sessions once you have them.
+        probability-scale: 0.25
     mitigation:
         # Phase 6. Turn on only after measuring the false positive rate on your own server.
         enabled: false

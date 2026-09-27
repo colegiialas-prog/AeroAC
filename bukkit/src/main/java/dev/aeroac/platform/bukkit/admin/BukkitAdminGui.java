@@ -94,6 +94,23 @@ public final class BukkitAdminGui implements AdminGuiBridge, StartableInitable, 
         with(sender, player -> show(new ProfileMenu(this, player, target, false)));
     }
 
+    @Override public boolean teleport(Sender sender, UUID target) {
+        return act(sender, target, (viewer, online) -> actions.teleport(viewer, online));
+    }
+
+    @Override public boolean spectate(Sender sender, UUID target) {
+        return act(sender, target, (viewer, online) -> actions.toggleSpectate(viewer, online));
+    }
+
+    /** Commands may arrive off the player's thread; the action runs on the operator's own scheduler. */
+    private boolean act(Sender sender, UUID target, java.util.function.BiConsumer<org.bukkit.entity.Player, org.bukkit.entity.Player> action) {
+        org.bukkit.entity.Player viewer = sender == null ? null : Bukkit.getPlayer(sender.getUniqueId());
+        org.bukkit.entity.Player online = Bukkit.getPlayer(target);
+        if (viewer == null || online == null || viewer.equals(online)) return false;
+        viewer.getScheduler().run(AeroACBukkitLoaderPlugin.LOADER, task -> action.accept(viewer, online), null);
+        return true;
+    }
+
     @Override public void openTraining(Sender sender) {
         with(sender, player -> show(new TrainingMenu(this, player)));
     }

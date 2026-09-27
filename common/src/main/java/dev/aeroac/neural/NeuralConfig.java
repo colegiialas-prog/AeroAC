@@ -37,7 +37,7 @@ public record NeuralConfig(boolean enabled, boolean collectionEnabled, int conti
                        double snapshotThreshold, int maxSnapshotsPerHour, int snapshotBefore, int snapshotAfter,
                        int carryOverSeconds, boolean logOdds, double logOddsWeight, double aiNeutral,
                        double aiClampLow, double aiClampHigh, double reliefScale, int persistHours,
-                       double restoreCap) { }
+                       double restoreCap, double cheaterShare, double probabilityScale) { }
 
     /**
      * cancelChance is the share of attack packets dropped while an action is in force (cancel-attacks
@@ -127,7 +127,9 @@ public record NeuralConfig(boolean enabled, boolean collectionEnabled, int conti
                 Math.max(low, Math.min(high, positive(config, "risk.ai-neutral", 0.5))), low, high,
                 positive(config, "risk.relief-scale", 0.5),
                 bounded(config, "risk.persist-hours", 72, 0, 24 * 30),
-                Math.min(confirmed, positive(config, "risk.restore-cap", 4.0)));
+                Math.min(confirmed, positive(config, "risk.restore-cap", 4.0)),
+                Math.max(1.0E-4, Math.min(0.5, positive(config, "risk.cheater-share", 0.02))),
+                Math.max(0.01, Math.min(1.0, positive(config, "risk.probability-scale", 0.25))));
     }
 
     private static Mitigation mitigation(ConfigManager config) {

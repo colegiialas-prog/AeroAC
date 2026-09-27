@@ -32,6 +32,7 @@ import java.util.UUID;
 public final class ProfileMenu extends AeroMenu {
     private static final int SLOT_HEAD = 4;
     private static final int TIMELINE_START = 9;
+    private static final int RISK_TIMELINE_START = 18;
     private static final int SLOT_WATCH = 29;
     private static final int SLOT_PREDICTIONS = 30;
     private static final int SLOT_EVIDENCE = 31;
@@ -81,6 +82,7 @@ public final class ProfileMenu extends AeroMenu {
 
         inventory.setItem(SLOT_HEAD, head(view, loaded));
         drawTimeline(inventory, loaded);
+        drawRiskTimeline(inventory, loaded);
 
         boolean watching = watching();
         inventory.setItem(SLOT_WATCH, MenuItems.item(watching ? Material.REDSTONE_TORCH : Material.TORCH,
@@ -210,6 +212,11 @@ public final class ProfileMenu extends AeroMenu {
         lore.add(MenuItems.line(AeroMessages.tr("gui.risk"), AdminStyle.number(view.risk(), 2)));
         lore.add(MenuItems.line(AeroMessages.tr("gui.peak_risk"), AdminStyle.number(view.peakRisk(), 2)));
         lore.add(MenuItems.line(AeroMessages.tr("gui.in_this_state"), AdminStyle.duration(view.stateForSeconds())));
+        String cheat = cheatLine(view.risk());
+        if (cheat != null) {
+            lore.add(cheat);
+            lore.add(MenuItems.note(AeroMessages.tr("gui.cheat_probability_note")));
+        }
         lore.add("");
         lore.add(MenuItems.riskLine(view.overall()));
         lore.add(MenuItems.headLine("Aim Assist", view.aimAssist()));
@@ -262,6 +269,41 @@ public final class ProfileMenu extends AeroMenu {
                     bandColour(value) + AdminStyle.percent(value),
                     MenuItems.note(AdminStyle.RISK_LABEL + ", " + (values.length - i) + AeroMessages.tr("gui.predictions_ago"))));
         }
+    }
+
+    /**
+     * Nine panes of accumulated risk, one per recent piece of evidence, oldest on the left, coloured
+     * by the state that risk puts the player in. This is how the verdict was reached, step by step.
+     */
+    private void drawRiskTimeline(Inventory inventory, AdminDetailView loaded) {
+        double[] values = loaded == null ? new double[0] : loaded.riskTimeline();
+        var runtime = gui.neural().runtime();
+        var engine = runtime == null ? null : runtime.riskEngine();
+        for (int i = 0; i < 9; i++) {
+            int slot = RISK_TIMELINE_START + i;
+            if (i >= values.length) {
+                inventory.setItem(slot, MenuItems.item(Material.BLACK_STAINED_GLASS_PANE,
+                        MenuItems.MUTED + (loaded == null ? AeroMessages.tr("gui.loading") : AdminStyle.NO_DATA)));
+                continue;
+            }
+            RiskState state = engine == null ? RiskState.CLEAN : engine.stateFor(values[i]);
+            List<String> lore = new ArrayList<>();
+            lore.add(MenuItems.line(AeroMessages.tr("gui.state"), AdminLabels.state(state), MenuItems.colourOf(state)));
+            String cheat = cheatLine(values[i]);
+            if (cheat != null) lore.add(cheat);
+            lore.add(MenuItems.note(AeroMessages.tr("gui.risk_after_evidence", values.length - i)));
+            inventory.setItem(slot, MenuItems.item(stateGlass(state),
+                    MenuItems.colourOf(state) + AeroMessages.tr("gui.risk") + AdminStyle.number(values[i], 2), lore));
+        }
+    }
+
+    private static Material stateGlass(RiskState state) {
+        return switch (state) {
+            case CLEAN -> Material.LIME_STAINED_GLASS_PANE;
+            case WATCH -> Material.YELLOW_STAINED_GLASS_PANE;
+            case SUSPICIOUS, MITIGATED -> Material.ORANGE_STAINED_GLASS_PANE;
+            case CONFIRMED -> Material.RED_STAINED_GLASS_PANE;
+        };
     }
 
     private static Material bandOf(double value) {
