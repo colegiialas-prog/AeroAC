@@ -27,6 +27,15 @@ public final class AdminPermissions {
     /** Confirm or decline a verdict. Held apart: this is the node that removes a player. */
     public static final String ENFORCE_CONFIRM = "aero.enforce.confirm";
 
+    /** Operator actions from a profile. Each apart: going to a player is not freezing or kicking them. */
+    public static final String ACTION_TELEPORT = "aero.action.teleport";
+    public static final String ACTION_SPECTATE = "aero.action.spectate";
+    public static final String ACTION_FREEZE = "aero.action.freeze";
+    public static final String ACTION_INVENTORY = "aero.action.inventory";
+    public static final String ACTION_KICK = "aero.action.kick";
+    /** Wipes accumulated risk and evidence; the model's history of the player is lost. */
+    public static final String ACTION_RESET = "aero.action.reset";
+
     public static final String TRAINING = "aero.training";
     /** Opening a dataset session: this writes labelled data that a model will be trained on. */
     public static final String TRAINING_RECORD = "aero.training.record";

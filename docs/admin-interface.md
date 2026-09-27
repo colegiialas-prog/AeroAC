@@ -435,3 +435,22 @@ stained-glass materials.
 
 ProtocolLib is not required and is not used; the indicator is built on the PacketEvents stack the
 plugin already depends on.
+
+
+## Actions on a player
+
+The profile screen has a row of operator actions; each has its own permission, all default to OP
+and are children of `aero.admin`.
+
+| Button | Permission | What it does |
+| --- | --- | --- |
+| Teleport | `aero.action.teleport` | Asynchronous teleport to the player (Paper/Folia safe). |
+| Spectate | `aero.action.spectate` | Spectator mode attached to the player's camera; the second click, or the target leaving, puts you back with your game mode and position. |
+| Freeze | `aero.action.freeze` | No movement, hits or commands; looking around stays free so you can watch them aim. Survives a relog. |
+| Inventory | `aero.action.inventory` | Opens the player's inventory. |
+| Kick | `aero.action.kick` | Asks, then kicks. |
+| Ban | `aero.enforce.confirm` | Asks, then runs the enforcement command and animation with the current numbers frozen into the verdict. |
+| Clear risk | `aero.action.reset` | Asks, then wipes risk, evidence, any running mitigation and the persisted value. |
+
+In the player and suspicious lists, Shift + left click teleports and Shift + right click spectates
+without opening the profile.

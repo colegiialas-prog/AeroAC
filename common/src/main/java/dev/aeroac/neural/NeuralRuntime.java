@@ -269,6 +269,17 @@ public final class NeuralRuntime implements AutoCloseable {
     }
 
     /**
+     * An operator cleared the player: risk, evidence and any running mitigation go, here and in the
+     * persistent store. Player event loop (the GUI hands it over with runSafely).
+     */
+    public void resetRisk(UUID player, NeuralPlayerState state) {
+        state.risk = null;
+        if (state.mitigation != null) state.mitigation.clear();
+        parked.remove(player);
+        if (store != null) store.take(player);
+    }
+
+    /**
      * Damage factor for a hit this player deals. Called from the platform damage event on whichever
      * thread fires it; it only reads the volatile, immutable current action.
      */

@@ -49,6 +49,11 @@ public final class BukkitAdminGui implements AdminGuiBridge, StartableInitable, 
     public AdminService service() { return AeroAPI.INSTANCE.getAdminService(); }
 
     public dev.aeroac.neural.NeuralManager neural() { return AeroAPI.INSTANCE.getNeuralManager(); }
+    private final PlayerActions actions = new PlayerActions();
+
+    /** Teleport, spectate and freeze state that outlives any one screen. */
+    public PlayerActions actions() { return actions; }
+
     public AeroPlayer tracked(UUID uuid) { return AeroAPI.INSTANCE.getPlayerDataManager().getPlayer(uuid); }
     public Sender sender(UUID uuid) {
         PlatformPlayer platform = platformFor(uuid);
@@ -62,6 +67,7 @@ public final class BukkitAdminGui implements AdminGuiBridge, StartableInitable, 
         }
         running = true;
         Bukkit.getPluginManager().registerEvents(new MenuListener(this), AeroACBukkitLoaderPlugin.LOADER);
+        Bukkit.getPluginManager().registerEvents(actions, AeroACBukkitLoaderPlugin.LOADER);
         service().gui(this);
         schedule();
     }
@@ -218,6 +224,7 @@ public final class BukkitAdminGui implements AdminGuiBridge, StartableInitable, 
 
     @Override public void stop() {
         running = false;
+        actions.releaseAll();
         closeAll();
         service().gui(null);
         if (refreshTask != null) {

@@ -113,6 +113,8 @@ public final class PlayerListMenu extends AeroMenu {
         lore.add(MenuItems.note(AeroMessages.tr("gui.left_click_profile")));
         lore.add(MenuItems.note(view.watched() ? AeroMessages.tr("gui.right_click_watch_someone_already_is")
                 : AeroMessages.tr("gui.right_click_watch")));
+        if (permitted(AdminPermissions.ACTION_TELEPORT)) lore.add(MenuItems.note(AeroMessages.tr("gui.action.shift_left_teleport")));
+        if (permitted(AdminPermissions.ACTION_SPECTATE)) lore.add(MenuItems.note(AeroMessages.tr("gui.action.shift_right_spectate")));
 
         String name = MenuItems.colourOf(state) + AdminStyle.symbol(state) + " " + view.name();
         return MenuItems.head(view.uuid(), view.name(), name, lore);
@@ -142,6 +144,19 @@ public final class PlayerListMenu extends AeroMenu {
         }
         if (slot >= rendered.size() || slot >= PER_PAGE) return;
         UUID target = rendered.get(slot);
+        if (event.isShiftClick()) {
+            // Straight from the list to the suspect: no profile in between when time matters.
+            String permission = event.isRightClick() ? AdminPermissions.ACTION_SPECTATE : AdminPermissions.ACTION_TELEPORT;
+            org.bukkit.entity.Player online = org.bukkit.Bukkit.getPlayer(target);
+            if (!permitted(permission)) deny(permission);
+            else if (online == null || online.equals(viewer)) viewer.sendMessage(MenuItems.BAD + AeroMessages.tr("gui.player_offline"));
+            else {
+                viewer.closeInventory();
+                if (event.isRightClick()) gui.actions().toggleSpectate(viewer, online);
+                else gui.actions().teleport(viewer, online);
+            }
+            return;
+        }
         if (event.isRightClick()) toggleWatch(target);
         else if (permitted(AdminPermissions.PROFILE)) gui.show(new ProfileMenu(gui, viewer, target, onlySuspicious));
         else deny(AdminPermissions.PROFILE);
