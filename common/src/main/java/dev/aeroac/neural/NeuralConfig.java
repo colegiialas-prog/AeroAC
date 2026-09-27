@@ -38,8 +38,19 @@ public record NeuralConfig(boolean enabled, boolean collectionEnabled, int conti
                        int carryOverSeconds, boolean logOdds, double logOddsWeight, double aiNeutral,
                        double aiClampLow, double aiClampHigh, double reliefScale) { }
 
+    /**
+     * cancelChance is the share of attack packets dropped while an action is in force (cancel-attacks
+     * alone means 1.0); damageMultiplier scales the damage the player deals through the platform's
+     * damage event. Onset delay and release jitter are drawn at random per action so a cheat developer
+     * watching when the nerf starts and stops cannot read the detector's decision boundary off it.
+     */
     public record Mitigation(boolean enabled, RiskState minState, boolean cancelAttacks, int durationSeconds,
-                             int maxPerHour) { }
+                             int maxPerHour, double cancelChance, double damageMultiplier,
+                             int onsetDelayMinSeconds, int onsetDelayMaxSeconds, int releaseJitterSeconds) {
+
+        /** True when an action would change gameplay at all rather than only being recorded. */
+        public boolean affectsGameplay() { return cancelChance > 0 || damageMultiplier < 1; }
+    }
 
     public static NeuralConfig read(ConfigManager config) {
         int before = bounded(config, "windows.attack-before", 20, 0, 128);
@@ -117,11 +128,19 @@ public record NeuralConfig(boolean enabled, boolean collectionEnabled, int conti
     }
 
     private static Mitigation mitigation(ConfigManager config) {
+        boolean cancelAttacks = config.getBooleanElse("neural.mitigation.cancel-attacks", false);
+        // Older configs only know cancel-attacks; it keeps meaning "drop every attack".
+        double cancelChance = fraction(config, "mitigation.cancel-chance", cancelAttacks ? 1.0 : 0.0);
+        double multiplier = Math.max(0.05, Math.min(1.0, positive(config, "mitigation.damage-multiplier", 1.0)));
+        int delayMin = bounded(config, "mitigation.onset-delay-min-seconds", 0, 0, 600);
+        int delayMax = Math.max(delayMin, bounded(config, "mitigation.onset-delay-max-seconds", 0, 0, 600));
         return new Mitigation(config.getBooleanElse("neural.mitigation.enabled", false),
                 RiskState.parse(config.getStringElse("neural.mitigation.min-state", "MITIGATED"), RiskState.MITIGATED),
-                config.getBooleanElse("neural.mitigation.cancel-attacks", false),
+                cancelAttacks,
                 bounded(config, "mitigation.duration-seconds", 30, 1, 3600),
-                bounded(config, "mitigation.max-per-hour", 20, 0, 1000));
+                bounded(config, "mitigation.max-per-hour", 20, 0, 1000),
+                cancelChance, multiplier, delayMin, delayMax,
+                bounded(config, "mitigation.release-jitter-seconds", 0, 0, 600));
     }
 
     private static boolean usableEndpoint(String endpoint) {

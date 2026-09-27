@@ -323,9 +323,19 @@ neural:
         # Phase 6. Turn on only after measuring the false positive rate on your own server.
         enabled: false
         min-state: MITIGATED
+        # true drops every attack while an action runs (same as cancel-chance: 1.0).
         cancel-attacks: false
+        # Share of attacks dropped, drawn per attack; 0.25 feels like a bad connection, not a ban.
+        cancel-chance: 0.0
+        # Damage the player deals, melee and projectiles (Bukkit/Paper/Folia). 1.0 = unchanged.
+        damage-multiplier: 1.0
         duration-seconds: 30
         max-per-hour: 20
+        # Random delay before an action takes effect and random extra length at its end, so the
+        # moment the nerf starts cannot be used to find the detection threshold.
+        onset-delay-min-seconds: 5
+        onset-delay-max-seconds: 20
+        release-jitter-seconds: 10
     training:
         # The training service, separate from inference: inference answers questions about a
         # running model, this starts and watches runs that produce one. Both are off unless the

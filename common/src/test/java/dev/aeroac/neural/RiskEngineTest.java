@@ -302,6 +302,57 @@ class RiskEngineTest {
         return new MitigationManager(NeuralConfig.read(NeuralConfigTest.config(overrides)).mitigation());
     }
 
+    private static MitigationManager mitigation(Map<String, Object> overrides, double... draws) {
+        int[] next = {0};
+        return new MitigationManager(NeuralConfig.read(NeuralConfigTest.config(overrides)).mitigation(),
+                () -> draws[Math.min(next[0]++, draws.length - 1)]);
+    }
+
+    @Test void legacyCancelAttacksStillDropsEveryAttackImmediately() {
+        MitigationManager manager = mitigation(Map.of("neural.mitigation.enabled", true,
+                "neural.mitigation.min-state", "WATCH", "neural.mitigation.cancel-attacks", true), 0.99);
+        PlayerMitigationState state = new PlayerMitigationState(8);
+        MitigationAction action = manager.evaluate(state, confirmed(), SECOND, "test");
+        assertEquals(MitigationRule.CANCEL_ATTACKS, action.rule());
+        assertEquals(SECOND, action.effectiveNanos());
+        assertTrue(manager.shouldCancelAttacks(state, SECOND));
+        assertEquals(1.0, manager.damageMultiplier(state, SECOND));
+    }
+
+    @Test void dampeningWaitsOutARandomOnsetAndEndsWithJitter() {
+        // Draws: onset (0.5 of 10..20 s = 15 s), release jitter (0.5 of 10 s = 5 s), then per-attack rolls.
+        MitigationManager manager = mitigation(Map.of("neural.mitigation.enabled", true,
+                "neural.mitigation.min-state", "WATCH", "neural.mitigation.cancel-chance", 0.3,
+                "neural.mitigation.damage-multiplier", 0.5, "neural.mitigation.duration-seconds", 30,
+                "neural.mitigation.onset-delay-min-seconds", 10, "neural.mitigation.onset-delay-max-seconds", 20,
+                "neural.mitigation.release-jitter-seconds", 10), 0.5, 0.5, 0.1, 0.9);
+        PlayerMitigationState state = new PlayerMitigationState(8);
+        MitigationAction action = manager.evaluate(state, confirmed(), 0, "test");
+        assertEquals(MitigationRule.DAMPEN, action.rule());
+        assertEquals(15 * SECOND, action.effectiveNanos());
+        assertEquals(50 * SECOND, action.endNanos());
+        assertEquals(1.0, manager.damageMultiplier(state, 14 * SECOND), "nothing changes during the onset delay");
+        assertFalse(manager.shouldCancelAttacks(state, 14 * SECOND));
+        assertEquals(RiskState.MITIGATED, manager.report(state, RiskState.SUSPICIOUS, 14 * SECOND),
+                "the operator already sees the decision");
+        assertEquals(0.5, manager.damageMultiplier(state, 20 * SECOND));
+        assertTrue(manager.shouldCancelAttacks(state, 20 * SECOND), "0.1 < 0.3");
+        assertFalse(manager.shouldCancelAttacks(state, 21 * SECOND), "0.9 >= 0.3");
+        assertEquals(1.0, manager.damageMultiplier(state, 50 * SECOND), "expired");
+    }
+
+    @Test void aMitigationThatChangesNothingIsOnlyObserved() {
+        MitigationManager manager = mitigation(Map.of("neural.mitigation.enabled", true,
+                "neural.mitigation.min-state", "WATCH"), 0.0);
+        PlayerMitigationState state = new PlayerMitigationState(8);
+        MitigationAction action = manager.evaluate(state, confirmed(), SECOND, "test");
+        assertEquals(MitigationRule.OBSERVE, action.rule());
+        assertFalse(manager.shouldCancelAttacks(state, SECOND));
+        assertEquals(1.0, manager.damageMultiplier(state, SECOND));
+        assertEquals(0.05, NeuralConfig.read(NeuralConfigTest.config(Map.of("neural.mitigation.damage-multiplier", 0.0)))
+                .mitigation().damageMultiplier(), 0, "a hit is never scaled to nothing");
+    }
+
     private static PredictionResult prediction(long id, double overall, double aim) {
         return result(id, "overall", overall, "aimAssist", aim);
     }

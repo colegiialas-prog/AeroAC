@@ -237,6 +237,14 @@ public final class NeuralRuntime implements AutoCloseable {
         return mitigation != null && mitigation.shouldCancelAttacks(state.mitigation, nowNanos);
     }
 
+    /**
+     * Damage factor for a hit this player deals. Called from the platform damage event on whichever
+     * thread fires it; it only reads the volatile, immutable current action.
+     */
+    public double damageMultiplier(NeuralPlayerState state, long nowNanos) {
+        return mitigation == null || state == null ? 1.0 : mitigation.damageMultiplier(state.mitigation, nowNanos);
+    }
+
     @Override public void close() {
         if (client != null) client.close();
     }
