@@ -41,4 +41,4 @@ def test_schema_installed_resource_lookup_is_not_cwd_dependent(tmp_path, monkeyp
     from aeroml.schema import manifest_path
     monkeypatch.chdir(tmp_path)
     assert manifest_path().is_file()
-    assert default_schema().version == 3
+    assert default_schema().version == 4

@@ -31,6 +31,13 @@ public enum ModelFeature {
     ROTATION_CORRECTION_GAIN(null, true, -3, 3),
     /** Rotation perpendicular to the previous aim error, same units; assisted rotation runs straight at the target. */
     ROTATION_OFF_AXIS(null, true, -3, 3),
+    /** 1 when the look ray enters the target box. Assists typically stop correcting once it does. */
+    CROSSHAIR_ON_TARGET(null, true, 0, 1),
+    /** Where on the box height the ray enters; head or centre locks sit at one value. */
+    CROSSHAIR_HIT_HEIGHT(null, true, 0, 1),
+    /** Angle between the look direction and the target box centre. */
+    CENTER_AIM_ERROR(null, true, 0, 180),
+    CENTER_AIM_ERROR_RATIO(null, true, 0, 64),
     PLAYER_SPEED_HORIZONTAL(null, true, 0, 8),
     PLAYER_VELOCITY_Y(FrameField.VELOCITY_Y, true, -8, 8),
     ON_GROUND(FrameField.ON_GROUND, false, 0, 1),

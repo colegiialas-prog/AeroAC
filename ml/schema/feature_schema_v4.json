@@ -1,0 +1,610 @@
+{
+  "featureSchemaVersion": 4,
+  "rawSchemaVersion": 1,
+  "rawFields": [
+    "YAW",
+    "PITCH",
+    "DELTA_YAW",
+    "DELTA_PITCH",
+    "DELTA2_YAW",
+    "DELTA2_PITCH",
+    "ROTATION_SPEED",
+    "ROTATION_ACCELERATION",
+    "ROTATION_JERK",
+    "PLAYER_X",
+    "PLAYER_Y",
+    "PLAYER_Z",
+    "EYE_HEIGHT",
+    "VELOCITY_X",
+    "VELOCITY_Y",
+    "VELOCITY_Z",
+    "ON_GROUND",
+    "SPRINTING",
+    "SNEAKING",
+    "AIRBORNE",
+    "TARGET_PRESENT",
+    "TARGET_ENTITY_ID",
+    "PREVIOUS_TARGET_ENTITY_ID",
+    "TARGET_TYPE",
+    "TARGET_X",
+    "TARGET_Y",
+    "TARGET_Z",
+    "TARGET_VELOCITY_X",
+    "TARGET_VELOCITY_Y",
+    "TARGET_VELOCITY_Z",
+    "TARGET_MIN_X",
+    "TARGET_MIN_Y",
+    "TARGET_MIN_Z",
+    "TARGET_MAX_X",
+    "TARGET_MAX_Y",
+    "TARGET_MAX_Z",
+    "AIM_POINT_X",
+    "AIM_POINT_Y",
+    "AIM_POINT_Z",
+    "DISTANCE_TO_TARGET",
+    "TARGET_YAW",
+    "TARGET_PITCH",
+    "AIM_ERROR_YAW",
+    "AIM_ERROR_PITCH",
+    "AIM_ERROR_TOTAL",
+    "AIM_ERROR_DELTA",
+    "CROSSHAIR_INSIDE_HITBOX",
+    "LINE_OF_SIGHT",
+    "ATTACK",
+    "SWING",
+    "SUCCESSFUL_HIT",
+    "ATTACK_COUNT",
+    "SWING_COUNT",
+    "CANCELLED_ATTACK_COUNT",
+    "TICKS_SINCE_ATTACK",
+    "ATTACK_INTERVAL_MS",
+    "TARGET_SWITCH",
+    "TICKS_SINCE_TARGET_SWITCH",
+    "PING_MS",
+    "ESTIMATED_JITTER_MS",
+    "SERVER_TICK_DURATION_MS",
+    "CLIENT_PROTOCOL_VERSION",
+    "REACH_EVIDENCE",
+    "WALL_HIT_EVIDENCE",
+    "ENTITY_PIERCE_EVIDENCE",
+    "PACKET_ORDER_EVIDENCE",
+    "REACH_DISTANCE",
+    "REACH_TARGET_ENTITY_ID",
+    "REACH_OBSERVATION_AGE_MS",
+    "TELEPORT_STATE",
+    "VEHICLE_STATE",
+    "INVENTORY_STATE",
+    "HELD_ITEM_TYPE",
+    "MOVEMENT_HAS_POSITION",
+    "MOVEMENT_HAS_LOOK",
+    "SEGMENT_START",
+    "SAMPLE_INTERVAL_MS",
+    "TRANSACTION_ID",
+    "SERVER_TICK"
+  ],
+  "note": "Canonical model input contract. Java FeatureSchema, the training pipeline and the inference service must all agree with this file; NeuralSchemaContractTest and ml/tests/test_schema.py both pin it. Values are window-local: derived deltas at window index 0 have no predecessor inside the window and are masked. Mask channels follow all value channels, in declaration order of the nullable values, named <NAME>_MASK. Absolute positions, entity/transaction/session identifiers, protocol version, held item, player identity, dataset collection metadata (scenario, assistStrength, clientFamily, configuration) and Grim check evidence are deliberately absent: identity and recording conditions must not be learnable, and deterministic check output must not become the label the model copies. A channel may declare a monotone transform applied before clipping; the clip bounds are stated in transformed units.",
+  "values": [
+    {
+      "name": "DELTA_YAW",
+      "source": "DELTA_YAW",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        -180.0,
+        180.0
+      ],
+      "unit": "deg/sample"
+    },
+    {
+      "name": "DELTA_PITCH",
+      "source": "DELTA_PITCH",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        -180.0,
+        180.0
+      ],
+      "unit": "deg/sample"
+    },
+    {
+      "name": "DELTA2_YAW",
+      "source": "DELTA2_YAW",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        -360.0,
+        360.0
+      ],
+      "unit": "deg/sample^2"
+    },
+    {
+      "name": "DELTA2_PITCH",
+      "source": "DELTA2_PITCH",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        -360.0,
+        360.0
+      ],
+      "unit": "deg/sample^2"
+    },
+    {
+      "name": "ROTATION_SPEED",
+      "source": "ROTATION_SPEED",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        0.0,
+        255.0
+      ],
+      "unit": "deg/sample"
+    },
+    {
+      "name": "ROTATION_ACCELERATION",
+      "source": "ROTATION_ACCELERATION",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        0.0,
+        512.0
+      ],
+      "unit": "deg/sample^2"
+    },
+    {
+      "name": "ROTATION_JERK",
+      "source": "ROTATION_JERK",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        -512.0,
+        512.0
+      ],
+      "unit": "deg/sample^3"
+    },
+    {
+      "name": "AIM_ERROR_YAW",
+      "source": "AIM_ERROR_YAW",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        -180.0,
+        180.0
+      ],
+      "unit": "deg"
+    },
+    {
+      "name": "AIM_ERROR_PITCH",
+      "source": "AIM_ERROR_PITCH",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        -180.0,
+        180.0
+      ],
+      "unit": "deg"
+    },
+    {
+      "name": "AIM_ERROR_TOTAL",
+      "source": "AIM_ERROR_TOTAL",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        0.0,
+        255.0
+      ],
+      "unit": "deg"
+    },
+    {
+      "name": "AIM_ERROR_DELTA",
+      "source": "AIM_ERROR_DELTA",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        -255.0,
+        255.0
+      ],
+      "unit": "deg/sample"
+    },
+    {
+      "name": "TARGET_ANGULAR_VELOCITY_YAW",
+      "source": "derived.targetAngularVelocityYaw",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        -180.0,
+        180.0
+      ],
+      "unit": "deg/sample"
+    },
+    {
+      "name": "TARGET_ANGULAR_VELOCITY_PITCH",
+      "source": "derived.targetAngularVelocityPitch",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        -180.0,
+        180.0
+      ],
+      "unit": "deg/sample"
+    },
+    {
+      "name": "ROTATION_TARGET_ALIGNMENT",
+      "source": "derived.rotationTargetAlignment",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        -1.0,
+        1.0
+      ],
+      "unit": "cosine"
+    },
+    {
+      "name": "DISTANCE_TO_TARGET",
+      "source": "DISTANCE_TO_TARGET",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        0.0,
+        16.0
+      ],
+      "unit": "blocks"
+    },
+    {
+      "name": "TARGET_RADIAL_SPEED",
+      "source": "derived.targetRadialSpeed",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        -8.0,
+        8.0
+      ],
+      "unit": "blocks/sample"
+    },
+    {
+      "name": "TARGET_SPEED",
+      "source": "derived.targetSpeed",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        0.0,
+        8.0
+      ],
+      "unit": "blocks/sample"
+    },
+    {
+      "name": "TARGET_ANGULAR_RADIUS",
+      "source": "derived.targetAngularRadius",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        0.0,
+        90.0
+      ],
+      "unit": "deg"
+    },
+    {
+      "name": "AIM_ERROR_RATIO",
+      "source": "derived.aimErrorRatio",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        0.0,
+        64.0
+      ],
+      "unit": "ratio"
+    },
+    {
+      "name": "ROTATION_CORRECTION_GAIN",
+      "source": "derived.rotationCorrectionGain",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        -3.0,
+        3.0
+      ],
+      "unit": "fraction of previous aim error"
+    },
+    {
+      "name": "ROTATION_OFF_AXIS",
+      "source": "derived.rotationOffAxis",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        -3.0,
+        3.0
+      ],
+      "unit": "fraction of previous aim error"
+    },
+    {
+      "name": "CROSSHAIR_ON_TARGET",
+      "source": "derived.crosshairOnTarget",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        0.0,
+        1.0
+      ],
+      "unit": "1 when the look ray enters the target box"
+    },
+    {
+      "name": "CROSSHAIR_HIT_HEIGHT",
+      "source": "derived.crosshairHitHeight",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        0.0,
+        1.0
+      ],
+      "unit": "fraction of target box height where the look ray enters"
+    },
+    {
+      "name": "CENTER_AIM_ERROR",
+      "source": "derived.centerAimError",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        0.0,
+        180.0
+      ],
+      "unit": "deg between look direction and target box centre"
+    },
+    {
+      "name": "CENTER_AIM_ERROR_RATIO",
+      "source": "derived.centerAimErrorRatio",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        0.0,
+        64.0
+      ],
+      "unit": "centerAimError / targetAngularRadius"
+    },
+    {
+      "name": "PLAYER_SPEED_HORIZONTAL",
+      "source": "derived.playerSpeedHorizontal",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        0.0,
+        8.0
+      ],
+      "unit": "blocks/sample"
+    },
+    {
+      "name": "PLAYER_VELOCITY_Y",
+      "source": "VELOCITY_Y",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        -8.0,
+        8.0
+      ],
+      "unit": "blocks/sample"
+    },
+    {
+      "name": "ON_GROUND",
+      "source": "ON_GROUND",
+      "transform": "none",
+      "nullable": false,
+      "clip": [
+        0.0,
+        1.0
+      ],
+      "unit": "flag"
+    },
+    {
+      "name": "SPRINTING",
+      "source": "SPRINTING",
+      "transform": "none",
+      "nullable": false,
+      "clip": [
+        0.0,
+        1.0
+      ],
+      "unit": "flag"
+    },
+    {
+      "name": "SNEAKING",
+      "source": "SNEAKING",
+      "transform": "none",
+      "nullable": false,
+      "clip": [
+        0.0,
+        1.0
+      ],
+      "unit": "flag"
+    },
+    {
+      "name": "TARGET_PRESENT",
+      "source": "TARGET_PRESENT",
+      "transform": "none",
+      "nullable": false,
+      "clip": [
+        0.0,
+        1.0
+      ],
+      "unit": "flag"
+    },
+    {
+      "name": "ATTACK",
+      "source": "ATTACK",
+      "transform": "none",
+      "nullable": false,
+      "clip": [
+        0.0,
+        1.0
+      ],
+      "unit": "flag"
+    },
+    {
+      "name": "ATTACK_COUNT",
+      "source": "ATTACK_COUNT",
+      "transform": "none",
+      "nullable": false,
+      "clip": [
+        0.0,
+        8.0
+      ],
+      "unit": "count/sample"
+    },
+    {
+      "name": "SWING_COUNT",
+      "source": "SWING_COUNT",
+      "transform": "none",
+      "nullable": false,
+      "clip": [
+        0.0,
+        16.0
+      ],
+      "unit": "count/sample"
+    },
+    {
+      "name": "TARGET_SWITCH",
+      "source": "TARGET_SWITCH",
+      "transform": "none",
+      "nullable": false,
+      "clip": [
+        0.0,
+        1.0
+      ],
+      "unit": "flag"
+    },
+    {
+      "name": "TICKS_SINCE_ATTACK",
+      "source": "TICKS_SINCE_ATTACK",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        0.0,
+        100.0
+      ],
+      "unit": "samples"
+    },
+    {
+      "name": "ATTACK_INTERVAL_MS",
+      "source": "ATTACK_INTERVAL_MS",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        0.0,
+        2000.0
+      ],
+      "unit": "ms"
+    },
+    {
+      "name": "TICKS_SINCE_TARGET_SWITCH",
+      "source": "TICKS_SINCE_TARGET_SWITCH",
+      "transform": "log1p",
+      "nullable": true,
+      "clip": [
+        0.0,
+        12.0
+      ],
+      "unit": "log1p(samples)"
+    },
+    {
+      "name": "PING_MS",
+      "source": "PING_MS",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        0.0,
+        1000.0
+      ],
+      "unit": "ms"
+    },
+    {
+      "name": "ESTIMATED_JITTER_MS",
+      "source": "ESTIMATED_JITTER_MS",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        0.0,
+        500.0
+      ],
+      "unit": "ms"
+    },
+    {
+      "name": "SAMPLE_INTERVAL_MS",
+      "source": "SAMPLE_INTERVAL_MS",
+      "transform": "none",
+      "nullable": true,
+      "clip": [
+        0.0,
+        500.0
+      ],
+      "unit": "ms"
+    },
+    {
+      "name": "SEGMENT_START",
+      "source": "SEGMENT_START",
+      "transform": "none",
+      "nullable": false,
+      "clip": [
+        0.0,
+        1.0
+      ],
+      "unit": "flag"
+    }
+  ],
+  "derivations": {
+    "targetAngularVelocityYaw": "wrap180(TARGET_YAW[t] - TARGET_YAW[t-1]) when sameTarget(t)",
+    "targetAngularVelocityPitch": "TARGET_PITCH[t] - TARGET_PITCH[t-1] when sameTarget(t)",
+    "rotationTargetAlignment": "cos angle between (DELTA_YAW,DELTA_PITCH) and (targetAngularVelocityYaw,targetAngularVelocityPitch); unknown when either norm < 1e-6",
+    "targetRadialSpeed": "DISTANCE_TO_TARGET[t] - DISTANCE_TO_TARGET[t-1] when sameTarget(t)",
+    "targetSpeed": "sqrt(TARGET_VELOCITY_X^2 + TARGET_VELOCITY_Y^2 + TARGET_VELOCITY_Z^2)",
+    "targetAngularRadius": "degrees(atan2(0.5 * max(TARGET_MAX_X-TARGET_MIN_X, TARGET_MAX_Z-TARGET_MIN_Z), DISTANCE_TO_TARGET)) when DISTANCE_TO_TARGET > 1e-6",
+    "aimErrorRatio": "AIM_ERROR_TOTAL / targetAngularRadius when targetAngularRadius > 1e-6",
+    "playerSpeedHorizontal": "sqrt(VELOCITY_X^2 + VELOCITY_Z^2)",
+    "sameTarget(t)": "t > 0 within the window AND TARGET_PRESENT[t]=1 AND TARGET_PRESENT[t-1]=1 AND TARGET_ENTITY_ID[t]=TARGET_ENTITY_ID[t-1] AND TARGET_SWITCH[t]=0 AND SEGMENT_START[t]=0",
+    "TICKS_SINCE_TARGET_SWITCH": "raw field, but the -1 sentinel written when no target is tracked counts as unknown; the known value is then transformed with log1p before clipping",
+    "aimErrorFrame(t-1)": "e = (wrap180(YAW[t-1] - TARGET_YAW[t-1]), PITCH[t-1] - TARGET_PITCH[t-1]), the aim error the player's rotation d = (DELTA_YAW[t], DELTA_PITCH[t]) responds to; usable when sameTarget(t) and |e| >= 1 degree",
+    "rotationCorrectionGain": "-(d . e) / |e|^2 over aimErrorFrame(t-1): the fraction of last sample's aim error the rotation removed. A smoothing aim assist (yaw += (target - yaw) * k) holds it near k; a hand does not",
+    "rotationOffAxis": "(d_yaw * e_pitch - d_pitch * e_yaw) / |e|^2 over aimErrorFrame(t-1): the rotation perpendicular to the error, in the same units. Assisted rotation runs straight at the target; yaw-odd",
+    "eye(t)": "(PLAYER_X, PLAYER_Y + EYE_HEIGHT, PLAYER_Z)",
+    "look(t)": "(-sin(yaw) * cos(pitch), -sin(pitch), cos(yaw) * cos(pitch)) with yaw = radians(YAW), pitch = radians(PITCH)",
+    "targetBox(t)": "[TARGET_MIN_*, TARGET_MAX_*]; usable when TARGET_PRESENT=1 and every box, eye and rotation field is finite",
+    "crosshairOnTarget": "slab test of the ray eye + s*look, s >= 0, against targetBox: 1 when max(entry, 0) <= exit, else 0; unknown when targetBox is unusable. An axis with |look| < 1e-9 misses unless eye lies within that slab. Pure geometry of one box, not a world raycast",
+    "crosshairHitHeight": "(eye.y + max(entry, 0) * look.y - TARGET_MIN_Y) / (TARGET_MAX_Y - TARGET_MIN_Y) when crosshairOnTarget = 1 and the box height > 1e-6; otherwise unknown",
+    "centerAimError": "degrees(acos(clamp(look . c / |c|, -1, 1))) with c = box centre - eye; unknown when targetBox is unusable or |c| < 1e-6",
+    "centerAimErrorRatio": "centerAimError / targetAngularRadius when targetAngularRadius > 1e-6"
+  },
+  "windows": {
+    "attack": "anchored on a sample whose ATTACK=1; attackBefore samples before it, the attack sample, attackAfter samples after it. Complete tick ids only, no segment boundary after index 0.",
+    "continuous": "the last sequenceLength consecutive samples with no segment boundary after index 0."
+  },
+  "heads": [
+    "overall",
+    "aimAssist",
+    "killAura",
+    "triggerBot"
+  ],
+  "requiredHeads": [
+    "overall",
+    "aimAssist"
+  ],
+  "transforms": {
+    "none": "value used as recorded",
+    "log1p": "natural log(1 + x), defined for x >= 0; unknown stays unknown and a negative input is unknown"
+  },
+  "versionHistory": {
+    "1": "initial contract",
+    "2": "TICKS_SINCE_TARGET_SWITCH changed from a raw sample count clipped at 200 to log1p(samples) clipped at 12. At the old bound the channel was constant for roughly three quarters of sampled windows (p50 = p99 = max = 200), so the clip discarded the dominant regime rather than a tail. log1p keeps full resolution in the first samples after a target switch, where the signal is, and compresses the long tail instead of erasing it. Bundles built for version 1 are rejected: the channel means something different now.",
+    "3": "ROTATION_CORRECTION_GAIN and ROTATION_OFF_AXIS added after AIM_ERROR_RATIO: the player's rotation expressed in the frame of the previous aim error. Derived from raw fields that already existed, so raw schema 1 recordings are unchanged and usable; bundles built for schema 2 must be retrained.",
+    "4": "CROSSHAIR_ON_TARGET, CROSSHAIR_HIT_HEIGHT, CENTER_AIM_ERROR and CENTER_AIM_ERROR_RATIO added after ROTATION_OFF_AXIS: where the crosshair actually is relative to the target box. AIM_ERROR_* measure the angle to the box point nearest the eyes, which cannot tell a crosshair resting inside the hitbox from one just outside it, and says nothing about where inside the box an assist parks the aim. Derived from raw fields that already existed (YAW, PITCH, PLAYER_*, EYE_HEIGHT, TARGET_MIN/MAX_*), so raw schema 1 recordings stay usable; bundles built for schema 3 must be retrained."
+  },
+  "forbiddenModelInputs": [
+    "assistStrength",
+    "cheatFamily",
+    "clientFamily",
+    "configuration",
+    "label",
+    "labelSource",
+    "playerId",
+    "reviewer",
+    "scenario",
+    "sessionId",
+    "username",
+    "uuid"
+  ]
+}

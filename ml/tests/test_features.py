@@ -138,3 +138,25 @@ def test_malformed_windows_are_refused(schema):
         encode_window(np.zeros((2, 3)), schema)
     with pytest.raises(ValueError):
         encode_windows(np.zeros((2, 3)), schema)
+
+
+def test_crosshair_geometry_reads_where_the_look_ray_meets_the_box(schema):
+    """Eye 1.62 above the origin, box three blocks along +x; yaw -90 looks straight at it."""
+    def window(yaw, pitch):
+        raw = np.full((1, len(schema.raw_fields)), np.nan)
+        values = dict(TARGET_PRESENT=1, YAW=yaw, PITCH=pitch, PLAYER_X=0.0, PLAYER_Y=0.0, PLAYER_Z=0.0,
+                      EYE_HEIGHT=1.62, TARGET_MIN_X=2.7, TARGET_MIN_Y=0.0, TARGET_MIN_Z=-0.3,
+                      TARGET_MAX_X=3.3, TARGET_MAX_Y=1.8, TARGET_MAX_Z=0.3, DISTANCE_TO_TARGET=2.7)
+        for name, value in values.items():
+            raw[0, schema.raw_index(name)] = value
+        return encode_window(raw, schema)[0]
+
+    level = window(-90.0, 0.0)
+    assert level[schema.index("CROSSHAIR_ON_TARGET")] == 1.0
+    assert level[schema.index("CROSSHAIR_HIT_HEIGHT")] == pytest.approx(0.9, abs=1e-6)
+    assert level[schema.index("CENTER_AIM_ERROR")] == pytest.approx(math.degrees(math.atan2(0.72, 3.0)), abs=1e-4)
+    beside = window(-80.0, 0.0)
+    assert beside[schema.index("CROSSHAIR_ON_TARGET")] == 0.0
+    assert beside[schema.index("CROSSHAIR_ON_TARGET_MASK")] == 1.0
+    assert beside[schema.index("CROSSHAIR_HIT_HEIGHT_MASK")] == 0.0
+    assert window(90.0, 0.0)[schema.index("CROSSHAIR_ON_TARGET")] == 0.0, "a box behind the eye is not a hit"
