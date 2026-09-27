@@ -78,4 +78,23 @@ class SnapshotIndexTest {
         assertTrue(detail.samples().get(2).afterEvent() && detail.samples().get(2).attack());
         assertNull(SnapshotIndex.detail(directory, "../escape.json"), "paths never leave the directory");
     }
+
+    @Test void aStaffVerdictIsWrittenBesideTheSnapshotsAndCanBeWithdrawn() throws Exception {
+        Path snapshots = Files.createTempDirectory("aero-root").resolve("snapshots");
+        Files.createDirectories(snapshots);
+        write(snapshots, "alice", 5_000);
+        SnapshotIndex.Summary summary = SnapshotIndex.list(snapshots, "alice", 1).get(0);
+        Path reviews = dev.aeroac.neural.dataset.SnapshotReviews.directoryFor(snapshots);
+        assertNull(dev.aeroac.neural.dataset.SnapshotReviews.read(reviews, summary.eventId()));
+        dev.aeroac.neural.dataset.SnapshotReviews.write(reviews, summary.eventId(), summary.file(),
+                dev.aeroac.neural.dataset.SnapshotReviews.Verdict.CHEAT, "mod", 9_000);
+        var review = dev.aeroac.neural.dataset.SnapshotReviews.read(reviews, summary.eventId());
+        assertEquals(dev.aeroac.neural.dataset.SnapshotReviews.Verdict.CHEAT, review.verdict());
+        assertEquals("mod", review.reviewer());
+        assertTrue(Files.isRegularFile(snapshots.getParent().resolve("reviews").resolve(summary.eventId() + ".json")));
+        assertThrows(IllegalArgumentException.class, () -> dev.aeroac.neural.dataset.SnapshotReviews.write(reviews,
+                "../../evil", summary.file(), dev.aeroac.neural.dataset.SnapshotReviews.Verdict.LEGIT, "mod", 0));
+        assertTrue(dev.aeroac.neural.dataset.SnapshotReviews.clear(reviews, summary.eventId()));
+        assertNull(dev.aeroac.neural.dataset.SnapshotReviews.read(reviews, summary.eventId()));
+    }
 }

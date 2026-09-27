@@ -483,3 +483,18 @@ before the event, concrete after. Hovering a pane shows the rotation, aim error 
 
 Snapshots name players only by the dataset pseudonym; the viewer derives it from the UUID and
 never writes anything. A snapshot is a reason to review, not proof, and it is never a training label.
+
+## CHEAT / LEGIT verdicts on snapshots
+
+In a snapshot replay, **CHEAT** (red) and **LEGIT** (green) record what a moderator concluded after
+watching it; clicking the highlighted one again withdraws it. The snapshot list shows each verdict
+and has *All snapshots: CHEAT / LEGIT* for labelling a player's whole list after a confirmation.
+Permission: `aero.training.review`.
+
+A verdict is written to `datasets/reviews/<eventId>.json` with the reviewer and time; the snapshot
+itself stays `UNLABELED`. It is a weak label — a moderator can be wrong, and snapshots exist only
+where the model already fired — so training ignores it unless run with `--include-staff-reviews`,
+and then puts those windows in the train fold only: never validation, calibration or test, and a
+reviewed player who also appears in one of those folds is dropped rather than leaked across the
+split. The numbers added and dropped are recorded in the bundle provenance
+(`staffReviewedWindows`). Lab recordings remain the only ground truth for evaluation.

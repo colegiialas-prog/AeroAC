@@ -4,6 +4,7 @@ import dev.aeroac.locale.AeroMessages;
 import dev.aeroac.neural.admin.AdminPermissions;
 import dev.aeroac.neural.admin.AdminStyle;
 import dev.aeroac.neural.dataset.SnapshotIndex;
+import dev.aeroac.neural.dataset.SnapshotReviews;
 import dev.aeroac.platform.bukkit.AeroACBukkitLoaderPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -33,6 +34,9 @@ public final class SnapshotDetailMenu extends AeroMenu {
     private final SnapshotsMenu parent;
     private volatile SnapshotIndex.Detail detail;
     private volatile boolean failed;
+    private volatile SnapshotReviews.Review review;
+    private static final int SLOT_CHEAT = 0;
+    private static final int SLOT_LEGIT = 8;
 
     public SnapshotDetailMenu(BukkitAdminGui gui, Player viewer, Path directory, SnapshotIndex.Summary summary,
                               SnapshotsMenu parent) {
@@ -42,8 +46,10 @@ public final class SnapshotDetailMenu extends AeroMenu {
         this.parent = parent;
         Bukkit.getScheduler().runTaskAsynchronously(AeroACBukkitLoaderPlugin.LOADER, () -> {
             SnapshotIndex.Detail result = SnapshotIndex.detail(directory, summary.file());
+            SnapshotReviews.Review verdict = SnapshotReviews.read(SnapshotReviews.directoryFor(directory), summary.eventId());
             onMain(() -> {
                 detail = result;
+                review = verdict;
                 failed = result == null;
                 redraw();
             });
@@ -68,8 +74,63 @@ public final class SnapshotDetailMenu extends AeroMenu {
             inventory.setItem(2, headsItem(loaded));
             inventory.setItem(6, evidenceItem(loaded));
             drawReplay(inventory, loaded.samples());
+            drawVerdict(inventory);
         }
         footer(inventory, () -> gui.show(parent.reopen()), AeroMessages.tr("gui.snapshots.back_list"));
+    }
+
+    /** CHEAT and LEGIT buttons; the current verdict is highlighted and clicking it again withdraws it. */
+    private void drawVerdict(Inventory inventory) {
+        SnapshotReviews.Review current = review;
+        boolean cheat = current != null && current.verdict() == SnapshotReviews.Verdict.CHEAT;
+        boolean legit = current != null && current.verdict() == SnapshotReviews.Verdict.LEGIT;
+        inventory.setItem(SLOT_CHEAT, MenuItems.item(cheat ? Material.RED_CONCRETE : Material.RED_WOOL,
+                MenuItems.BAD + (cheat ? "✔ " : "") + AeroMessages.tr("gui.review.cheat"), verdictLore(current, cheat)));
+        inventory.setItem(SLOT_LEGIT, MenuItems.item(legit ? Material.LIME_CONCRETE : Material.LIME_WOOL,
+                MenuItems.GOOD + (legit ? "✔ " : "") + AeroMessages.tr("gui.review.legit"), verdictLore(current, legit)));
+        lockSlot(inventory, SLOT_CHEAT, AdminPermissions.TRAINING_REVIEW);
+        lockSlot(inventory, SLOT_LEGIT, AdminPermissions.TRAINING_REVIEW);
+    }
+
+    private static List<String> verdictLore(SnapshotReviews.Review current, boolean selected) {
+        List<String> lore = new ArrayList<>();
+        if (current != null) {
+            lore.add(MenuItems.line(AeroMessages.tr("gui.review.current"), current.verdict().name()));
+            lore.add(MenuItems.line(AeroMessages.tr("gui.mark.by"), current.reviewer() + ", "
+                    + AdminStyle.age(System.currentTimeMillis() - current.reviewedAtMillis())));
+            lore.add("");
+        }
+        lore.add(MenuItems.note(AeroMessages.tr(selected ? "gui.review.click_clear" : "gui.review.click_set")));
+        lore.add(MenuItems.note(AeroMessages.tr("gui.review.weak")));
+        return lore;
+    }
+
+    private void setVerdict(SnapshotReviews.Verdict verdict) {
+        if (!permitted(AdminPermissions.TRAINING_REVIEW)) {
+            deny(AdminPermissions.TRAINING_REVIEW);
+            return;
+        }
+        SnapshotReviews.Review current = review;
+        boolean clear = current != null && current.verdict() == verdict;
+        String reviewer = viewer.getName();
+        Path reviews = SnapshotReviews.directoryFor(directory);
+        Bukkit.getScheduler().runTaskAsynchronously(AeroACBukkitLoaderPlugin.LOADER, () -> {
+            String message;
+            try {
+                if (clear) SnapshotReviews.clear(reviews, summary.eventId());
+                else SnapshotReviews.write(reviews, summary.eventId(), summary.file(), verdict, reviewer, System.currentTimeMillis());
+                message = MenuItems.GOOD + AeroMessages.tr(clear ? "gui.review.cleared" : "gui.review.saved", verdict.name());
+            } catch (java.io.IOException | RuntimeException error) {
+                message = MenuItems.BAD + AeroMessages.tr("gui.review.failed") + error.getMessage();
+            }
+            SnapshotReviews.Review after = SnapshotReviews.read(reviews, summary.eventId());
+            String text = message;
+            onMain(() -> {
+                review = after;
+                viewer.sendMessage(text);
+                redraw();
+            });
+        });
     }
 
     private org.bukkit.inventory.ItemStack summaryItem(SnapshotIndex.Detail loaded) {
@@ -142,5 +203,7 @@ public final class SnapshotDetailMenu extends AeroMenu {
         int slot = event.getSlot();
         if (isFooterClose(slot, rows())) viewer.closeInventory();
         else if (isFooterBack(slot, rows())) gui.show(parent.reopen());
+        else if (slot == SLOT_CHEAT && detail != null) setVerdict(SnapshotReviews.Verdict.CHEAT);
+        else if (slot == SLOT_LEGIT && detail != null) setVerdict(SnapshotReviews.Verdict.LEGIT);
     }
 }

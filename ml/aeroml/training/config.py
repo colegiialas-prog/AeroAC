@@ -44,6 +44,8 @@ class TrainingConfig:
     model_version_prefix: str = ""
     allow_synthetic: bool = False
     include_review: bool = False
+    # Moderator CHEAT/LEGIT verdicts on evidence snapshots (datasets/reviews). Train fold only.
+    include_staff_reviews: bool = False
     torch_threads: int = 2
     golden_manifest: Path | None = None
     # "platt" corrects the prior shift the class-weighted loss puts on every logit; "temperature"
