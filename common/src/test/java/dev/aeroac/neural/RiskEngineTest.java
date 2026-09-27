@@ -253,12 +253,125 @@ class RiskEngineTest {
         return profile;
     }
 
+    /** The original tests describe the threshold rule; log-odds tests opt in explicitly. */
     private static RiskEngine engine(Map<String, Object> overrides) {
-        return new RiskEngine(NeuralConfig.read(NeuralConfigTest.config(overrides)).risk());
+        Map<String, Object> settings = new java.util.HashMap<>();
+        settings.put("neural.risk.ai-scoring", "threshold");
+        settings.putAll(overrides);
+        return new RiskEngine(NeuralConfig.read(NeuralConfigTest.config(settings)).risk());
+    }
+
+    private static RiskEngine logOdds(Map<String, Object> overrides) {
+        Map<String, Object> settings = new java.util.HashMap<>(overrides);
+        settings.put("neural.risk.ai-scoring", "log-odds");
+        return new RiskEngine(NeuralConfig.read(NeuralConfigTest.config(settings)).risk());
+    }
+
+    @Test void riskReadsBackAsACheatProbabilityOnlyInLogOddsMode() {
+        NeuralConfig.Risk config = NeuralConfig.read(NeuralConfigTest.config(Map.of())).risk();
+        assertEquals(0.02, RiskEngine.cheatProbability(0, config), 1e-12, "no evidence: the base rate");
+        double watch = RiskEngine.cheatProbability(config.watch(), config);
+        double suspicious = RiskEngine.cheatProbability(config.suspicious(), config);
+        double confirmed = RiskEngine.cheatProbability(config.confirmed(), config);
+        assertTrue(watch < 0.1 && suspicious > 0.2 && suspicious < 0.4 && confirmed > 0.85 && confirmed < 0.95,
+                watch + " " + suspicious + " " + confirmed);
+        assertTrue(Double.isNaN(RiskEngine.cheatProbability(5, NeuralConfig.read(NeuralConfigTest.config(
+                Map.of("neural.risk.ai-scoring", "threshold"))).risk())));
+    }
+
+    @Test void theProfileRemembersTheRiskEachEvidenceLeftBehind() {
+        RiskEngine engine = engine(Map.of("neural.risk.decay-per-second", 0.0));
+        PlayerRiskProfile profile = new PlayerRiskProfile(3, 0);
+        for (int i = 1; i <= 4; i++) engine.accept(profile, Evidence.of(EvidenceType.AI_AIM, 1, i, "test"), i);
+        assertEquals(3, profile.evidenceSize());
+        assertEquals(2, profile.riskAfter(0), 1e-12);
+        assertEquals(4, profile.riskAfter(2), 1e-12);
+    }
+
+    @Test void logOddsIsTheDefaultScoring() {
+        assertTrue(NeuralConfig.read(NeuralConfigTest.config(Map.of())).risk().logOdds());
+    }
+
+    @Test void logOddsCountsTheOldDeadBandAndIsZeroAtTheNeutralRate() {
+        RiskEngine engine = logOdds(Map.of());
+        assertNull(engine.fromPrediction(prediction(1, 0.5, 0.5), SECOND), "p = prior carries no evidence");
+        Evidence moderate = engine.fromPrediction(prediction(2, 0.7, 0.7), SECOND);
+        assertEquals(EvidenceType.AI_OVERALL, moderate.type());
+        assertEquals(0.5 * Math.log(0.7 / 0.3), moderate.strength(), 1.0E-12);
+    }
+
+    @Test void logOddsHonoursOverlapShareClampAndReportedPrior() {
+        RiskEngine engine = logOdds(Map.of());
+        double full = engine.fromPrediction(prediction(1, 1.0, 1.0), 1.0, SECOND).strength();
+        assertEquals(0.5 * Math.log(0.98 / 0.02), full, 1.0E-12, "1.0 is clamped to 0.98");
+        assertEquals(full / 3, engine.fromPrediction(prediction(2, 1.0, 1.0), 1.0 / 3, SECOND).strength(), 1.0E-12);
+        assertNull(engine.fromPrediction(prediction(3, 1.0, 1.0), 0.0, SECOND), "a fully overlapped window adds nothing");
+        PredictionResult withPrior = new PredictionResult(4, SECOND, ModelKind.FLASH, "v", true,
+                new String[]{"overall"}, new double[]{0.2}, 1, 0.2);
+        assertNull(engine.fromPrediction(withPrior, SECOND), "p equal to the reported base rate is neutral");
+    }
+
+    @Test void logOddsReliefIsScaledAndNeverRaisesRisk() {
+        RiskEngine engine = logOdds(Map.of("neural.risk.relief-scale", 0.25));
+        Evidence relief = engine.fromPrediction(prediction(1, 0.1, 0.1), SECOND);
+        assertEquals(EvidenceType.AI_RELIEF, relief.type());
+        assertEquals(0.25 * 0.5 * (Math.log(0.1 / 0.9)), relief.strength(), 1.0E-12);
+        assertNull(logOdds(Map.of()).fromPrediction(uncalibrated(2, 0.99), SECOND));
     }
 
     private static MitigationManager mitigation(Map<String, Object> overrides) {
         return new MitigationManager(NeuralConfig.read(NeuralConfigTest.config(overrides)).mitigation());
+    }
+
+    private static MitigationManager mitigation(Map<String, Object> overrides, double... draws) {
+        int[] next = {0};
+        return new MitigationManager(NeuralConfig.read(NeuralConfigTest.config(overrides)).mitigation(),
+                () -> draws[Math.min(next[0]++, draws.length - 1)]);
+    }
+
+    @Test void legacyCancelAttacksStillDropsEveryAttackImmediately() {
+        MitigationManager manager = mitigation(Map.of("neural.mitigation.enabled", true,
+                "neural.mitigation.min-state", "WATCH", "neural.mitigation.cancel-attacks", true), 0.99);
+        PlayerMitigationState state = new PlayerMitigationState(8);
+        MitigationAction action = manager.evaluate(state, confirmed(), SECOND, "test");
+        assertEquals(MitigationRule.CANCEL_ATTACKS, action.rule());
+        assertEquals(SECOND, action.effectiveNanos());
+        assertTrue(manager.shouldCancelAttacks(state, SECOND));
+        assertEquals(1.0, manager.damageMultiplier(state, SECOND));
+    }
+
+    @Test void dampeningWaitsOutARandomOnsetAndEndsWithJitter() {
+        // Draws: onset (0.5 of 10..20 s = 15 s), release jitter (0.5 of 10 s = 5 s), then per-attack rolls.
+        MitigationManager manager = mitigation(Map.of("neural.mitigation.enabled", true,
+                "neural.mitigation.min-state", "WATCH", "neural.mitigation.cancel-chance", 0.3,
+                "neural.mitigation.damage-multiplier", 0.5, "neural.mitigation.duration-seconds", 30,
+                "neural.mitigation.onset-delay-min-seconds", 10, "neural.mitigation.onset-delay-max-seconds", 20,
+                "neural.mitigation.release-jitter-seconds", 10), 0.5, 0.5, 0.1, 0.9);
+        PlayerMitigationState state = new PlayerMitigationState(8);
+        MitigationAction action = manager.evaluate(state, confirmed(), 0, "test");
+        assertEquals(MitigationRule.DAMPEN, action.rule());
+        assertEquals(15 * SECOND, action.effectiveNanos());
+        assertEquals(50 * SECOND, action.endNanos());
+        assertEquals(1.0, manager.damageMultiplier(state, 14 * SECOND), "nothing changes during the onset delay");
+        assertFalse(manager.shouldCancelAttacks(state, 14 * SECOND));
+        assertEquals(RiskState.MITIGATED, manager.report(state, RiskState.SUSPICIOUS, 14 * SECOND),
+                "the operator already sees the decision");
+        assertEquals(0.5, manager.damageMultiplier(state, 20 * SECOND));
+        assertTrue(manager.shouldCancelAttacks(state, 20 * SECOND), "0.1 < 0.3");
+        assertFalse(manager.shouldCancelAttacks(state, 21 * SECOND), "0.9 >= 0.3");
+        assertEquals(1.0, manager.damageMultiplier(state, 50 * SECOND), "expired");
+    }
+
+    @Test void aMitigationThatChangesNothingIsOnlyObserved() {
+        MitigationManager manager = mitigation(Map.of("neural.mitigation.enabled", true,
+                "neural.mitigation.min-state", "WATCH"), 0.0);
+        PlayerMitigationState state = new PlayerMitigationState(8);
+        MitigationAction action = manager.evaluate(state, confirmed(), SECOND, "test");
+        assertEquals(MitigationRule.OBSERVE, action.rule());
+        assertFalse(manager.shouldCancelAttacks(state, SECOND));
+        assertEquals(1.0, manager.damageMultiplier(state, SECOND));
+        assertEquals(0.05, NeuralConfig.read(NeuralConfigTest.config(Map.of("neural.mitigation.damage-multiplier", 0.0)))
+                .mitigation().damageMultiplier(), 0, "a hit is never scaled to nothing");
     }
 
     private static PredictionResult prediction(long id, double overall, double aim) {

@@ -269,4 +269,37 @@ class BanServiceTest {
         assertEquals(30, policy.animation().seconds());
         assertEquals(10, policy.animation().levitation());
     }
+
+    @Test void automaticVerdictsWaitForAJitteredWaveAndSurviveADisconnect() {
+        Map<String, Object> settings = new java.util.HashMap<>(mode("automatic"));
+        settings.put("neural.enforcement.wave-minutes", 30);
+        settings.put("neural.enforcement.animation.enabled", false);
+        Rig rig = rig(settings);
+        rig.service().random(() -> 0.5);
+        UUID first = UUID.randomUUID(), second = UUID.randomUUID();
+        assertNotNull(rig.service().observe(view(first, RiskState.CONFIRMED, 40, 40), 1_000));
+        assertTrue(rig.commands().isEmpty(), "nothing is banned when the verdict is reached");
+        assertEquals(1_000 + 30 * 60_000L, rig.service().nextWaveMillis(), "half to one and a half periods away");
+        rig.service().forget(first);
+        assertNotNull(rig.service().observe(view(second, RiskState.CONFIRMED, 40, 40), 2_000));
+        assertEquals(2, rig.service().queued().size(), "leaving does not escape the wave");
+        rig.service().expire(1_000 + 30 * 60_000L - 1);
+        assertTrue(rig.commands().isEmpty());
+        rig.service().expire(1_000 + 30 * 60_000L);
+        assertEquals(2, rig.commands().size(), "the whole wave runs together");
+        assertTrue(rig.service().queued().isEmpty());
+        assertEquals(0, rig.service().nextWaveMillis());
+    }
+
+    @Test void switchingAwayFromAutomaticWithdrawsTheWave() {
+        Map<String, Object> settings = new java.util.HashMap<>(mode("automatic"));
+        settings.put("neural.enforcement.wave-minutes", 10);
+        Rig rig = rig(settings);
+        rig.service().observe(view(UUID.randomUUID(), RiskState.CONFIRMED, 40, 40), 0);
+        assertEquals(1, rig.service().queued().size());
+        rig.service().reload(BanPolicy.read(config(mode("announce"))));
+        assertTrue(rig.service().queued().isEmpty());
+        rig.service().expire(Long.MAX_VALUE / 2);
+        assertTrue(rig.commands().isEmpty());
+    }
 }

@@ -111,7 +111,8 @@ public final class NeuralManager implements StartableInitable, StoppableInitable
         }
         try {
             runtime = replacement.telemetryEnabled()
-                    ? new NeuralRuntime(generation, replacement, buildClient(replacement), this::datasets)
+                    ? new NeuralRuntime(generation, replacement, buildClient(replacement), this::datasets,
+                            riskStore(replacement))
                     : null;
         } catch (Exception error) {
             runtime = null;
@@ -129,10 +130,56 @@ public final class NeuralManager implements StartableInitable, StoppableInitable
         return settings.enabled() && (settings.collectionEnabled() || settings.risk().enabled());
     }
 
-    private static InferenceClient buildClient(NeuralConfig settings) {
+    /** One store for the manager's lifetime, so reloads never lose remembered risk. */
+    private dev.aeroac.neural.risk.RiskStore riskStore;
+
+    private dev.aeroac.neural.risk.RiskStore riskStore(NeuralConfig settings) {
+        if (!settings.risk().enabled() || settings.risk().persistHours() <= 0) return null;
+        if (riskStore == null) {
+            Path folder = dataFolder();
+            if (folder == null) return null;
+            riskStore = new dev.aeroac.neural.risk.RiskStore(folder.resolve("neural").resolve("risk-store.json"), log::warn);
+        }
+        return riskStore;
+    }
+
+    private InferenceClient buildClient(NeuralConfig settings) throws IOException {
         if (!settings.inference().enabled()) return null;
+        if (settings.inference().local()) return buildLocalClient(settings.inference());
         return new HttpInferenceClient(settings.inference().endpoint(), settings.inference().timeoutMs(),
                 settings.inference().maxInFlight(), Math.min(4, Math.max(1, settings.inference().maxInFlight())));
+    }
+
+    /**
+     * Loads the configured bundles for in-JVM inference. A bundle that is missing or built for another
+     * feature schema throws, which disables the runtime with a logged reason instead of serving a model
+     * that would read the wrong channels.
+     */
+    private InferenceClient buildLocalClient(NeuralConfig.Inference inference) throws IOException {
+        java.util.List<dev.aeroac.neural.inference.local.LocalModelBundle> bundles = new java.util.ArrayList<>();
+        bundles.add(loadBundle(inference.flashBundle(), dev.aeroac.neural.inference.ModelKind.FLASH));
+        if (inference.proEnabled() && !inference.proBundle().isEmpty()) {
+            bundles.add(loadBundle(inference.proBundle(), dev.aeroac.neural.inference.ModelKind.PRO));
+        }
+        return new dev.aeroac.neural.inference.local.LocalInferenceClient(bundles, inference.maxInFlight(),
+                inference.localThreads());
+    }
+
+    private dev.aeroac.neural.inference.local.LocalModelBundle loadBundle(String configured,
+                                                                          dev.aeroac.neural.inference.ModelKind kind) throws IOException {
+        Path path = Path.of(configured);
+        if (!path.isAbsolute()) {
+            Path folder = dataFolder();
+            if (folder == null) throw new IOException("папка данных недоступна для " + configured);
+            path = folder.resolve(configured);
+        }
+        var bundle = dev.aeroac.neural.inference.local.LocalModelBundle.load(path);
+        if (bundle.kind() != kind) {
+            throw new IOException(path + " содержит модель " + bundle.kind().wireName() + ", ожидалась " + kind.wireName());
+        }
+        log.info("Aero AC: локальная модель " + kind.wireName() + " " + bundle.modelVersion() + " из " + path
+                + (bundle.calibrated() ? "" : " (без калибровки)"));
+        return bundle;
     }
 
     public void serverTick() {
@@ -174,14 +221,44 @@ public final class NeuralManager implements StartableInitable, StoppableInitable
         return collector;
     }
 
-    /** Creates the collector on demand. Called on the first attack and when recording starts. */
+    /**
+     * Out of combat: keep only the last few rotations, primitive and in place, so a first attack
+     * has the history an aimbot's snap onto its target happens in. Teleports, vehicles and cancelled
+     * ticks break it the same way they break a collector's segment.
+     */
+    private void recordHistory(AeroPlayer player, PacketReceiveEvent event, NeuralRuntime active) {
+        NeuralPlayerState state = player.getNeuralState();
+        if (state.disconnected || !active.config().telemetryEnabled()) return;
+        try {
+            int capacity = Math.max(1, active.config().attackBefore());
+            if (state.history == null || state.history.capacity() != capacity) {
+                state.history = new dev.aeroac.neural.window.RotationHistory(capacity);
+            }
+            if ((WrapperPlayClientPlayerFlying.isFlying(event.getPacketType()) && player.packetStateData.lastPacketWasTeleport)
+                    || player.inVehicle()) {
+                state.history.clear();
+            } else if (player.packetEntityReplication.isTickPacket(event.getPacketType()) && !event.isCancelled()) {
+                CombatTelemetryCollector.recordHistory(player, state.history, System.nanoTime());
+            }
+        } catch (RuntimeException error) { failed(player, error); }
+    }
+
+    /**
+     * Creates the collector on demand. Called on the first attack and when recording starts; it continues
+     * from the rotation history kept while the player was not in combat.
+     */
     private CombatTelemetryCollector openCollector(AeroPlayer player, long nowNanos) {
         NeuralRuntime active = runtime;
         if (active == null || player.getNeuralState().disconnected) return null;
         CombatTelemetryCollector collector = collector(player);
         if (collector == null) {
             collector = new CombatTelemetryCollector(player, active.config(), active.generation(), nowNanos);
-            player.getNeuralState().collector = collector;
+            NeuralPlayerState state = player.getNeuralState();
+            if (state.history != null) {
+                collector.seed(state.history.frames(1, nowNanos));
+                state.history.clear();
+            }
+            state.collector = collector;
         }
         return collector;
     }
@@ -189,8 +266,11 @@ public final class NeuralManager implements StartableInitable, StoppableInitable
     // Called immediately before PacketEntityReplication advances compensated interpolation.
     public void beforeEntityReplication(AeroPlayer player, PacketReceiveEvent event) {
         CombatTelemetryCollector collector = collector(player);
-        if (collector == null) return;
         NeuralRuntime active = runtime;
+        if (collector == null) {
+            if (active != null) recordHistory(player, event, active);
+            return;
+        }
         if (active == null) return;
         try {
             long now = System.nanoTime();
@@ -437,7 +517,22 @@ public final class NeuralManager implements StartableInitable, StoppableInitable
         NeuralRuntime active = runtime;
         runtime = null;
         long generation = ++generations;
-        if (active != null) active.close();
+        if (active != null) {
+            // A restart must not be a reset: remember everyone still online before the runtime goes.
+            try {
+                long now = System.nanoTime();
+                for (AeroPlayer player : AeroAPI.INSTANCE.getPlayerDataManager().getEntries()) {
+                    active.remember(player.getUniqueId(), player.getNeuralState().risk, now);
+                }
+            } catch (RuntimeException unavailable) {
+                log.warn("Aero AC: риск онлайн-игроков не сохранён при остановке: " + unavailable.getMessage());
+            }
+            active.close();
+        }
+        if (riskStore != null) {
+            riskStore.close();
+            riskStore = null;
+        }
         DatasetManager manager = datasets;
         datasets = null;
         // Stop runs on the server thread during plugin disable, so it may not wait for the disk: the

@@ -113,7 +113,7 @@ common/src/main/java/dev/aeroac/neural/
   NeuralPlayerState.java    единственное новое поле AeroPlayer
   NeuralMessages.java       доставка ответа оператору вне packet-потока
   telemetry/
-    FrameField.java             79 raw полей (НЕ список входов модели)
+    FrameField.java             81 raw поле (НЕ список входов модели)
     TelemetryRecord.java, CombatFrame.java, CombatEvent.java, ReachObservation.java
     CombatTelemetryCollector.java
   target/
@@ -124,7 +124,7 @@ common/src/main/java/dev/aeroac/neural/
     DatasetMetadata.java, DatasetSession.java, DatasetJson.java, DatasetManager.java
     SnapshotJson.java
   inference/
-    ModelFeature.java          67 каналов входа модели
+    ModelFeature.java          83 канала входа модели
     FeatureEncoder.java        окно кадров -> float[]
     ModelKind.java, ModelWindow.java
     InferenceRequest.java, InferenceResponse.java, PredictionResult.java
@@ -172,7 +172,7 @@ flowchart TD
   Q --> W[Dedicated JSONL writer]
   W --> M[Raw session + metadata]
   E --> G[Complete attack or continuous window]
-  G --> X[FeatureEncoder: 67 channels]
+  G --> X[FeatureEncoder: 83 channels]
   X --> I[Bounded async inference client]
   I --> P[PredictionResult applied via runSafely]
   P --> T[PredictionTrail]
@@ -186,10 +186,13 @@ flowchart TD
 ```
 
 Телеметрия начинается с **первой атаки** игрока и прекращается после
-`telemetry.idle-timeout-seconds` без боя. Соединение, которое не дерётся, стоит один пустой
-объект состояния: ни кольца, ни кадров, ни выделений на движение. Цена — у самой первой
-атаки нет предшествующей истории, поэтому её окно не строится; для целей это ограничение
-и так существует (цель известна только после атаки).
+`telemetry.idle-timeout-seconds` без боя. Пока игрок не дерётся, `RotationHistory` держит только
+последние `attack-before` поворотов в одном примитивном массиве (yaw, pitch, земля, спринт,
+присед, сетка мыши, пинг; ~1.5 KiB на игрока, без выделений на тик). Телепорт, транспорт и пауза
+дольше 150 мс её обнуляют. На первой атаке коллектор засевается этой историей как обычными кадрами
+с началом сегмента на первом из них, поэтому окно первой атаки теперь строится: именно в нём
+аимбот делает рывок на цель. Цель в этих кадрах неизвестна (`TARGET_PRESENT = 0`, маски 0) —
+она известна только после атаки, и выдумывать ближайшую сущность нельзя.
 
 1. Запись датасета открывается явной командой. Disk worker создаёт raw file и incomplete
    metadata; сессия присоединяется к уже работающему collector.
@@ -218,8 +221,8 @@ Attack tick для window builder — первый следующий sample, в
 
 ## Окна и вход модели
 
-Кадр — это 79 raw полей; вход модели — 67 каналов, и это два разных контракта.
-Новейший `ml/schema/feature_schema_v*.json` (сейчас v3) канонически задаёт второй: 38 value channels и 29 mask
+Кадр — это 81 raw поле; вход модели — 83 канала, и это два разных контракта.
+Новейший `ml/schema/feature_schema_v*.json` (сейчас v5) канонически задаёт второй: 46 value channels и 37 mask
 channels (маски идут после всех значений, в порядке объявления nullable значений).
 Java `ModelFeature`/`FeatureEncoder` и Python `encode_window` обязаны совпадать; это удерживают
 `FeatureSchemaTest`, `FeatureEncoderGoldenTest` и `ml/tests/test_features.py` через общий
@@ -395,7 +398,7 @@ punishments deterministic проверок.
 
 ## Чего здесь нет
 
-Локального inference внутри JVM (`mode: local` ничего не включает), множителя урона в
+Множителя урона в
 mitigation (нет platform damage hook), модели таймингов AutoClicker (её нельзя обучать на
 rotation data), долгосрочного fingerprint игрока (тип evidence зарезервирован), переноса риска
 между подключениями и heads кроме `overall`/`aimAssist` в обученной модели.

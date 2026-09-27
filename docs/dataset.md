@@ -137,7 +137,7 @@ VERIFIED/REVIEWED_PRODUCTION — будущий отдельный процес�
 сессии. Монотонное время пригодно для интервалов; wall clock восстанавливается
 приблизительно как startTimestamp + offsetNanos / 1e6.
 
-* `type=frame`: tick и объект values с 79 полями из `FrameField`. Числа без boxing
+* `type=frame`: tick и объект values с 81 полем из `FrameField` (raw schema 2; записи schema 1 несут 79, без `MOUSE_GRID_*`). Числа без boxing
   хранятся в immutable double array на JVM. Unknown — JSON null, flags — 0/1.
 * `type=attack` / `swing`: precedingTick, entityId, cancelledAtObservation, yaw/pitch.
   Несколько событий между samples не схлопываются в один timestamp.

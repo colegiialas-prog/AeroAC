@@ -1,5 +1,6 @@
 package dev.aeroac.platform.bukkit.admin;
 
+import dev.aeroac.neural.admin.AdminStyle;
 import dev.aeroac.locale.AeroMessages;
 
 import dev.aeroac.neural.admin.AdminPermissions;
@@ -80,6 +81,21 @@ public abstract class AeroMenu implements InventoryHolder {
     }
 
     protected AdminService service() { return gui.service(); }
+
+    /** Accumulated risk read as the chance this player cheats, or NaN when that has no meaning. */
+    protected double cheatProbability(double risk) {
+        var runtime = gui.neural().runtime();
+        return runtime == null ? Double.NaN
+                : dev.aeroac.neural.risk.RiskEngine.cheatProbability(risk, runtime.config().risk());
+    }
+
+    /** "Cheat probability over the fight: 29%" line; absent in threshold scoring. */
+    protected String cheatLine(double risk) {
+        double probability = cheatProbability(risk);
+        if (Double.isNaN(probability)) return null;
+        String colour = probability >= 0.75 ? MenuItems.BAD : probability >= 0.25 ? MenuItems.WARN : MenuItems.GOOD;
+        return MenuItems.line(AeroMessages.tr("gui.cheat_probability"), AdminStyle.percent(probability), colour);
+    }
 
     protected boolean permitted(String permission) {
         return viewer.hasPermission(permission) || viewer.hasPermission(AdminPermissions.ADMIN);

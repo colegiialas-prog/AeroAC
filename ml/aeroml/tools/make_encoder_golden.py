@@ -22,7 +22,7 @@ from ..dataset.features import encode_window
 from ..schema import default_schema
 
 CASES = ("all_unknown", "tracking_run", "target_switch", "segment_boundary", "clipping", "yaw_wrap", "no_target",
-         "error_frame")
+         "error_frame", "crosshair", "mouse_grid")
 
 
 def _row(schema, **values) -> list[float | None]:
@@ -147,6 +147,40 @@ def build_cases() -> list[dict]:
         framed(12, 0, 1069.0, 1.5, -8.0, 2.0, -1.0, 0.5),    # vs error (-2, -1) on the new target: -0.3, 0.4
     ]
     cases.append({"name": "error_frame", "raw": frame})
+
+    # Crosshair geometry: the player stands at the origin (eye 1.62) and the target box is
+    # [2.7, 3.3] x [0, 1.8] x [-0.3, 0.3], three blocks along +x. Yaw -90 looks along +x.
+    def aimed(yaw, pitch, eye_height=1.62, present=1, player_x=0.0):
+        return _row(schema, TARGET_PRESENT=present, TARGET_ENTITY_ID=21, TARGET_SWITCH=0, SEGMENT_START=0,
+                    YAW=yaw, PITCH=pitch, PLAYER_X=player_x, PLAYER_Y=0.0, PLAYER_Z=0.0, EYE_HEIGHT=eye_height,
+                    TARGET_MIN_X=2.7, TARGET_MIN_Y=0.0, TARGET_MIN_Z=-0.3,
+                    TARGET_MAX_X=3.3, TARGET_MAX_Y=1.8, TARGET_MAX_Z=0.3, DISTANCE_TO_TARGET=2.7)
+    crosshair = [
+        aimed(-90.0, 0.0),            # level, straight at it: hit at eye height 1.62 / 1.8 = 0.9
+        aimed(-90.0, 12.0),           # looking down into the chest: hit lower on the box
+        aimed(-80.0, 0.0),            # 10 degrees off: the ray passes beside the box, a miss
+        aimed(90.0, 0.0),             # facing away: box behind the eye is not a hit
+        aimed(-90.0, -60.0),          # looking steeply up: passes over the box
+        aimed(-90.0, 0.0, player_x=3.0),  # eye inside the box: entry clamps to 0
+        aimed(-90.0, 0.0, present=0),     # no target: all four unknown
+        aimed(0.0, 90.0),             # straight down: x and z parallel to their slabs, a miss
+    ]
+    cases.append({"name": "crosshair", "raw": crosshair})
+
+    # Mouse grid: 0.15 degrees per count. Whole counts, a fraction, a negative half count that
+    # rint rounds to even, a missing grid and a zero grid.
+    def gridded(delta_yaw, delta_pitch, grid_yaw=0.15, grid_pitch=0.15):
+        return _row(schema, TARGET_PRESENT=0, SEGMENT_START=0, DELTA_YAW=delta_yaw, DELTA_PITCH=delta_pitch,
+                    MOUSE_GRID_YAW=grid_yaw, MOUSE_GRID_PITCH=grid_pitch)
+    grid = [
+        gridded(0.45, -0.30),            # 3 and -2 counts: on the grid
+        gridded(0.52, 0.07),             # 3.47 and 0.47 counts: off it
+        gridded(-0.375, 0.0),            # -2.5 counts: rint gives -2, residual 0.5
+        gridded(1.2, 0.3, grid_yaw=None, grid_pitch=None),  # no sensitivity estimate yet
+        gridded(1.2, 0.3, grid_yaw=0.0, grid_pitch=0.15),   # degenerate grid
+        gridded(900.0, None),            # far past the counts clip; missing pitch delta
+    ]
+    cases.append({"name": "mouse_grid", "raw": grid})
     return cases
 
 

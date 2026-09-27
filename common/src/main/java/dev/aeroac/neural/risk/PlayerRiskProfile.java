@@ -9,6 +9,8 @@ package dev.aeroac.neural.risk;
  */
 public final class PlayerRiskProfile {
     private final Evidence[] recent;
+    /** Risk right after each entry of {@link #recent} was applied, same indexing. */
+    private final double[] riskAfter;
     private final long[] typeCounts = new long[EvidenceType.values().length];
     private int next;
     private int size;
@@ -23,6 +25,7 @@ public final class PlayerRiskProfile {
     public PlayerRiskProfile(int historySize, long nowNanos) {
         if (historySize < 1 || historySize > 512) throw new IllegalArgumentException("historySize must be 1..512");
         recent = new Evidence[historySize];
+        riskAfter = new double[historySize];
         lastUpdateNanos = nowNanos;
         stateSinceNanos = nowNanos;
     }
@@ -41,6 +44,12 @@ public final class PlayerRiskProfile {
         return recent[(next - size + index + recent.length) % recent.length];
     }
 
+    /** Risk right after the evidence at the same index was applied. */
+    public double riskAfter(int index) {
+        if (index < 0 || index >= size) throw new IndexOutOfBoundsException(index);
+        return riskAfter[(next - size + index + recent.length) % recent.length];
+    }
+
     void risk(double value, long nowNanos) {
         risk = value;
         lastUpdateNanos = nowNanos;
@@ -56,6 +65,7 @@ public final class PlayerRiskProfile {
 
     void record(Evidence evidence) {
         recent[next] = evidence;
+        riskAfter[next] = risk;
         next = (next + 1) % recent.length;
         size = Math.min(size + 1, recent.length);
         typeCounts[evidence.type().ordinal()]++;

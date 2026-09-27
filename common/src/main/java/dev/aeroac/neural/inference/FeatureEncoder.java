@@ -10,7 +10,7 @@ import dev.aeroac.neural.telemetry.FrameField;
  * derived deltas are unknown. ml/aeroml/features.py applies exactly the same rule.
  */
 public final class FeatureEncoder {
-    public static final int FEATURE_SCHEMA_VERSION = 3;
+    public static final int FEATURE_SCHEMA_VERSION = 5;
     private static final double EPSILON = 1.0E-6;
     /** Below this aim error (degrees) the error-frame channels are noise and stay unknown. */
     private static final double MIN_ERROR_FRAME_DEGREES = 1.0;
@@ -48,6 +48,57 @@ public final class FeatureEncoder {
                 && frame.value(FrameField.TARGET_ENTITY_ID) == previous.value(FrameField.TARGET_ENTITY_ID)
                 && frame.value(FrameField.TARGET_SWITCH) == 0
                 && frame.value(FrameField.SEGMENT_START) == 0;
+    }
+
+    /** Rotation in mouse counts, or NaN without a usable sensitivity grid. */
+    private static double counts(double delta, double grid) {
+        if (!Double.isFinite(delta) || !Double.isFinite(grid) || !(grid > EPSILON)) return Double.NaN;
+        return delta / grid;
+    }
+
+    /**
+     * {on target, entry height, degrees to box centre} for one sample, NaN where unknown. A slab
+     * test of the look ray against the one target box already in the frame; not a world raycast.
+     * Same order of operations as crosshair() in ml/aeroml/dataset/features.py.
+     */
+    static double[] crosshair(CombatFrame frame) {
+        double[] result = {Double.NaN, Double.NaN, Double.NaN};
+        if (frame.value(FrameField.TARGET_PRESENT) != 1) return result;
+        double yaw = Math.toRadians(frame.value(FrameField.YAW)), pitch = Math.toRadians(frame.value(FrameField.PITCH));
+        double[] look = {-Math.sin(yaw) * Math.cos(pitch), -Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)};
+        double[] eye = {frame.value(FrameField.PLAYER_X),
+                frame.value(FrameField.PLAYER_Y) + frame.value(FrameField.EYE_HEIGHT), frame.value(FrameField.PLAYER_Z)};
+        double[] low = {frame.value(FrameField.TARGET_MIN_X), frame.value(FrameField.TARGET_MIN_Y), frame.value(FrameField.TARGET_MIN_Z)};
+        double[] high = {frame.value(FrameField.TARGET_MAX_X), frame.value(FrameField.TARGET_MAX_Y), frame.value(FrameField.TARGET_MAX_Z)};
+        for (int axis = 0; axis < 3; axis++) {
+            if (!Double.isFinite(look[axis]) || !Double.isFinite(eye[axis])
+                    || !Double.isFinite(low[axis]) || !Double.isFinite(high[axis])) return result;
+        }
+        double near = Double.NEGATIVE_INFINITY, far = Double.POSITIVE_INFINITY;
+        boolean hit = true;
+        for (int axis = 0; axis < 3 && hit; axis++) {
+            double o = eye[axis], d = look[axis];
+            if (Math.abs(d) < 1.0E-9) {
+                if (o < low[axis] || o > high[axis]) hit = false;
+                continue;
+            }
+            double first = (low[axis] - o) / d, second = (high[axis] - o) / d;
+            if (first > second) { double swap = first; first = second; second = swap; }
+            near = Math.max(near, first);
+            far = Math.min(far, second);
+        }
+        double entry = Math.max(near, 0.0);
+        hit = hit && entry <= far;
+        result[0] = hit ? 1 : 0;
+        double height = high[1] - low[1];
+        if (hit && height > EPSILON) result[1] = (eye[1] + entry * look[1] - low[1]) / height;
+        double cx = 0.5 * (low[0] + high[0]) - eye[0], cy = 0.5 * (low[1] + high[1]) - eye[1], cz = 0.5 * (low[2] + high[2]) - eye[2];
+        double norm = Math.sqrt(cx * cx + cy * cy + cz * cz);
+        if (norm >= EPSILON) {
+            double cosine = (look[0] * cx + look[1] * cy + look[2] * cz) / norm;
+            result[2] = Math.toDegrees(Math.acos(Math.max(-1.0, Math.min(1.0, cosine))));
+        }
+        return result;
     }
 
     private static double derive(ModelFeature feature, CombatFrame frame, CombatFrame previous, boolean continuous) {
@@ -99,6 +150,29 @@ public final class FeatureEncoder {
                 return feature == ModelFeature.ROTATION_CORRECTION_GAIN
                         ? -(deltaYaw * errorYaw + deltaPitch * errorPitch) / norm2
                         : (deltaYaw * errorPitch - deltaPitch * errorYaw) / norm2;
+            }
+            case ROTATION_COUNTS_YAW:
+                return counts(frame.value(FrameField.DELTA_YAW), frame.value(FrameField.MOUSE_GRID_YAW));
+            case ROTATION_COUNTS_PITCH:
+                return counts(frame.value(FrameField.DELTA_PITCH), frame.value(FrameField.MOUSE_GRID_PITCH));
+            case GRID_RESIDUAL_YAW: {
+                double counts = counts(frame.value(FrameField.DELTA_YAW), frame.value(FrameField.MOUSE_GRID_YAW));
+                return Math.abs(counts - Math.rint(counts));
+            }
+            case GRID_RESIDUAL_PITCH: {
+                double counts = counts(frame.value(FrameField.DELTA_PITCH), frame.value(FrameField.MOUSE_GRID_PITCH));
+                return Math.abs(counts - Math.rint(counts));
+            }
+            case CROSSHAIR_ON_TARGET:
+                return crosshair(frame)[0];
+            case CROSSHAIR_HIT_HEIGHT:
+                return crosshair(frame)[1];
+            case CENTER_AIM_ERROR:
+                return crosshair(frame)[2];
+            case CENTER_AIM_ERROR_RATIO: {
+                double radius = derive(ModelFeature.TARGET_ANGULAR_RADIUS, frame, previous, continuous);
+                if (!(radius > EPSILON)) return Double.NaN;
+                return crosshair(frame)[2] / radius;
             }
             case PLAYER_SPEED_HORIZONTAL: {
                 double x = frame.value(FrameField.VELOCITY_X), z = frame.value(FrameField.VELOCITY_Z);

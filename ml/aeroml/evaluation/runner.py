@@ -85,7 +85,8 @@ def evaluate_index(model, index, rows, output, *, fold="external-test", threshol
         holdout_clients=sorted(unknown_clients),
         risk_config=config, calibrated=model.calibration is not None,
         head_scores={h: scores[:, i] for i, h in enumerate(manifest.heads)},
-        inference_interval_seconds=inference_interval_seconds)
+        inference_interval_seconds=inference_interval_seconds,
+        prior=model.calibration_prior() if hasattr(model, "calibration_prior") else None)
     simulated = {"riskConfig": config.to_dict(), "inferenceIntervalSeconds": inference_interval_seconds,
                  "falsePositives": false_positive_simulation(evaluations), "detection": detection_simulation(evaluations),
                  "breakdowns": breakdowns(evaluations),

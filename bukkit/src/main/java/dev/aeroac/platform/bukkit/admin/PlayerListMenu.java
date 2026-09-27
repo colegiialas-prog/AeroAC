@@ -25,8 +25,8 @@ import java.util.UUID;
  * <p>One class for both because they differ by a filter and a title and nothing else, and two
  * copies of this lore would drift apart within a week.
  *
- * <p>Sorted by model output descending, so the row an operator opened this screen to find is the
- * first one. A player the model has never scored is not sorted to the top and is not shown as 0%:
+ * <p>Sorted by accumulated risk descending (AdminPlayerView.sortKey), so the row an operator opened
+ * this screen to find is the first one; a single high window does not jump a player to the top. A player the model has never scored is not sorted to the top and is not shown as 0%:
  * the lore says NO DATA, because "the model has not seen enough of this player" and "the model
  * thinks this player is clean" are different answers and only one of them is reassuring.
  */
@@ -89,8 +89,12 @@ public final class PlayerListMenu extends AeroMenu {
         RiskState state = view.state() == null ? RiskState.CLEAN : view.state();
         List<String> lore = new ArrayList<>();
         lore.add("");
-        lore.add(MenuItems.riskLine(view.overall()));
+        // The verdict first: state, accumulated risk and what it means. One window's score after it.
         lore.add(MenuItems.line(AeroMessages.tr("gui.state"), AdminLabels.state(state), MenuItems.colourOf(state)));
+        lore.add(MenuItems.line(AeroMessages.tr("gui.risk_score"), AdminStyle.number(view.risk(), 2)));
+        String cheat = cheatLine(view.risk());
+        if (cheat != null) lore.add(cheat);
+        lore.add(MenuItems.riskLine(view.overall()) + MenuItems.MUTED + " " + AeroMessages.tr("gui.last_window"));
         lore.add("");
         lore.add(MenuItems.headLine("Aim Assist", view.aimAssist()));
         lore.add(MenuItems.headLine("KillAura", view.killAura()));
@@ -99,8 +103,9 @@ public final class PlayerListMenu extends AeroMenu {
         lore.add(MenuItems.line(AeroMessages.tr("gui.ping"), view.ping() < 0 ? AdminStyle.NO_DATA : view.ping() + "ms"));
         lore.add(MenuItems.line(AeroMessages.tr("gui.combat"), AdminStyle.duration(view.combatSeconds())));
         lore.add("");
-        lore.add(MenuItems.line(AeroMessages.tr("gui.risk_score"), AdminStyle.number(view.risk(), 2)));
         lore.add(MenuItems.line(AeroMessages.tr("gui.evidence"), String.valueOf(view.evidenceCount())));
+        StaffMarks.Mark mark = gui.marks().mark(view.uuid());
+        if (mark != StaffMarks.Mark.NONE) lore.add(MenuItems.line(AeroMessages.tr("gui.mark.title"), ProfileMenu.markLabel(mark)));
         if (view.mitigation() != null) {
             lore.add(MenuItems.line(AeroMessages.tr("gui.mitigation"), view.mitigation() + " "
                     + view.mitigationRemainingMs() + AeroMessages.tr("gui.ms_left"), MenuItems.BAD));
@@ -113,6 +118,8 @@ public final class PlayerListMenu extends AeroMenu {
         lore.add(MenuItems.note(AeroMessages.tr("gui.left_click_profile")));
         lore.add(MenuItems.note(view.watched() ? AeroMessages.tr("gui.right_click_watch_someone_already_is")
                 : AeroMessages.tr("gui.right_click_watch")));
+        if (permitted(AdminPermissions.ACTION_TELEPORT)) lore.add(MenuItems.note(AeroMessages.tr("gui.action.shift_left_teleport")));
+        if (permitted(AdminPermissions.ACTION_SPECTATE)) lore.add(MenuItems.note(AeroMessages.tr("gui.action.shift_right_spectate")));
 
         String name = MenuItems.colourOf(state) + AdminStyle.symbol(state) + " " + view.name();
         return MenuItems.head(view.uuid(), view.name(), name, lore);
@@ -142,6 +149,19 @@ public final class PlayerListMenu extends AeroMenu {
         }
         if (slot >= rendered.size() || slot >= PER_PAGE) return;
         UUID target = rendered.get(slot);
+        if (event.isShiftClick()) {
+            // Straight from the list to the suspect: no profile in between when time matters.
+            String permission = event.isRightClick() ? AdminPermissions.ACTION_SPECTATE : AdminPermissions.ACTION_TELEPORT;
+            org.bukkit.entity.Player online = org.bukkit.Bukkit.getPlayer(target);
+            if (!permitted(permission)) deny(permission);
+            else if (online == null || online.equals(viewer)) viewer.sendMessage(MenuItems.BAD + AeroMessages.tr("gui.player_offline"));
+            else {
+                viewer.closeInventory();
+                if (event.isRightClick()) gui.actions().toggleSpectate(viewer, online);
+                else gui.actions().teleport(viewer, online);
+            }
+            return;
+        }
         if (event.isRightClick()) toggleWatch(target);
         else if (permitted(AdminPermissions.PROFILE)) gui.show(new ProfileMenu(gui, viewer, target, onlySuspicious));
         else deny(AdminPermissions.PROFILE);

@@ -14,9 +14,18 @@ import java.util.List;
  */
 public record AdminDetailView(AdminPlayerView summary, List<Prediction> predictions, List<Evidence> evidence,
                               List<Mitigation> mitigations, long[] evidenceCounts, double[] timeline,
-                              long trailAccepted, long trailStaleDropped) {
+                              long trailAccepted, long trailStaleDropped, double[] riskTimeline) {
+
+    /** Without a risk timeline, as views built before it existed. */
+    public AdminDetailView(AdminPlayerView summary, List<Prediction> predictions, List<Evidence> evidence,
+                           List<Mitigation> mitigations, long[] evidenceCounts, double[] timeline,
+                           long trailAccepted, long trailStaleDropped) {
+        this(summary, predictions, evidence, mitigations, evidenceCounts, timeline, trailAccepted, trailStaleDropped,
+                new double[0]);
+    }
 
     public AdminDetailView {
+        riskTimeline = riskTimeline == null ? new double[0] : riskTimeline.clone();
         predictions = List.copyOf(predictions);
         evidence = List.copyOf(evidence);
         mitigations = List.copyOf(mitigations);
@@ -26,6 +35,8 @@ public record AdminDetailView(AdminPlayerView summary, List<Prediction> predicti
 
     @Override public long[] evidenceCounts() { return evidenceCounts.clone(); }
     @Override public double[] timeline() { return timeline.clone(); }
+    /** Accumulated risk after each of the most recent evidence items, oldest first. */
+    @Override public double[] riskTimeline() { return riskTimeline.clone(); }
 
     public record Prediction(String model, String modelVersion, boolean calibrated, String window,
                              double overall, String[] headNames, double[] headValues,

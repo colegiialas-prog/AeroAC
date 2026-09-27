@@ -32,6 +32,10 @@ AI_TRIGGER = "AI_TRIGGER"
 AI_OVERALL = "AI_OVERALL"
 AI_RELIEF = "AI_RELIEF"
 
+THRESHOLD = "threshold"
+LOG_ODDS = "log-odds"
+SCORING_MODES = (LOG_ODDS, THRESHOLD)
+
 #: Head -> evidence type, in the order Java checks them: most specific head first.
 HEAD_ORDER = (("aimAssist", AI_AIM), ("killAura", AI_KILLAURA),
               ("triggerBot", AI_TRIGGER), ("overall", AI_OVERALL))
@@ -42,7 +46,8 @@ class RiskConfig:
     """Mirrors ``NeuralConfig.Risk``. Defaults match the bundled config.yml."""
 
     accept_uncalibrated: bool = False
-    decay_per_second: float = 0.01
+    ai_scoring: str = LOG_ODDS
+    decay_per_second: float = 0.001
     max_risk: float = 20.0
     ai_weight: float = 0.5
     ai_threshold: float = 0.80
@@ -52,12 +57,18 @@ class RiskConfig:
     watch: float = 2.0
     suspicious: float = 6.0
     confirmed: float = 12.0
+    log_odds_weight: float = 0.5
+    ai_neutral: float = 0.5
+    ai_clamp_low: float = 0.02
+    ai_clamp_high: float = 0.98
+    relief_scale: float = 0.5
 
     @classmethod
     def from_dict(cls, data: dict) -> "RiskConfig":
         return cls(
             accept_uncalibrated=bool(data.get("acceptUncalibrated", False)),
-            decay_per_second=float(data.get("decayPerSecond", 0.01)),
+            ai_scoring=str(data.get("aiScoring", LOG_ODDS)),
+            decay_per_second=float(data.get("decayPerSecond", 0.001)),
             max_risk=float(data.get("maxRisk", 20.0)),
             ai_weight=float(data.get("aiWeight", 0.5)),
             ai_threshold=float(data.get("aiThreshold", 0.80)),
@@ -67,11 +78,17 @@ class RiskConfig:
             watch=float(data.get("watch", 2.0)),
             suspicious=float(data.get("suspicious", 6.0)),
             confirmed=float(data.get("confirmed", 12.0)),
+            log_odds_weight=float(data.get("logOddsWeight", 0.5)),
+            ai_neutral=float(data.get("aiNeutral", 0.5)),
+            ai_clamp_low=float(data.get("aiClampLow", 0.02)),
+            ai_clamp_high=float(data.get("aiClampHigh", 0.98)),
+            relief_scale=float(data.get("reliefScale", 0.5)),
         )
 
     def to_dict(self) -> dict:
         return {
             "acceptUncalibrated": self.accept_uncalibrated,
+            "aiScoring": self.ai_scoring,
             "decayPerSecond": self.decay_per_second,
             "maxRisk": self.max_risk,
             "aiWeight": self.ai_weight,
@@ -82,18 +99,26 @@ class RiskConfig:
             "watch": self.watch,
             "suspicious": self.suspicious,
             "confirmed": self.confirmed,
+            "logOddsWeight": self.log_odds_weight,
+            "aiNeutral": self.ai_neutral,
+            "aiClampLow": self.ai_clamp_low,
+            "aiClampHigh": self.ai_clamp_high,
+            "reliefScale": self.relief_scale,
         }
 
     def normalised(self) -> "RiskConfig":
         """Java clamps these while reading the config; a simulation must use the same numbers."""
-        if any(not math.isfinite(v) for k, v in self.to_dict().items() if k != "acceptUncalibrated"):
+        if any(not math.isfinite(v) for k, v in self.to_dict().items() if k not in ("acceptUncalibrated", "aiScoring")):
             raise ValueError("risk configuration must be finite")
         watch = max(0.0, self.watch)
         suspicious = max(watch, self.suspicious)
         confirmed = max(suspicious, self.confirmed)
         threshold = min(1.0, max(0.0, self.ai_threshold))
+        low = min(0.5, max(1.0e-6, self.ai_clamp_low))
+        high = max(0.5, min(1.0 - 1.0e-6, self.ai_clamp_high))
         return RiskConfig(
             accept_uncalibrated=self.accept_uncalibrated,
+            ai_scoring=self.ai_scoring if self.ai_scoring in SCORING_MODES else LOG_ODDS,
             decay_per_second=max(0.0, self.decay_per_second),
             max_risk=max(confirmed, self.max_risk),
             ai_weight=max(0.0, self.ai_weight),
@@ -104,7 +129,16 @@ class RiskConfig:
             watch=watch,
             suspicious=suspicious,
             confirmed=confirmed,
+            log_odds_weight=max(0.0, self.log_odds_weight),
+            ai_neutral=min(high, max(low, self.ai_neutral)),
+            ai_clamp_low=low,
+            ai_clamp_high=high,
+            relief_scale=max(0.0, self.relief_scale),
         )
+
+
+def logit(probability: float) -> float:
+    return math.log(probability / (1.0 - probability))
 
 
 @dataclass
@@ -112,6 +146,10 @@ class Prediction:
     nano_time: int
     heads: dict[str, float]
     calibrated: bool = True
+    #: Fraction of this window's samples not already scored by the previous window. 1 = no overlap.
+    share: float = 1.0
+    #: Base rate the calibrated heads are posteriors under, as the service reports it; None = unknown.
+    prior: float | None = None
 
     def head(self, name: str) -> float:
         value = self.heads.get(name)
@@ -123,10 +161,13 @@ class Prediction:
 
     @classmethod
     def from_dict(cls, data: dict) -> "Prediction":
-        return cls(int(data["nanoTime"]), dict(data["heads"]), bool(data.get("calibrated", True)))
+        prior = data.get("prior")
+        return cls(int(data["nanoTime"]), dict(data["heads"]), bool(data.get("calibrated", True)),
+                   float(data.get("share", 1.0)), None if prior is None else float(prior))
 
     def to_dict(self) -> dict:
-        return {"nanoTime": self.nano_time, "calibrated": self.calibrated, "heads": self.heads}
+        return {"nanoTime": self.nano_time, "calibrated": self.calibrated, "heads": self.heads,
+                "share": self.share, "prior": self.prior}
 
 
 @dataclass
@@ -256,6 +297,8 @@ class RiskSimulator:
         """Returns (evidenceType, strength) or None, exactly as ``RiskEngine.fromPrediction`` does."""
         if not prediction.calibrated and not self.config.accept_uncalibrated:
             return None
+        if self.config.ai_scoring == LOG_ODDS:
+            return self._log_odds(prediction)
         for head, kind in HEAD_ORDER:
             probability = prediction.head(head)
             if math.isnan(probability) or probability < self.config.ai_threshold:
@@ -268,6 +311,33 @@ class RiskSimulator:
                 return None
             return AI_RELIEF, -relief
         return None
+
+    def _log_odds(self, prediction: Prediction) -> tuple[str, float] | None:
+        """Mirrors ``RiskEngine.logOdds``: the window's log-likelihood ratio, discounted by overlap."""
+        config = self.config
+        overall = prediction.overall
+        share = prediction.share
+        if math.isnan(overall) or not math.isfinite(share):
+            return None
+        share = max(0.0, min(1.0, share))
+        prior = prediction.prior
+        if prior is None or not math.isfinite(prior) or not 0.0 < prior < 1.0:
+            prior = config.ai_neutral
+        prior = max(config.ai_clamp_low, min(config.ai_clamp_high, prior))
+        clamped = max(config.ai_clamp_low, min(config.ai_clamp_high, overall))
+        ratio = logit(clamped) - logit(prior)
+        strength = config.log_odds_weight * share * ratio
+        if ratio < 0:
+            strength *= config.relief_scale
+        if abs(strength) < 1.0e-12:
+            return None
+        if strength < 0:
+            return AI_RELIEF, strength
+        for head, kind in HEAD_ORDER[:-1]:
+            probability = prediction.head(head)
+            if not math.isnan(probability) and probability >= config.ai_threshold:
+                return kind, strength
+        return AI_OVERALL, strength
 
     def step(self, prediction: Prediction) -> Step:
         if prediction.nano_time < self.last_update:
@@ -303,15 +373,29 @@ def simulate(predictions: Iterable[Prediction], config: RiskConfig | None = None
     return trace
 
 
+def overlap_share(previous_end_seconds: float | None, end_seconds: float, window_seconds: float | None) -> float:
+    """Share of a window not covered by the previous one; mirrors ``NeuralRuntime.overlapShare``."""
+    if previous_end_seconds is None or not window_seconds or window_seconds <= 0:
+        return 1.0
+    return max(0.0, min(1.0, (end_seconds - previous_end_seconds) / window_seconds))
+
+
 def simulate_scores(timestamps_seconds: Sequence[float], scores: Sequence[float],
                     config: RiskConfig | None = None, head: str = "overall",
-                    calibrated: bool = True) -> Trace:
-    """Convenience wrapper for evaluation, which works in seconds and a single score column."""
+                    calibrated: bool = True, window_seconds: float | None = None,
+                    prior: float | None = None) -> Trace:
+    """Convenience wrapper for evaluation, which works in seconds and a single score column.
+
+    ``window_seconds`` is the model window's span (31 samples = 1.55 s): overlapping windows then
+    share their evidence the way the server does. None treats every window as independent.
+    """
     if len(timestamps_seconds) != len(scores):
         raise ValueError("timestamps and scores must have equal lengths")
-    predictions = [
-        Prediction(int(round(second * 1e9)), {"overall": float(score)} if head == "overall"
-                   else {"overall": float(score), head: float(score)}, calibrated)
-        for second, score in zip(timestamps_seconds, scores)
-    ]
+    predictions = []
+    previous = None
+    for second, score in zip(timestamps_seconds, scores):
+        heads = {"overall": float(score)} if head == "overall" else {"overall": float(score), head: float(score)}
+        share = overlap_share(previous, float(second), window_seconds)
+        previous = float(second)
+        predictions.append(Prediction(int(round(second * 1e9)), heads, calibrated, share, prior))
     return simulate(predictions, config)

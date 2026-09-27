@@ -266,8 +266,16 @@ neural:
     inference:
         # Requires a running model service; see docs/inference.md. Monitoring only, never a punishment.
         enabled: false
+        # remote: POST windows to the Python service at endpoint. local: run the exported bundle
+        # inside the server (no service, ~2 ms per Flash window on a background thread).
         mode: remote
         endpoint: "http://127.0.0.1:8080/predict"
+        local:
+            # Bundle directories written by the training pipeline (manifest.json, weights.json,
+            # model.weights), relative to the plugin folder. An empty pro-bundle keeps Pro off.
+            flash-bundle: "models/flash"
+            pro-bundle: ""
+            threads: 2
         timeout-ms: 300
         max-in-flight: 8
         min-interval-ms: 500
@@ -287,7 +295,20 @@ neural:
         enabled: false
         # An uncalibrated model output is not a probability; leave this false unless you know why.
         accept-uncalibrated: false
-        decay-per-second: 0.01
+        # log-odds: each window adds log-odds-weight * (logit(p) - logit(prior)), shared out over
+        # overlapping windows; honest windows lower risk by the evidence they carry. threshold: the
+        # older rule, only p >= ai-threshold raises risk and p <= ai-clear-threshold relieves it.
+        ai-scoring: log-odds
+        log-odds-weight: 0.5
+        # Base rate used when the model service does not report the one it was calibrated under.
+        ai-neutral: 0.5
+        ai-clamp-low: 0.02
+        ai-clamp-high: 0.98
+        # Multiplier on negative (legitimate-looking) evidence. 1 = symmetric.
+        relief-scale: 0.5
+        # Half-life ~11.5 minutes. Honest play already walks risk down in log-odds mode, so time
+        # decay no longer has to be fast enough to forgive short bursts of fighting.
+        decay-per-second: 0.001
         max-risk: 20.0
         ai-weight: 0.5
         ai-threshold: 0.80
@@ -301,13 +322,35 @@ neural:
         max-snapshots-per-hour: 12
         snapshot-before: 64
         snapshot-after: 32
+        # Remember risk across restarts and reloads in plugins/AeroAC/neural/risk-store.json for this
+        # many hours (0 disables). It decays for the time the player was away and is restored at most
+        # to restore-cap: the evidence behind it is gone, so it can start a watch but not a verdict.
+        persist-hours: 72
+        restore-cap: 4.0
+        # Share of cheaters among fighting players you expect. Only used to turn risk into the
+        # "cheat probability over the whole fight" operators see; it never moves risk itself.
+        cheater-share: 0.02
+        # How much of the summed evidence that estimate trusts. Windows of one player are strongly
+        # correlated; at 1.0 SUSPICIOUS would read as 99.97%. 0.25 maps WATCH/SUSPICIOUS/CONFIRMED to
+        # roughly 5% / 29% / 89%. Fit it on labelled sessions once you have them.
+        probability-scale: 0.25
     mitigation:
         # Phase 6. Turn on only after measuring the false positive rate on your own server.
         enabled: false
         min-state: MITIGATED
+        # true drops every attack while an action runs (same as cancel-chance: 1.0).
         cancel-attacks: false
+        # Share of attacks dropped, drawn per attack; 0.25 feels like a bad connection, not a ban.
+        cancel-chance: 0.0
+        # Damage the player deals, melee and projectiles (Bukkit/Paper/Folia). 1.0 = unchanged.
+        damage-multiplier: 1.0
         duration-seconds: 30
         max-per-hour: 20
+        # Random delay before an action takes effect and random extra length at its end, so the
+        # moment the nerf starts cannot be used to find the detection threshold.
+        onset-delay-min-seconds: 5
+        onset-delay-max-seconds: 20
+        release-jitter-seconds: 10
     training:
         # The training service, separate from inference: inference answers questions about a
         # running model, this starts and watches runs that produce one. Both are off unless the
@@ -383,6 +426,10 @@ neural:
         cooldown-seconds: 600
         # An announced verdict nobody answered is dropped after this. Silence is a refusal.
         confirm-timeout-seconds: 900
+        # automatic mode only: collect verdicts and carry them out together in a ban wave this many
+        # minutes later (randomised between half and one and a half periods). An instant ban tells a
+        # cheat developer which fight and which setting tripped the detector. 0 bans at once.
+        wave-minutes: 30
         # Run by the console. {player} and {reason} are substituted; point it at whatever
         # punishment plugin you actually use.
         command: "ban {player} {reason}"

@@ -20,11 +20,16 @@ public final class NeuralPlayerState {
     public volatile boolean cancelOpening;
     public volatile boolean disconnected;
     public CombatTelemetryCollector collector;
+    /** Rotations while not in combat, so the first attack of a fight has history. Lazily created. */
+    public dev.aeroac.neural.window.RotationHistory history;
 
     public PredictionTrail trail;
     public long lastFlashNanos;
     public long lastProNanos;
     public long inferenceSkipped;
+    /** End of the last window that produced evidence, per ModelKind ordinal; 0 = none yet. */
+    public final long[] lastScoredWindowEndNanos = new long[2];
+    public final boolean[] scoredWindowSeen = new boolean[2];
 
     public PlayerRiskProfile risk;
     public PendingSnapshot pendingSnapshot;
@@ -49,10 +54,13 @@ public final class NeuralPlayerState {
     /** Drops per-connection derived state without touching the dataset session. */
     public void resetRuntime() {
         collector = null;
+        history = null;
         trail = null;
         risk = null;
         pendingSnapshot = null;
         mitigation = null;
         lastFlashNanos = lastProNanos = 0;
+        java.util.Arrays.fill(lastScoredWindowEndNanos, 0);
+        java.util.Arrays.fill(scoredWindowSeen, false);
     }
 }

@@ -264,7 +264,7 @@ def test_health_describes_the_schema_the_queue_and_the_reach_of_the_socket(servi
     assert status == 200
     assert health["status"] == "ok"
     assert health["featureSchemaVersion"] == SCHEMA_VERSION
-    assert health["rawSchemaVersion"] == 1
+    assert health["rawSchemaVersion"] == 2
     assert health["featureCount"] == FEATURE_COUNT
     assert health["localOnly"] is True and health["authRequired"] is False
     assert health["automaticDeployment"] is AUTOMATIC_DEPLOYMENT is False

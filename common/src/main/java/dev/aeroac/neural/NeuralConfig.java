@@ -14,20 +14,44 @@ public record NeuralConfig(boolean enabled, boolean collectionEnabled, int conti
                            int idleTimeoutSeconds, Inference inference, Risk risk, Mitigation mitigation,
                            int monitorIntervalMs, boolean debug) {
 
-    /** A rejected endpoint disables inference instead of silently pointing requests somewhere else. */
+    /**
+     * A rejected endpoint disables inference instead of silently pointing requests somewhere else.
+     * local = true runs the bundles named by flashBundle/proBundle inside the JVM; the endpoint is
+     * then unused. A blank bundle path means that model is not served locally.
+     */
     public record Inference(boolean enabled, String endpoint, int timeoutMs, int maxInFlight, int minIntervalMs,
                             ModelWindow flashWindow, int flashSequence, boolean proEnabled, ModelWindow proWindow,
-                            int proSequence, double proTrigger, int proMinIntervalMs) { }
+                            int proSequence, double proTrigger, int proMinIntervalMs, boolean local,
+                            String flashBundle, String proBundle, int localThreads) { }
 
-    /** acceptUncalibrated exists so an uncalibrated sigmoid cannot silently be treated as a probability. */
+    /**
+     * acceptUncalibrated exists so an uncalibrated sigmoid cannot silently be treated as a probability.
+     *
+     * <p>logOdds selects how a prediction becomes evidence. True (the default) adds the window's
+     * log-likelihood ratio, weight * share * (logit(p) - logit(prior)); false keeps the older rule
+     * that only counts probabilities above aiThreshold and relieves below aiClearThreshold.
+     */
     public record Risk(boolean enabled, boolean acceptUncalibrated, double decayPerSecond, double maxRisk,
                        double aiWeight, double aiThreshold, double aiClearThreshold, double aiRelief,
                        double grimWeight, double watch, double suspicious, double confirmed,
                        double snapshotThreshold, int maxSnapshotsPerHour, int snapshotBefore, int snapshotAfter,
-                       int carryOverSeconds) { }
+                       int carryOverSeconds, boolean logOdds, double logOddsWeight, double aiNeutral,
+                       double aiClampLow, double aiClampHigh, double reliefScale, int persistHours,
+                       double restoreCap, double cheaterShare, double probabilityScale) { }
 
+    /**
+     * cancelChance is the share of attack packets dropped while an action is in force (cancel-attacks
+     * alone means 1.0); damageMultiplier scales the damage the player deals through the platform's
+     * damage event. Onset delay and release jitter are drawn at random per action so a cheat developer
+     * watching when the nerf starts and stops cannot read the detector's decision boundary off it.
+     */
     public record Mitigation(boolean enabled, RiskState minState, boolean cancelAttacks, int durationSeconds,
-                             int maxPerHour) { }
+                             int maxPerHour, double cancelChance, double damageMultiplier,
+                             int onsetDelayMinSeconds, int onsetDelayMaxSeconds, int releaseJitterSeconds) {
+
+        /** True when an action would change gameplay at all rather than only being recorded. */
+        public boolean affectsGameplay() { return cancelChance > 0 || damageMultiplier < 1; }
+    }
 
     public static NeuralConfig read(ConfigManager config) {
         int before = bounded(config, "windows.attack-before", 20, 0, 128);
@@ -49,10 +73,15 @@ public record NeuralConfig(boolean enabled, boolean collectionEnabled, int conti
 
     private static Inference inference(ConfigManager config, int attackWindow, int continuous) {
         String endpoint = config.getStringElse("neural.inference.endpoint", "http://127.0.0.1:8080/predict");
-        boolean remote = "remote".equalsIgnoreCase(config.getStringElse("neural.inference.mode", "remote"));
+        String mode = config.getStringElse("neural.inference.mode", "remote").trim();
+        boolean remote = "remote".equalsIgnoreCase(mode);
+        boolean local = "local".equalsIgnoreCase(mode);
+        String flashBundle = config.getStringElse("neural.inference.local.flash-bundle", "models/flash").trim();
+        String proBundle = config.getStringElse("neural.inference.local.pro-bundle", "").trim();
         ModelWindow flash = ModelWindow.parse(config.getStringElse("neural.inference.flash.window", "attack"));
         ModelWindow pro = ModelWindow.parse(config.getStringElse("neural.inference.pro.window", "continuous"));
-        return new Inference(config.getBooleanElse("neural.inference.enabled", false) && remote && usableEndpoint(endpoint),
+        boolean usable = remote ? usableEndpoint(endpoint) : local && !flashBundle.isEmpty();
+        return new Inference(config.getBooleanElse("neural.inference.enabled", false) && usable,
                 endpoint, bounded(config, "inference.timeout-ms", 300, 20, 5000),
                 bounded(config, "inference.max-in-flight", 8, 1, 256),
                 bounded(config, "inference.min-interval-ms", 500, 0, 60000),
@@ -60,7 +89,8 @@ public record NeuralConfig(boolean enabled, boolean collectionEnabled, int conti
                 config.getBooleanElse("neural.inference.pro.enabled", false),
                 pro, sequence(config, "inference.pro.sequence-length", 96, pro, attackWindow, continuous),
                 fraction(config, "inference.pro.trigger-overall", 0.5),
-                bounded(config, "inference.pro.min-interval-ms", 2000, 0, 600000));
+                bounded(config, "inference.pro.min-interval-ms", 2000, 0, 600000),
+                local, flashBundle, proBundle, bounded(config, "inference.local.threads", 2, 1, 16));
     }
 
     /**
@@ -79,9 +109,12 @@ public record NeuralConfig(boolean enabled, boolean collectionEnabled, int conti
         double confirmed = Math.max(suspicious, positive(config, "risk.confirmed", 12.0));
         double aiThreshold = fraction(config, "risk.ai-threshold", 0.80);
         int after = Math.min(continuous - 1, bounded(config, "risk.snapshot-after", 32, 0, 512));
+        boolean logOdds = !"threshold".equalsIgnoreCase(config.getStringElse("neural.risk.ai-scoring", "log-odds").trim());
+        double low = Math.max(1.0E-6, Math.min(0.5, positive(config, "risk.ai-clamp-low", 0.02)));
+        double high = Math.max(0.5, Math.min(1 - 1.0E-6, positive(config, "risk.ai-clamp-high", 0.98)));
         return new Risk(config.getBooleanElse("neural.risk.enabled", false),
                 config.getBooleanElse("neural.risk.accept-uncalibrated", false),
-                positive(config, "risk.decay-per-second", 0.01),
+                positive(config, "risk.decay-per-second", 0.001),
                 Math.max(confirmed, positive(config, "risk.max-risk", 20.0)),
                 positive(config, "risk.ai-weight", 0.5), aiThreshold,
                 Math.min(aiThreshold, fraction(config, "risk.ai-clear-threshold", 0.20)),
@@ -89,15 +122,30 @@ public record NeuralConfig(boolean enabled, boolean collectionEnabled, int conti
                 watch, suspicious, confirmed, Math.max(watch, positive(config, "risk.snapshot-threshold", 8.0)),
                 bounded(config, "risk.max-snapshots-per-hour", 12, 0, 1000),
                 Math.min(continuous - after, bounded(config, "risk.snapshot-before", 64, 0, 512)), after,
-                bounded(config, "risk.carry-over-seconds", 300, 0, 3600));
+                bounded(config, "risk.carry-over-seconds", 300, 0, 3600),
+                logOdds, positive(config, "risk.log-odds-weight", 0.5),
+                Math.max(low, Math.min(high, positive(config, "risk.ai-neutral", 0.5))), low, high,
+                positive(config, "risk.relief-scale", 0.5),
+                bounded(config, "risk.persist-hours", 72, 0, 24 * 30),
+                Math.min(confirmed, positive(config, "risk.restore-cap", 4.0)),
+                Math.max(1.0E-4, Math.min(0.5, positive(config, "risk.cheater-share", 0.02))),
+                Math.max(0.01, Math.min(1.0, positive(config, "risk.probability-scale", 0.25))));
     }
 
     private static Mitigation mitigation(ConfigManager config) {
+        boolean cancelAttacks = config.getBooleanElse("neural.mitigation.cancel-attacks", false);
+        // Older configs only know cancel-attacks; it keeps meaning "drop every attack".
+        double cancelChance = fraction(config, "mitigation.cancel-chance", cancelAttacks ? 1.0 : 0.0);
+        double multiplier = Math.max(0.05, Math.min(1.0, positive(config, "mitigation.damage-multiplier", 1.0)));
+        int delayMin = bounded(config, "mitigation.onset-delay-min-seconds", 0, 0, 600);
+        int delayMax = Math.max(delayMin, bounded(config, "mitigation.onset-delay-max-seconds", 0, 0, 600));
         return new Mitigation(config.getBooleanElse("neural.mitigation.enabled", false),
                 RiskState.parse(config.getStringElse("neural.mitigation.min-state", "MITIGATED"), RiskState.MITIGATED),
-                config.getBooleanElse("neural.mitigation.cancel-attacks", false),
+                cancelAttacks,
                 bounded(config, "mitigation.duration-seconds", 30, 1, 3600),
-                bounded(config, "mitigation.max-per-hour", 20, 0, 1000));
+                bounded(config, "mitigation.max-per-hour", 20, 0, 1000),
+                cancelChance, multiplier, delayMin, delayMax,
+                bounded(config, "mitigation.release-jitter-seconds", 0, 0, 600));
     }
 
     private static boolean usableEndpoint(String endpoint) {

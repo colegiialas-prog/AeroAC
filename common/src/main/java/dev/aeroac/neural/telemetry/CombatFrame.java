@@ -1,7 +1,8 @@
 package dev.aeroac.neural.telemetry;
 
 public final class CombatFrame implements TelemetryRecord {
-    public static final int SCHEMA_VERSION = 1;
+    /** 2 added MOUSE_GRID_YAW and MOUSE_GRID_PITCH; version 1 frames are still readable. */
+    public static final int SCHEMA_VERSION = 2;
     private final long tick;
     private final long nanoTime;
     private final double[] values;

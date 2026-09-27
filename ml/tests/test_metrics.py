@@ -259,6 +259,14 @@ def test_head_calibration_round_trips_new_and_legacy_manifests():
                        HeadCalibration.fit(stacked, targets, heads, method="temperature").apply_logits(stacked))
     single = load_calibration(PlattScaler.fit(logits, labels).to_dict(), heads)
     assert isinstance(single, PlattScaler)
+    # The calibration fold's base rate travels with the bundle for log-odds risk scoring.
+    assert manifest["priors"]["overall"] == pytest.approx(float(np.mean(labels)))
+    assert restored.prior("overall") == pytest.approx(float(np.mean(labels)))
+    without = dict(manifest)
+    without.pop("priors")
+    assert load_calibration(without, heads).prior("overall") is None
+    with pytest.raises(ValueError):
+        load_calibration({**manifest, "priors": {"overall": 2.0}}, heads)
 
 
 def test_partial_auc_reference_points():

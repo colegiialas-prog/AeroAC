@@ -88,7 +88,16 @@ public final class InferenceJson {
             throw new IllegalArgumentException("calibrated must be boolean");
         }
         boolean calibrated = calibration != null && calibration.getAsBoolean();
-        return new InferenceResponse(requestId, protocol, schema, modelVersion, request.model(), calibrated, names, values);
+        double prior = Double.NaN;
+        JsonElement priorElement = json.get("calibrationPrior");
+        if (priorElement != null && !priorElement.isJsonNull()) {
+            if (!priorElement.isJsonPrimitive() || !priorElement.getAsJsonPrimitive().isNumber()) {
+                throw new IllegalArgumentException("calibrationPrior must be a number");
+            }
+            prior = priorElement.getAsDouble();
+        }
+        return new InferenceResponse(requestId, protocol, schema, modelVersion, request.model(), calibrated, names, values,
+                prior);
     }
 
     private static int integer(JsonObject json, String key) {

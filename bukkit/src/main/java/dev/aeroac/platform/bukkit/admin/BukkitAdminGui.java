@@ -49,6 +49,27 @@ public final class BukkitAdminGui implements AdminGuiBridge, StartableInitable, 
     public AdminService service() { return AeroAPI.INSTANCE.getAdminService(); }
 
     public dev.aeroac.neural.NeuralManager neural() { return AeroAPI.INSTANCE.getNeuralManager(); }
+    private final PlayerActions actions = new PlayerActions();
+    private volatile StaffMarks marks;
+
+    /** Moderator marks, loaded on first use from plugins/AeroAC/neural/staff-marks.json. */
+    public StaffMarks marks() {
+        StaffMarks current = marks;
+        if (current == null) {
+            synchronized (this) {
+                if (marks == null) {
+                    marks = new StaffMarks(AeroACBukkitLoaderPlugin.LOADER.getDataFolder().toPath()
+                            .resolve("neural").resolve("staff-marks.json"));
+                }
+                current = marks;
+            }
+        }
+        return current;
+    }
+
+    /** Teleport, spectate and freeze state that outlives any one screen. */
+    public PlayerActions actions() { return actions; }
+
     public AeroPlayer tracked(UUID uuid) { return AeroAPI.INSTANCE.getPlayerDataManager().getPlayer(uuid); }
     public Sender sender(UUID uuid) {
         PlatformPlayer platform = platformFor(uuid);
@@ -62,6 +83,7 @@ public final class BukkitAdminGui implements AdminGuiBridge, StartableInitable, 
         }
         running = true;
         Bukkit.getPluginManager().registerEvents(new MenuListener(this), AeroACBukkitLoaderPlugin.LOADER);
+        Bukkit.getPluginManager().registerEvents(actions, AeroACBukkitLoaderPlugin.LOADER);
         service().gui(this);
         schedule();
     }
@@ -86,6 +108,23 @@ public final class BukkitAdminGui implements AdminGuiBridge, StartableInitable, 
 
     @Override public void openProfile(Sender sender, UUID target) {
         with(sender, player -> show(new ProfileMenu(this, player, target, false)));
+    }
+
+    @Override public boolean teleport(Sender sender, UUID target) {
+        return act(sender, target, (viewer, online) -> actions.teleport(viewer, online));
+    }
+
+    @Override public boolean spectate(Sender sender, UUID target) {
+        return act(sender, target, (viewer, online) -> actions.toggleSpectate(viewer, online));
+    }
+
+    /** Commands may arrive off the player's thread; the action runs on the operator's own scheduler. */
+    private boolean act(Sender sender, UUID target, java.util.function.BiConsumer<org.bukkit.entity.Player, org.bukkit.entity.Player> action) {
+        org.bukkit.entity.Player viewer = sender == null ? null : Bukkit.getPlayer(sender.getUniqueId());
+        org.bukkit.entity.Player online = Bukkit.getPlayer(target);
+        if (viewer == null || online == null || viewer.equals(online)) return false;
+        viewer.getScheduler().run(AeroACBukkitLoaderPlugin.LOADER, task -> action.accept(viewer, online), null);
+        return true;
     }
 
     @Override public void openTraining(Sender sender) {
@@ -218,6 +257,7 @@ public final class BukkitAdminGui implements AdminGuiBridge, StartableInitable, 
 
     @Override public void stop() {
         running = false;
+        actions.releaseAll();
         closeAll();
         service().gui(null);
         if (refreshTask != null) {

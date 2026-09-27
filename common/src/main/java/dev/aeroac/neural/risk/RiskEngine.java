@@ -28,6 +28,26 @@ public final class RiskEngine {
         profile.state(stateFor(profile.risk()), nowNanos);
     }
 
+    /**
+     * Time passes without decay: the player is in a vehicle and the model cannot see their aim, so
+     * silence there is not evidence of honest play.
+     */
+    public void hold(PlayerRiskProfile profile, long nowNanos) {
+        if (nowNanos > profile.lastUpdateNanos()) profile.risk(profile.risk(), nowNanos);
+    }
+
+    /**
+     * Seeds a fresh profile with risk remembered from an earlier connection, decayed for the time
+     * the player was away and capped: the evidence behind it is gone, so it may start a watch but
+     * never a verdict on its own.
+     */
+    public void restore(PlayerRiskProfile profile, double stored, double awaySeconds, long nowNanos) {
+        if (!(stored > 0) || !Double.isFinite(stored) || !(awaySeconds >= 0)) return;
+        double decayed = stored * Math.exp(-config.decayPerSecond() * awaySeconds);
+        profile.risk(clamp(Math.min(config.restoreCap(), decayed)), nowNanos);
+        profile.state(stateFor(profile.risk()), nowNanos);
+    }
+
     /** Applies decay up to now, then the evidence. Returns true when the state boundary moved. */
     public boolean accept(PlayerRiskProfile profile, Evidence evidence, long nowNanos) {
         decay(profile, nowNanos);
@@ -36,6 +56,25 @@ public final class RiskEngine {
         profile.record(evidence);
         profile.state(stateFor(profile.risk()), nowNanos);
         return profile.state() != before;
+    }
+
+    /**
+     * The accumulated risk read back as "how likely is this player a cheater", for operators.
+     *
+     * <p>In log-odds scoring the risk is a sum of weighted log-likelihood ratios, so dividing by the
+     * weight gives the evidence in log-odds, and adding the server's base rate of cheaters gives a
+     * posterior. It is an estimate, not a measurement: Grim flags add fixed units rather than
+     * likelihood ratios, relief is scaled, risk never drops below zero and it decays with time.
+     * And windows of one player are far from independent, so the summed evidence is trusted only
+     * at probabilityScale; without that a SUSPICIOUS player would read as 99.97%. Fit that scale on
+     * labelled sessions once they exist. NaN in threshold scoring.
+     */
+    public static double cheatProbability(double risk, NeuralConfig.Risk config) {
+        if (config == null || !config.logOdds() || !(config.logOddsWeight() > 0) || !Double.isFinite(risk)) return Double.NaN;
+        double prior = config.cheaterShare();
+        double logOdds = Math.log(prior / (1 - prior))
+                + config.probabilityScale() * Math.max(0, risk) / config.logOddsWeight();
+        return 1.0 / (1.0 + Math.exp(-logOdds));
     }
 
     public RiskState stateFor(double risk) {
@@ -50,9 +89,19 @@ public final class RiskEngine {
      * crossed the threshold. Returns null in the ordinary case where the model saw nothing notable.
      */
     public Evidence fromPrediction(PredictionResult result, long nowNanos) {
+        return fromPrediction(result, 1.0, nowNanos);
+    }
+
+    /**
+     * @param share fraction of the window's samples that no earlier scored window already covered.
+     *              Overlapping windows see the same ticks; counting each tick once keeps a burst of
+     *              heavily overlapping predictions from multiplying one moment into several.
+     */
+    public Evidence fromPrediction(PredictionResult result, double share, long nowNanos) {
         if (result == null) return null;
         if (!result.calibrated() && !config.acceptUncalibrated()) return null;
         String source = result.model().wireName() + "/" + result.modelVersion();
+        if (config.logOdds()) return logOdds(result, share, nowNanos, source);
         for (String head : new String[]{"aimAssist", "killAura", "triggerBot", "overall"}) {
             double probability = result.head(head);
             if (Double.isNaN(probability) || probability < config.aiThreshold()) continue;
@@ -68,6 +117,38 @@ public final class RiskEngine {
         }
         return null;
     }
+
+    /**
+     * Sequential evidence: a calibrated probability p under base rate prior carries the likelihood
+     * ratio logit(p) - logit(prior). Summing those is what a sequential probability ratio test does,
+     * so there is no dead band where a cheat tuned to sit at 0.7 earns nothing, and a legitimate
+     * window pulls risk down by exactly the evidence it carries. Probabilities are clamped so one
+     * saturated answer cannot dominate. Mirrored by ml/aeroml/evaluation/risk_sim.py.
+     */
+    private Evidence logOdds(PredictionResult result, double share, long nowNanos, String source) {
+        double overall = result.overall();
+        if (Double.isNaN(overall) || !Double.isFinite(share)) return null;
+        double portion = Math.max(0, Math.min(1, share));
+        double prior = result.hasCalibrationPrior() ? result.calibrationPrior() : config.aiNeutral();
+        prior = Math.max(config.aiClampLow(), Math.min(config.aiClampHigh(), prior));
+        double p = Math.max(config.aiClampLow(), Math.min(config.aiClampHigh(), overall));
+        double ratio = logit(p) - logit(prior);
+        double strength = config.logOddsWeight() * portion * ratio;
+        if (ratio < 0) strength *= config.reliefScale();
+        if (Math.abs(strength) < 1.0E-12) return null;
+        String metadata = "overall=" + String.format("%.3f", overall) + " llr=" + String.format("%+.2f", ratio)
+                + " share=" + String.format("%.2f", portion);
+        if (strength < 0) return new Evidence(EvidenceType.AI_RELIEF, strength, nowNanos, source, metadata);
+        for (String head : new String[]{"aimAssist", "killAura", "triggerBot"}) {
+            double probability = result.head(head);
+            if (!Double.isNaN(probability) && probability >= config.aiThreshold()) {
+                return new Evidence(typeFor(head), strength, nowNanos, source, metadata);
+            }
+        }
+        return new Evidence(EvidenceType.AI_OVERALL, strength, nowNanos, source, metadata);
+    }
+
+    private static double logit(double probability) { return Math.log(probability / (1 - probability)); }
 
     /** A Grim flag contributes a fixed unit; its own violation accounting is untouched. */
     public Evidence fromCheck(String checkName, long nowNanos) {

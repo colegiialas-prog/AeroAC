@@ -4,6 +4,7 @@ import dev.aeroac.neural.risk.Evidence;
 import dev.aeroac.neural.risk.EvidenceType;
 import dev.aeroac.neural.risk.PlayerRiskProfile;
 import dev.aeroac.neural.risk.RiskState;
+import dev.aeroac.neural.risk.RiskStore;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -65,5 +66,23 @@ class RiskCarryOverTest {
         PlayerRiskProfile other = runtime.riskProfile(UUID.randomUUID(), new NeuralPlayerState(), SECOND);
         assertEquals(0, other.risk());
         assertEquals(1, runtime.parkedCount());
+    }
+
+    @Test void aRestartRestoresCappedRiskFromTheStore() throws Exception {
+        java.nio.file.Path file = java.nio.file.Files.createTempDirectory("aero-risk").resolve("risk-store.json");
+        UUID player = UUID.randomUUID();
+        NeuralConfig config = NeuralConfig.read(NeuralConfigTest.config(Map.of("neural.enabled", true,
+                "neural.risk.enabled", true, "neural.risk.restore-cap", 4.0)));
+        try (RiskStore store = new RiskStore(file, null)) {
+            NeuralRuntime before = new NeuralRuntime(1, config, null, () -> null, store);
+            before.park(player, suspicious(before), 0);
+            before.close();
+        }
+        try (RiskStore store = new RiskStore(file, null)) {
+            NeuralRuntime after = new NeuralRuntime(2, config, null, () -> null, store);
+            PlayerRiskProfile restored = after.riskProfile(player, new NeuralPlayerState(), 0);
+            assertTrue(restored.risk() > 3.9 && restored.risk() <= 4.0, "capped, barely decayed: " + restored.risk());
+            assertEquals(RiskState.WATCH, restored.state());
+        }
     }
 }

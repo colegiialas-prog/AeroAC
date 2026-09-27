@@ -123,7 +123,33 @@ bukkit {
                 "aero.view", "aero.status", "aero.mitigation", "aero.alerts", "aero.training",
                 "aero.training.record", "aero.training.stop", "aero.training.overview",
                 "aero.training.review", "aero.training.model",
+                "aero.action.teleport", "aero.action.spectate", "aero.action.freeze",
+                "aero.action.inventory", "aero.action.kick", "aero.action.reset",
             )
+        }
+        register("aero.action.teleport") {
+            description = "Teleport to a player from their Aero profile"
+            default = Permission.Default.OP
+        }
+        register("aero.action.spectate") {
+            description = "Watch a player as a spectator from their Aero profile"
+            default = Permission.Default.OP
+        }
+        register("aero.action.freeze") {
+            description = "Freeze a player in place while checking them"
+            default = Permission.Default.OP
+        }
+        register("aero.action.inventory") {
+            description = "Open a player's inventory from their Aero profile"
+            default = Permission.Default.OP
+        }
+        register("aero.action.kick") {
+            description = "Kick a player from their Aero profile"
+            default = Permission.Default.OP
+        }
+        register("aero.action.reset") {
+            description = "Clear a player's accumulated Aero risk"
+            default = Permission.Default.OP
         }
         register("aero.gui") {
             description = "Open the /aero interface"

@@ -45,6 +45,12 @@ public interface AdminGuiBridge {
 
     default void resumeRecording(Sender sender, String field) { openTraining(sender); }
 
+    /** Teleports the sender to the target. False when this platform cannot. */
+    default boolean teleport(Sender sender, UUID target) { return false; }
+
+    /** Toggles spectating the target. False when this platform cannot. */
+    default boolean spectate(Sender sender, UUID target) { return false; }
+
     default void reload() { closeAll(); }
 
     /** Closes every open screen, so none survives a reload of the state it was drawn from. */

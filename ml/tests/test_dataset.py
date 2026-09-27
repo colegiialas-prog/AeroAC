@@ -158,3 +158,34 @@ def test_group_key_identifies_player_client_and_configuration(sessions):
     assert len(keys) == len(sessions)
     for player, client, configuration in keys:
         assert player and client and configuration
+
+
+def test_a_raw_schema_one_recording_loads_with_the_mouse_grid_unknown(tmp_path, schema):
+    """Recordings made before raw schema 2 stay usable: the grid fields load as unknown."""
+    import json
+    import shutil
+
+    from aeroml.dataset.records import load_session
+    from aeroml.tools.make_synthetic import generate_dataset
+
+    root = tmp_path / "data"
+    generate_dataset(root, players=1, seconds=2.0, seed=3)
+    metadata_path = next((root / "metadata").glob("session-*.json"))
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    raw_path = root / "raw" / f"session-{metadata['sessionId']}.jsonl"
+    downgraded = []
+    for line in raw_path.read_text(encoding="utf-8").splitlines():
+        record = json.loads(line)
+        record["schemaVersion"] = 1
+        for field in ("MOUSE_GRID_YAW", "MOUSE_GRID_PITCH"):
+            record.get("values", {}).pop(field, None)
+        downgraded.append(json.dumps(record))
+    raw_path.write_text("\n".join(downgraded) + "\n", encoding="utf-8")
+    metadata["schemaVersion"] = 1
+    metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
+
+    session = load_session(metadata_path, schema=schema)
+    assert len(session) > 0
+    assert np.all(np.isnan(session.column("MOUSE_GRID_YAW")))
+    assert np.all(np.isfinite(session.column("YAW")))
+    shutil.rmtree(root)

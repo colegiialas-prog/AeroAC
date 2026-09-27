@@ -20,7 +20,15 @@ public enum FrameField {
     REACH_DISTANCE, REACH_TARGET_ENTITY_ID, REACH_OBSERVATION_AGE_MS,
     TELEPORT_STATE, VEHICLE_STATE, INVENTORY_STATE, HELD_ITEM_TYPE,
     MOVEMENT_HAS_POSITION, MOVEMENT_HAS_LOOK, SEGMENT_START, SAMPLE_INTERVAL_MS,
-    TRANSACTION_ID, SERVER_TICK;
+    TRANSACTION_ID, SERVER_TICK,
+    /**
+     * Raw schema 2. Degrees of rotation per mouse count on each axis, as Grim's AimProcessor
+     * estimates the player's sensitivity grid; unknown until it has enough small rotations.
+     */
+    MOUSE_GRID_YAW, MOUSE_GRID_PITCH;
 
     public static final int COUNT = values().length;
+
+    /** Raw schema version that introduced a field; frames of an older version carry it as unknown. */
+    public int since() { return ordinal() >= MOUSE_GRID_YAW.ordinal() ? 2 : 1; }
 }

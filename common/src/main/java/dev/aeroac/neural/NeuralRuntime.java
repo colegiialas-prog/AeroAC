@@ -47,9 +47,19 @@ public final class NeuralRuntime implements AutoCloseable {
 
     private record Parked(PlayerRiskProfile profile, long nanoTime) { }
 
+    /** Survives reloads and restarts; owned by NeuralManager. Null when persistence is off. */
+    private final dev.aeroac.neural.risk.RiskStore store;
+
     public NeuralRuntime(long generation, NeuralConfig config, InferenceClient client, Supplier<DatasetManager> datasets) {
+        this(generation, config, client, datasets, null);
+    }
+
+    public NeuralRuntime(long generation, NeuralConfig config, InferenceClient client, Supplier<DatasetManager> datasets,
+                         dev.aeroac.neural.risk.RiskStore store) {
+        this.store = config.risk().persistHours() > 0 ? store : null;
         this.generation = generation;
         this.config = config;
+        if (this.store != null) this.store.prune(System.currentTimeMillis(), persistMillis());
         this.datasets = datasets;
         this.client = client;
         this.gateway = client == null ? null : new InferenceGateway(config.inference(), client, this::onPrediction);
@@ -74,7 +84,10 @@ public final class NeuralRuntime implements AutoCloseable {
         if (state.pendingSnapshot != null && latest != null && state.pendingSnapshot.accept(latest)) {
             submitSnapshot(player, state);
         }
-        if (riskEngine != null && state.risk != null) riskEngine.decay(state.risk, nowNanos);
+        if (riskEngine != null && state.risk != null) {
+            if (player.inVehicle()) riskEngine.hold(state.risk, nowNanos);
+            else riskEngine.decay(state.risk, nowNanos);
+        }
         if (gateway != null) gateway.afterSample(player, state, collector, nowNanos);
         publishMonitor(player, state, collector, nowNanos);
     }
@@ -90,12 +103,29 @@ public final class NeuralRuntime implements AutoCloseable {
         if (!state.trail.add(result)) return;
         if (riskEngine == null) return;
         PlayerRiskProfile profile = riskProfile(player.getUniqueId(), state, result.nanoTime());
-        Evidence evidence = riskEngine.fromPrediction(result, result.nanoTime());
+        Evidence evidence = riskEngine.fromPrediction(result, overlapShare(state, request), result.nanoTime());
         if (evidence == null) {
             riskEngine.decay(profile, result.nanoTime());
             return;
         }
         apply(player, state, collector, evidence, result);
+    }
+
+    /**
+     * Share of this window that no earlier window of the same model already covered. Windows are
+     * 31 samples sent every ~10, so without this each tick would be counted about three times.
+     * Mirrored by risk_sim.overlap_share, which assumes the same 50 ms nominal sample.
+     */
+    static double overlapShare(NeuralPlayerState state, InferenceRequest request) {
+        int kind = request.model().ordinal();
+        long end = request.windowEndNanos();
+        boolean seen = state.scoredWindowSeen[kind];
+        long previous = state.lastScoredWindowEndNanos[kind];
+        state.scoredWindowSeen[kind] = true;
+        state.lastScoredWindowEndNanos[kind] = end;
+        if (!seen) return 1.0;
+        double span = request.sequenceLength() * 50_000_000.0;
+        return Math.max(0, Math.min(1, (end - previous) / span));
     }
 
     /**
@@ -114,9 +144,16 @@ public final class NeuralRuntime implements AutoCloseable {
     PlayerRiskProfile riskProfile(UUID player, NeuralPlayerState state, long nowNanos) {
         if (state.risk != null) return state.risk;
         Parked back = player == null ? null : parked.remove(player);
-        state.risk = back != null && nowNanos - back.nanoTime() <= carryOverNanos()
-                ? back.profile()
-                : new PlayerRiskProfile(EVIDENCE_HISTORY, nowNanos);
+        if (back != null && nowNanos - back.nanoTime() <= carryOverNanos()) {
+            if (store != null) store.take(player);
+            return state.risk = back.profile();
+        }
+        state.risk = new PlayerRiskProfile(EVIDENCE_HISTORY, nowNanos);
+        RiskStore.Stored stored = store == null || riskEngine == null ? null : store.take(player);
+        if (stored != null) {
+            long away = System.currentTimeMillis() - stored.savedAtMillis();
+            if (away >= 0 && away <= persistMillis()) riskEngine.restore(state.risk, stored.risk(), away / 1000.0, nowNanos);
+        }
         return state.risk;
     }
 
@@ -125,6 +162,7 @@ public final class NeuralRuntime implements AutoCloseable {
      * the player's event loop has stopped applying anything to it (the state is marked disconnected).
      */
     public void park(UUID player, PlayerRiskProfile profile, long nowNanos) {
+        remember(player, profile, nowNanos);
         long ttl = carryOverNanos();
         if (player == null || profile == null || ttl <= 0 || riskEngine == null || !(profile.risk() > 0)) return;
         parked.values().removeIf(entry -> nowNanos - entry.nanoTime() > ttl);
@@ -136,6 +174,16 @@ public final class NeuralRuntime implements AutoCloseable {
     public int parkedCount() { return parked.size(); }
 
     private long carryOverNanos() { return config.risk().carryOverSeconds() * 1_000_000_000L; }
+
+    private long persistMillis() { return config.risk().persistHours() * 3_600_000L; }
+
+    /** Writes a profile's current, decayed risk to the persistent store. Safe from any thread. */
+    public void remember(UUID player, PlayerRiskProfile profile, long nowNanos) {
+        if (store == null || riskEngine == null || player == null || profile == null) return;
+        // Read-only: at shutdown this runs off the player's event loop, so the profile is not touched.
+        double elapsed = Math.max(0, (nowNanos - profile.lastUpdateNanos()) / 1_000_000_000.0);
+        store.put(player, profile.risk() * Math.exp(-config.risk().decayPerSecond() * elapsed), System.currentTimeMillis());
+    }
 
     private void apply(AeroPlayer player, NeuralPlayerState state, CombatTelemetryCollector collector,
                        Evidence evidence, PredictionResult result) {
@@ -220,7 +268,31 @@ public final class NeuralRuntime implements AutoCloseable {
         return mitigation != null && mitigation.shouldCancelAttacks(state.mitigation, nowNanos);
     }
 
+    /**
+     * An operator cleared the player: risk, evidence and any running mitigation go, here and in the
+     * persistent store. Player event loop (the GUI hands it over with runSafely).
+     */
+    public void resetRisk(UUID player, NeuralPlayerState state) {
+        state.risk = null;
+        if (state.mitigation != null) state.mitigation.clear();
+        parked.remove(player);
+        if (store != null) store.take(player);
+    }
+
+    /**
+     * Damage factor for a hit this player deals. Called from the platform damage event on whichever
+     * thread fires it; it only reads the volatile, immutable current action.
+     */
+    public double damageMultiplier(NeuralPlayerState state, long nowNanos) {
+        return mitigation == null || state == null ? 1.0 : mitigation.damageMultiplier(state.mitigation, nowNanos);
+    }
+
     @Override public void close() {
         if (client != null) client.close();
+        // Players parked across a reload keep their risk through the store instead of losing it.
+        if (store != null && riskEngine != null) {
+            long now = System.nanoTime();
+            parked.forEach((player, entry) -> remember(player, entry.profile(), now));
+        }
     }
 }

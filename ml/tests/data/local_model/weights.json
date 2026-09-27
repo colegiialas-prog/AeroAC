@@ -1,0 +1,260 @@
+{
+ "weightsFormat": 1,
+ "architecture": {
+  "architecture": "temporal-convnet-v1",
+  "featureCount": 83,
+  "sequenceLength": 9,
+  "heads": [
+   "overall",
+   "aimAssist"
+  ],
+  "width": 16,
+  "blocks": 2,
+  "kernelSize": 3,
+  "dropout": 0.1,
+  "groups": 8
+ },
+ "floatCount": 5219,
+ "sha256": "9340b46f1c9101426c1beb7c511418d9d7e02bcfadac75e4e9b3e2fc8843f4c3",
+ "tensors": [
+  {
+   "name": "project.0.weight",
+   "shape": [
+    16,
+    83,
+    1
+   ],
+   "offset": 0,
+   "count": 1328
+  },
+  {
+   "name": "project.0.bias",
+   "shape": [
+    16
+   ],
+   "offset": 1328,
+   "count": 16
+  },
+  {
+   "name": "project.1.weight",
+   "shape": [
+    16
+   ],
+   "offset": 1344,
+   "count": 16
+  },
+  {
+   "name": "project.1.bias",
+   "shape": [
+    16
+   ],
+   "offset": 1360,
+   "count": 16
+  },
+  {
+   "name": "blocks.0.first.weight",
+   "shape": [
+    16,
+    16,
+    3
+   ],
+   "offset": 1376,
+   "count": 768
+  },
+  {
+   "name": "blocks.0.first.bias",
+   "shape": [
+    16
+   ],
+   "offset": 2144,
+   "count": 16
+  },
+  {
+   "name": "blocks.0.norm_first.weight",
+   "shape": [
+    16
+   ],
+   "offset": 2160,
+   "count": 16
+  },
+  {
+   "name": "blocks.0.norm_first.bias",
+   "shape": [
+    16
+   ],
+   "offset": 2176,
+   "count": 16
+  },
+  {
+   "name": "blocks.0.second.weight",
+   "shape": [
+    16,
+    16,
+    3
+   ],
+   "offset": 2192,
+   "count": 768
+  },
+  {
+   "name": "blocks.0.second.bias",
+   "shape": [
+    16
+   ],
+   "offset": 2960,
+   "count": 16
+  },
+  {
+   "name": "blocks.0.norm_second.weight",
+   "shape": [
+    16
+   ],
+   "offset": 2976,
+   "count": 16
+  },
+  {
+   "name": "blocks.0.norm_second.bias",
+   "shape": [
+    16
+   ],
+   "offset": 2992,
+   "count": 16
+  },
+  {
+   "name": "blocks.1.first.weight",
+   "shape": [
+    16,
+    16,
+    3
+   ],
+   "offset": 3008,
+   "count": 768
+  },
+  {
+   "name": "blocks.1.first.bias",
+   "shape": [
+    16
+   ],
+   "offset": 3776,
+   "count": 16
+  },
+  {
+   "name": "blocks.1.norm_first.weight",
+   "shape": [
+    16
+   ],
+   "offset": 3792,
+   "count": 16
+  },
+  {
+   "name": "blocks.1.norm_first.bias",
+   "shape": [
+    16
+   ],
+   "offset": 3808,
+   "count": 16
+  },
+  {
+   "name": "blocks.1.second.weight",
+   "shape": [
+    16,
+    16,
+    3
+   ],
+   "offset": 3824,
+   "count": 768
+  },
+  {
+   "name": "blocks.1.second.bias",
+   "shape": [
+    16
+   ],
+   "offset": 4592,
+   "count": 16
+  },
+  {
+   "name": "blocks.1.norm_second.weight",
+   "shape": [
+    16
+   ],
+   "offset": 4608,
+   "count": 16
+  },
+  {
+   "name": "blocks.1.norm_second.bias",
+   "shape": [
+    16
+   ],
+   "offset": 4624,
+   "count": 16
+  },
+  {
+   "name": "pool.score.weight",
+   "shape": [
+    1,
+    16,
+    1
+   ],
+   "offset": 4640,
+   "count": 16
+  },
+  {
+   "name": "pool.score.bias",
+   "shape": [
+    1
+   ],
+   "offset": 4656,
+   "count": 1
+  },
+  {
+   "name": "trunk.0.weight",
+   "shape": [
+    16,
+    32
+   ],
+   "offset": 4657,
+   "count": 512
+  },
+  {
+   "name": "trunk.0.bias",
+   "shape": [
+    16
+   ],
+   "offset": 5169,
+   "count": 16
+  },
+  {
+   "name": "heads.overall.weight",
+   "shape": [
+    1,
+    16
+   ],
+   "offset": 5185,
+   "count": 16
+  },
+  {
+   "name": "heads.overall.bias",
+   "shape": [
+    1
+   ],
+   "offset": 5201,
+   "count": 1
+  },
+  {
+   "name": "heads.aimAssist.weight",
+   "shape": [
+    1,
+    16
+   ],
+   "offset": 5202,
+   "count": 16
+  },
+  {
+   "name": "heads.aimAssist.bias",
+   "shape": [
+    1
+   ],
+   "offset": 5218,
+   "count": 1
+  }
+ ]
+}

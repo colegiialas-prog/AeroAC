@@ -65,7 +65,17 @@ DERIVED_SOURCES = {"targetAngularVelocityYaw", "targetAngularVelocityPitch", "ro
                    "targetRadialSpeed", "targetSpeed", "targetAngularRadius", "aimErrorRatio", "playerSpeedHorizontal",
                    # Schema 3. Read YAW/PITCH only as the difference to TARGET_YAW/TARGET_PITCH, so they see
                    # the aim error, never the absolute look direction; pinned by the world-rotation check.
-                   "rotationCorrectionGain", "rotationOffAxis"}
+                   "rotationCorrectionGain", "rotationOffAxis",
+                   # Schema 4. Look ray against the target box: they read YAW/PITCH together with the
+                   # player and box positions, so only a rigid rotation of the whole scene leaves them
+                   # unchanged; pinned by the rigid world-rotation check.
+                   "crosshairOnTarget", "crosshairHitHeight", "centerAimError", "centerAimErrorRatio",
+                   # Schema 5. DELTA_* divided by the mouse grid: relative rotation in counts.
+                   "rotationCountsYaw", "rotationCountsPitch", "gridResidualYaw", "gridResidualPitch"}
+
+#: Channels that combine look direction with positions. The yaw-only rotation check cannot apply
+#: to them (turning the player without turning the world really does move the crosshair).
+SCENE_GEOMETRY_CHANNELS = ("CROSSHAIR_ON_TARGET", "CROSSHAIR_HIT_HEIGHT", "CENTER_AIM_ERROR", "CENTER_AIM_ERROR_RATIO")
 
 #: Absolute world coordinates in the raw frame. Translating all of them must change nothing.
 ABSOLUTE_FIELDS = (
@@ -136,7 +146,13 @@ def check_encoder_invariance(schema: FeatureSchema | None = None, seed: int = 0)
         rotated[:, schema.raw_index(field)] += 137.0
     rotated[:, schema.raw_index("TARGET_YAW")] = wrap180(rotated[:, schema.raw_index("TARGET_YAW")])
     findings += _compare(baseline, encode_window(rotated, schema), schema,
-                         "world rotation", "absolute look direction reached the model")
+                         "world rotation", "absolute look direction reached the model",
+                         ignore=SCENE_GEOMETRY_CHANNELS)
+
+    # A rigid quarter turn of everything: yaw, positions, boxes and velocities. Boxes stay axis
+    # aligned, so every relative quantity, including the crosshair geometry, must be unchanged.
+    findings += _compare(baseline, encode_window(_quarter_turn(raw, schema), schema), schema,
+                         "rigid world rotation", "absolute look direction reached the model")
 
     renumbered = raw.copy()
     for field in IDENTIFIER_FIELDS:
@@ -161,9 +177,35 @@ def check_encoder_invariance(schema: FeatureSchema | None = None, seed: int = 0)
     return findings
 
 
+def _quarter_turn(raw: np.ndarray, schema: FeatureSchema) -> np.ndarray:
+    """Turns the scene +90 degrees of yaw. Minecraft looks along (-sin yaw, cos yaw) in (x, z), so a
+    +90 yaw turn maps a point (x, z) to (-z, x)."""
+    turned = raw.copy()
+    column = lambda name: raw[:, schema.raw_index(name)]  # noqa: E731 - local shorthand
+
+    def put(name, values):
+        turned[:, schema.raw_index(name)] = values
+
+    for field in ("YAW", "TARGET_YAW"):
+        put(field, column(field) + 90.0)
+    put("TARGET_YAW", wrap180(turned[:, schema.raw_index("TARGET_YAW")]))
+    for prefix in ("PLAYER_", "TARGET_", "AIM_POINT_", "VELOCITY_", "TARGET_VELOCITY_"):
+        put(prefix + "X", -column(prefix + "Z"))
+        put(prefix + "Z", column(prefix + "X"))
+    put("TARGET_MIN_X", -column("TARGET_MAX_Z"))
+    put("TARGET_MAX_X", -column("TARGET_MIN_Z"))
+    put("TARGET_MIN_Z", column("TARGET_MIN_X"))
+    put("TARGET_MAX_Z", column("TARGET_MAX_X"))
+    return turned
+
+
 def _compare(baseline: np.ndarray, transformed: np.ndarray, schema: FeatureSchema,
-             check: str, detail: str) -> list[Finding]:
+             check: str, detail: str, ignore: Sequence[str] = ()) -> list[Finding]:
     difference = np.abs(baseline - transformed)
+    for name in ignore:
+        for suffix in ("", "_MASK"):
+            if name + suffix in schema.channel_names:
+                difference[:, schema.channel_names.index(name + suffix)] = 0.0
     changed = np.flatnonzero((difference.max(axis=0) > 1e-6) | ~np.all(np.isfinite(difference), axis=0))
     if changed.size == 0:
         return []

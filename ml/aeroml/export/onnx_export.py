@@ -61,6 +61,10 @@ def export(model, path: Path | str, *, model_version: str, model_kind: str, wind
     parity = _verify(model, target, example, tolerance)
     provenance.evaluation["onnxVerification"] = {"passed": True, "maxAbsoluteLogitError": parity, "tolerance": tolerance,
         "sha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in path.glob("model.onnx*") if p.is_file()}}
+    # The same weights for the in-JVM Flash model, so a server can run it without the service.
+    from .java_weights import export_weights
+    index = export_weights(model, path)
+    provenance.evaluation["javaWeights"] = {"sha256": index["sha256"], "floatCount": index["floatCount"]}
     manifest = BundleManifest(
         model_version=model_version,
         model_kind=model_kind,

@@ -1,6 +1,7 @@
 package dev.aeroac.neural.telemetry;
 
 import dev.aeroac.AeroAPI;
+import dev.aeroac.checks.impl.aim.processor.AimProcessor;
 import dev.aeroac.neural.NeuralConfig;
 import dev.aeroac.neural.dataset.DatasetSession;
 import dev.aeroac.neural.target.AimErrorCalculator;
@@ -10,6 +11,7 @@ import dev.aeroac.neural.window.AttackWindowBuilder;
 import dev.aeroac.player.AeroPlayer;
 import dev.aeroac.utils.collisions.datatypes.SimpleCollisionBox;
 import dev.aeroac.utils.data.packetentity.PacketEntity;
+import dev.aeroac.utils.math.AeroMath;
 import dev.aeroac.utils.math.Vector3dm;
 import dev.aeroac.utils.math.VectorUtils;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
@@ -84,6 +86,39 @@ public final class CombatTelemetryCollector {
     public long lifetimeAttackWindows() { return lifetimeAttackWindows; }
     public boolean idle(long nowNanos, long timeoutNanos) {
         return session == null && nowNanos - lastCombatNanos > timeoutNanos;
+    }
+
+    /**
+     * Continues from the rotation history recorded before the first attack, so that attack gets a
+     * complete window. Only a fresh collector is seeded; the frames must end just before now.
+     */
+    public void seed(CombatFrame[] history) {
+        if (history == null || history.length == 0 || tick != 0 || frames.size() != 0) return;
+        for (CombatFrame frame : history) frames.add(frame);
+        CombatFrame last = history[history.length - 1];
+        tick = last.tick();
+        previousNanos = last.nanoTime();
+        yaw = last.value(YAW);
+        pitch = last.value(PITCH);
+        deltaYaw = known(last.value(DELTA_YAW));
+        deltaPitch = known(last.value(DELTA_PITCH));
+        CombatFrame before = history.length >= 2 ? history[history.length - 2] : null;
+        acceleration = before == null ? 0 : Math.hypot(deltaYaw - known(before.value(DELTA_YAW)),
+                deltaPitch - known(before.value(DELTA_PITCH)));
+        rotationSamples = Math.min(4, history.length);
+        discontinuity = false;
+    }
+
+    private static double known(double value) { return Double.isFinite(value) ? value : 0; }
+
+    /** One pre-combat tick into the player's rotation history; same sources as a full sample. */
+    public static void recordHistory(AeroPlayer player, dev.aeroac.neural.window.RotationHistory history, long nowNanos) {
+        AimProcessor aim = player.checkManager.getRotationCheck(AimProcessor.class);
+        double gridYaw = aim != null && aim.modeX > AeroMath.MINIMUM_DIVISOR ? aim.modeX : Double.NaN;
+        double gridPitch = aim != null && aim.modeY > AeroMath.MINIMUM_DIVISOR ? aim.modeY : Double.NaN;
+        double ping = player.getLastTransactionReceived() > 0 ? player.getTransactionPing() : Double.NaN;
+        history.record(nowNanos, player.yaw, player.pitch, player.packetStateData.packetPlayerOnGround,
+                player.isSprinting, player.isSneaking, gridYaw, gridPitch, ping);
     }
 
     public void attach(DatasetSession replacement) {
@@ -173,6 +208,11 @@ public final class CombatTelemetryCollector {
         tick++;
         Arrays.fill(scratch, Double.NaN);
         put(YAW, player.yaw); put(PITCH, player.pitch);
+        AimProcessor aim = player.checkManager.getRotationCheck(AimProcessor.class);
+        if (aim != null) {
+            put(MOUSE_GRID_YAW, aim.modeX > AeroMath.MINIMUM_DIVISOR ? aim.modeX : Double.NaN);
+            put(MOUSE_GRID_PITCH, aim.modeY > AeroMath.MINIMUM_DIVISOR ? aim.modeY : Double.NaN);
+        }
         double dyaw = AimErrorCalculator.normalizeYaw(player.yaw - yaw);
         double dpitch = player.pitch - pitch;
         double acc = Math.hypot(dyaw - deltaYaw, dpitch - deltaPitch);

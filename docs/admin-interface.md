@@ -82,12 +82,18 @@ The anticheat can ask for a ban. Whether it asks, and who answers, is `neural.en
 | --- | --- |
 | `off` | Nothing. |
 | `announce` (default) | Staff with `aero.enforce` see *"the anticheat would ban X — but will not without confirmation"*, with the numbers behind it and three buttons: **BAN**, **DECLINE**, **PROFILE**. Nothing happens until somebody with `aero.enforce.confirm` answers. |
-| `automatic` | The ban runs on its own. |
+| `automatic` | The ban runs on its own, in the next ban wave (`wave-minutes`, 0 for at once). |
 
 The default is `announce` because the model behind the risk value has not been calibrated against a
 labelled dataset recorded on this server. Pointed at automatic bans, an uncalibrated detector removes
 honest players and nobody finds out until the appeal. Switch to `automatic` after measuring your own
 false positive rate.
+
+In automatic mode verdicts are not carried out when they are reached. They queue for a ban wave that
+runs `wave-minutes` later, randomised between half and one and a half periods, and every verdict
+queued by then runs together; a player who logs out in the meantime is still banned. An instant ban
+tells a cheat developer exactly which fight and which setting tripped the detector; a wave does not.
+Reloading into any mode other than `automatic` withdraws the queued verdicts.
 
 The bar is a gate on a verdict the risk engine already reached — it computes nothing of its own:
 reported state at least `min-state` (CONFIRMED), at least `min-evidence` accumulated evidence, and
@@ -429,3 +435,66 @@ stained-glass materials.
 
 ProtocolLib is not required and is not used; the indicator is built on the PacketEvents stack the
 plugin already depends on.
+
+
+## Actions on a player
+
+The profile screen has a row of operator actions; each has its own permission, all default to OP
+and are children of `aero.admin`.
+
+| Button | Permission | What it does |
+| --- | --- | --- |
+| Teleport | `aero.action.teleport` | Asynchronous teleport to the player (Paper/Folia safe). |
+| Spectate | `aero.action.spectate` | Spectator mode attached to the player's camera; the second click, or the target leaving, puts you back with your game mode and position. |
+| Freeze | `aero.action.freeze` | No movement, hits or commands; looking around stays free so you can watch them aim. Survives a relog. |
+| Inventory | `aero.action.inventory` | Opens the player's inventory. |
+| Kick | `aero.action.kick` | Asks, then kicks. |
+| Ban | `aero.enforce.confirm` | Asks, then runs the enforcement command and animation with the current numbers frozen into the verdict. |
+| Clear risk | `aero.action.reset` | Asks, then wipes risk, evidence, any running mitigation and the persisted value. |
+
+In the player and suspicious lists, Shift + left click teleports and Shift + right click spectates
+without opening the profile.
+
+## Reading a player
+
+* **State and risk come first.** Lists are sorted by accumulated risk; the model's last single
+  window is shown after it and labelled as such, because one window is not a verdict.
+* **Cheat probability (fight)** turns accumulated risk into a percentage:
+  `sigmoid(logit(risk.cheater-share) + risk.probability-scale * risk / risk.log-odds-weight)`.
+  With the defaults WATCH, SUSPICIOUS and CONFIRMED read about 5%, 29% and 89%. It is an estimate:
+  `probability-scale` stands in for how strongly one player's windows are correlated and should be
+  fitted on labelled sessions. Not shown in `threshold` scoring.
+* **Risk timeline** (third row of the profile): the risk each of the last nine pieces of evidence
+  left behind, coloured by the state it meant. It shows how the verdict was reached.
+* **Staff mark** (name tag): none → checked, clean → watching → cheater, stored in
+  `plugins/AeroAC/neural/staff-marks.json` and shown in the lists. It never changes risk, training
+  or bans; it records what a person concluded, next to what the model says.
+* **Alerts** carry Profile, Watch, TP and Spectate buttons (`/aero tp`, `/aero spectate`).
+
+## Event snapshots
+
+When risk crosses `risk.snapshot-threshold`, a snapshot with the frames around the moment is written
+to `datasets/snapshots/`. The profile's **Event snapshots** button lists that player's snapshots,
+newest first (state change, risk before and after, trigger, model score). Clicking one opens a
+replay: the model's heads, the evidence accumulated so far, and 36 panes — 24 samples of run-up and
+12 of aftermath, 50 ms each — red for an attack, green when the crosshair was inside the target's
+box, yellow when a target was tracked but the crosshair was off it, grey with no target; glass
+before the event, concrete after. Hovering a pane shows the rotation, aim error and distance.
+
+Snapshots name players only by the dataset pseudonym; the viewer derives it from the UUID and
+never writes anything. A snapshot is a reason to review, not proof, and it is never a training label.
+
+## CHEAT / LEGIT verdicts on snapshots
+
+In a snapshot replay, **CHEAT** (red) and **LEGIT** (green) record what a moderator concluded after
+watching it; clicking the highlighted one again withdraws it. The snapshot list shows each verdict
+and has *All snapshots: CHEAT / LEGIT* for labelling a player's whole list after a confirmation.
+Permission: `aero.training.review`.
+
+A verdict is written to `datasets/reviews/<eventId>.json` with the reviewer and time; the snapshot
+itself stays `UNLABELED`. It is a weak label — a moderator can be wrong, and snapshots exist only
+where the model already fired — so training ignores it unless run with `--include-staff-reviews`,
+and then puts those windows in the train fold only: never validation, calibration or test, and a
+reviewed player who also appears in one of those folds is dropped rather than leaked across the
+split. The numbers added and dropped are recorded in the bundle provenance
+(`staffReviewedWindows`). Lab recordings remain the only ground truth for evaluation.

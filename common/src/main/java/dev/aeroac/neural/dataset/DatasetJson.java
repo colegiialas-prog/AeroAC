@@ -21,13 +21,20 @@ public final class DatasetJson {
     /** Strict frame decoder for offline validation. Rejects missing/reordered-incompatible schemas. */
     public static CombatFrame readFrame(Reader input, long sessionStartNanos) {
         JsonObject json = new JsonParser().parse(input).getAsJsonObject();
-        if (json.get("schemaVersion").getAsInt() != CombatFrame.SCHEMA_VERSION || !"frame".equals(json.get("type").getAsString())) {
+        int version = json.get("schemaVersion").getAsInt();
+        if (version < 1 || version > CombatFrame.SCHEMA_VERSION || !"frame".equals(json.get("type").getAsString())) {
             throw new IllegalArgumentException("Incompatible dataset schema/type");
         }
         JsonObject values = json.getAsJsonObject("values");
-        if (values.entrySet().size() != FIELDS.length) throw new IllegalArgumentException("Incompatible feature count");
+        int expected = 0;
+        for (FrameField field : FIELDS) if (field.since() <= version) expected++;
+        if (values.entrySet().size() != expected) throw new IllegalArgumentException("Incompatible feature count");
         double[] data = new double[FIELDS.length];
         for (FrameField field : FIELDS) {
+            if (field.since() > version) {
+                data[field.ordinal()] = Double.NaN;
+                continue;
+            }
             JsonElement value = values.get(field.name());
             if (value == null) throw new IllegalArgumentException("Missing field " + field);
             if (value.isJsonNull()) data[field.ordinal()] = Double.NaN;

@@ -138,6 +138,7 @@ def run(config: TrainingConfig, schema: FeatureSchema | None = None, progress=No
                 and (verdicts[s.metadata.session_id] == "GOOD" or ((config.include_review or config.allow_synthetic) and verdicts[s.metadata.session_id] == "REVIEW"))]
     golden_path = config.golden_manifest or Path(__file__).resolve().parents[3] / "datasets/manifests/golden-v1.json"
     golden_ids = set()
+    golden_players: set[str] = set()
     if golden_path.is_file():
         golden = json.loads(golden_path.read_text(encoding="utf-8"))
         if golden.get("sessions"):
@@ -160,12 +161,26 @@ def run(config: TrainingConfig, schema: FeatureSchema | None = None, progress=No
     LOGGER.info("dataset: %s", json.dumps(dataset_report(sessions, schema), default=str))
     LOGGER.warning("audit accepted %d of %d readable sessions; exclusions are recorded in dataset_audit.json", len(sessions), len(all_sessions))
 
+    staff_ids: set[str] = set()
+    if config.include_staff_reviews:
+        from ..dataset.reviews import load_reviewed_snapshots
+        staff = [s for s in load_reviewed_snapshots(config.dataset, schema)
+                 if s.metadata.player_id not in golden_players]
+        staff_ids = {s.metadata.session_id for s in staff}
+        LOGGER.warning("including %d staff-reviewed snapshots in the train fold only", len(staff))
+        sessions = sessions + staff
+
     index = build_windows(sessions, config, schema)
     LOGGER.info("%s | %s", index.describe(), json.dumps(balance_report(index), default=str))
     if len(index) == 0:
         raise SystemExit("no complete windows; record longer sessions or shorten the window")
 
     split = make_split(index, config)
+    staff_placement = {"added": 0, "droppedForLeakage": 0}
+    if staff_ids:
+        from ..dataset.reviews import train_only
+        staff_placement = train_only(index, split, staff_ids)
+        LOGGER.info("staff reviews: %s", staff_placement)
     findings = check_split(index, split, config.group_by, config.holdout_clients)
     if exit_code(findings):
         raise ValueError("split leakage: " + str(findings))
@@ -321,6 +336,7 @@ def run(config: TrainingConfig, schema: FeatureSchema | None = None, progress=No
             "headsNotTrained": [head for head, usable in zip(config.heads, heads.trainable) if not usable],
             "channelsNeverObserved": never_seen,
             "lineage": {"normalizationFold": "train", "epochSelectionFold": "validation", "calibrationFold": "calibration"},
+            "staffReviewedWindows": staff_placement,
             "synthetic": bool(synthetic),
             "excludedGoldenSessionsAndPlayers": sorted(golden_ids),
             "purpose": "pipeline-smoke-only" if synthetic else "candidate-awaiting-human-promotion-review",
@@ -417,6 +433,8 @@ def main() -> None:
     parser.add_argument("--notes", default="")
     parser.add_argument("--allow-synthetic", action="store_true", help="pipeline tests only; blocks production promotion")
     parser.add_argument("--include-review", action="store_true", help="explicitly include readable REVIEW sessions; never UNUSABLE")
+    parser.add_argument("--include-staff-reviews", action="store_true",
+                        help="add moderator CHEAT/LEGIT verdicts on evidence snapshots to the train fold only")
     parser.add_argument("--golden", type=Path, help="reserve all reviewed golden players outside every training fold")
     parser.add_argument("--calibration", choices=("platt", "temperature"), default="platt")
     parser.add_argument("--group-balance", type=float, default=0.5,
@@ -445,6 +463,7 @@ def main() -> None:
         notes=arguments.notes,
         allow_synthetic=arguments.allow_synthetic,
         include_review=arguments.include_review,
+        include_staff_reviews=arguments.include_staff_reviews,
         golden_manifest=arguments.golden,
         calibration=arguments.calibration,
         group_balance=arguments.group_balance,

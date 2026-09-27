@@ -5,7 +5,15 @@ package dev.aeroac.neural.inference;
  * to the Java telemetry protocol; unknown head names are carried through to operators untouched.
  */
 public record InferenceResponse(long requestId, int protocolVersion, int featureSchemaVersion, String modelVersion,
-                                ModelKind model, boolean calibrated, String[] headNames, double[] headValues) {
+                                ModelKind model, boolean calibrated, String[] headNames, double[] headValues,
+                                double calibrationPrior) {
+
+    /** A response without the optional calibration base rate. */
+    public InferenceResponse(long requestId, int protocolVersion, int featureSchemaVersion, String modelVersion,
+                             ModelKind model, boolean calibrated, String[] headNames, double[] headValues) {
+        this(requestId, protocolVersion, featureSchemaVersion, modelVersion, model, calibrated, headNames, headValues,
+                Double.NaN);
+    }
 
     public InferenceResponse {
         if (headNames == null || headValues == null || headNames.length != headValues.length) {
@@ -19,6 +27,9 @@ public record InferenceResponse(long requestId, int protocolVersion, int feature
             }
         }
         if (head(headNames, headValues, "overall") < 0) throw new IllegalArgumentException("Missing overall head");
+        if (!Double.isNaN(calibrationPrior) && !(calibrationPrior > 0 && calibrationPrior < 1)) {
+            throw new IllegalArgumentException("calibrationPrior outside (0,1)");
+        }
     }
 
     public double head(String name) { return head(headNames, headValues, name); }

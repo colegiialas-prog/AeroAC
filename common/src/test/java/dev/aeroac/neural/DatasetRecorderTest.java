@@ -45,6 +45,21 @@ class DatasetRecorderTest {
         assertThrows(IllegalArgumentException.class, () -> DatasetJson.readFrame(new StringReader(frame.toString()), 0));
     }
 
+    @Test void aRawSchemaOneFrameIsStillReadWithTheNewFieldsUnknown() throws Exception {
+        StringWriter output = new StringWriter();
+        DatasetJson.writeRecord(output, metadata(), TelemetryFoundationTest.frame(1, false, true));
+        JsonObject frame = new JsonParser().parse(output.toString()).getAsJsonObject();
+        frame.addProperty("schemaVersion", 1);
+        frame.getAsJsonObject("values").remove("MOUSE_GRID_YAW");
+        frame.getAsJsonObject("values").remove("MOUSE_GRID_PITCH");
+        CombatFrame decoded = DatasetJson.readFrame(new StringReader(frame.toString()), 0);
+        assertTrue(Double.isNaN(decoded.value(FrameField.MOUSE_GRID_YAW)));
+        assertEquals(frame.getAsJsonObject("values").get("YAW").getAsDouble(), decoded.value(FrameField.YAW));
+        frame.addProperty("schemaVersion", 2);
+        assertThrows(IllegalArgumentException.class, () -> DatasetJson.readFrame(new StringReader(frame.toString()), 0),
+                "a version 2 frame must carry the version 2 fields");
+    }
+
     @Test void preservesMultipleAttackEventsAndEscapesMetadata() throws Exception {
         StringWriter output = new StringWriter();
         DatasetMetadata metadata = metadata();

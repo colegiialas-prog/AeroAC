@@ -11,6 +11,8 @@ plausible measurement, and the model must be able to tell "no target" from "perf
 
 from __future__ import annotations
 
+import math
+
 import numpy as np
 
 from ..schema import FeatureSchema, default_schema
@@ -48,6 +50,68 @@ def _shift(column: np.ndarray) -> np.ndarray:
     previous[0] = np.nan
     previous[1:] = column[:-1]
     return previous
+
+
+def crosshair(raw: np.ndarray, schema: FeatureSchema) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Where the look ray is relative to the target box: (on target, entry height, angle to centre).
+
+    Pure geometry of one box — the slab test of the ray against the conservative envelope Grim
+    already computed — not a world raycast. Mirrors ``FeatureEncoder.crosshair`` sample by sample.
+    """
+    length = raw.shape[0]
+    column = lambda name: raw[:, schema.raw_index(name)]  # noqa: E731 - local shorthand
+    yaw = np.radians(column("YAW"))
+    pitch = np.radians(column("PITCH"))
+    look = np.stack([-np.sin(yaw) * np.cos(pitch), -np.sin(pitch), np.cos(yaw) * np.cos(pitch)], axis=1)
+    eye = np.stack([column("PLAYER_X"), column("PLAYER_Y") + column("EYE_HEIGHT"), column("PLAYER_Z")], axis=1)
+    low = np.stack([column("TARGET_MIN_X"), column("TARGET_MIN_Y"), column("TARGET_MIN_Z")], axis=1)
+    high = np.stack([column("TARGET_MAX_X"), column("TARGET_MAX_Y"), column("TARGET_MAX_Z")], axis=1)
+    usable = (column("TARGET_PRESENT") == 1) & np.all(np.isfinite(np.concatenate([look, eye, low, high], axis=1)), axis=1)
+
+    on_target = np.full(length, np.nan)
+    hit_height = np.full(length, np.nan)
+    center_error = np.full(length, np.nan)
+    for t in np.flatnonzero(usable):
+        hit, entry = _ray_box(eye[t], look[t], low[t], high[t])
+        on_target[t] = 1.0 if hit else 0.0
+        height = high[t, 1] - low[t, 1]
+        if hit and height > EPSILON:
+            hit_height[t] = (eye[t, 1] + entry * look[t, 1] - low[t, 1]) / height
+        centre = 0.5 * (low[t] + high[t]) - eye[t]
+        norm = math.sqrt(centre[0] * centre[0] + centre[1] * centre[1] + centre[2] * centre[2])
+        if norm >= EPSILON:
+            cosine = (look[t, 0] * centre[0] + look[t, 1] * centre[1] + look[t, 2] * centre[2]) / norm
+            center_error[t] = math.degrees(math.acos(max(-1.0, min(1.0, cosine))))
+    return on_target, hit_height, center_error
+
+
+def mouse_counts(delta: np.ndarray, grid: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Rotation in mouse counts, and how far it is from a whole count; unknown without a grid.
+
+    Mirrors ``FeatureEncoder`` (``Math.rint`` rounds half to even, as ``np.rint`` does).
+    """
+    usable = np.isfinite(grid) & (grid > EPSILON) & np.isfinite(delta)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        counts = np.where(usable, delta / np.where(usable, grid, 1.0), np.nan)
+    residual = np.abs(counts - np.rint(counts))
+    return counts, residual
+
+
+def _ray_box(origin, direction, low, high) -> tuple[bool, float]:
+    """Slab test for s >= 0. Returns (hit, entry distance clamped at 0)."""
+    near, far = -math.inf, math.inf
+    for axis in range(3):
+        o, d = float(origin[axis]), float(direction[axis])
+        if abs(d) < 1.0e-9:
+            if o < low[axis] or o > high[axis]:
+                return False, math.nan
+            continue
+        first, second = (float(low[axis]) - o) / d, (float(high[axis]) - o) / d
+        if first > second:
+            first, second = second, first
+        near, far = max(near, first), min(far, second)
+    entry = max(near, 0.0)
+    return entry <= far, entry
 
 
 def derive(raw: np.ndarray, schema: FeatureSchema) -> dict[str, np.ndarray]:
@@ -108,7 +172,22 @@ def derive(raw: np.ndarray, schema: FeatureSchema) -> dict[str, np.ndarray]:
         correction_gain = np.where(framed, -(delta_yaw * error_yaw + delta_pitch * error_pitch) / safe_norm2, unknown)
         off_axis = np.where(framed, (delta_yaw * error_pitch - delta_pitch * error_yaw) / safe_norm2, unknown)
 
+    on_target, hit_height, center_error = crosshair(raw, schema)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        center_ratio = np.where(ratio_usable, center_error / np.where(ratio_usable, radius, 1.0), unknown)
+
+    counts_yaw, residual_yaw = mouse_counts(delta_yaw, raw[:, schema.raw_index("MOUSE_GRID_YAW")])
+    counts_pitch, residual_pitch = mouse_counts(delta_pitch, raw[:, schema.raw_index("MOUSE_GRID_PITCH")])
+
     return {
+        "rotationCountsYaw": counts_yaw,
+        "rotationCountsPitch": counts_pitch,
+        "gridResidualYaw": residual_yaw,
+        "gridResidualPitch": residual_pitch,
+        "crosshairOnTarget": on_target,
+        "crosshairHitHeight": hit_height,
+        "centerAimError": center_error,
+        "centerAimErrorRatio": center_ratio,
         "targetAngularVelocityYaw": angular_yaw,
         "targetAngularVelocityPitch": angular_pitch,
         "rotationTargetAlignment": alignment,

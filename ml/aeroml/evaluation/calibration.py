@@ -290,10 +290,22 @@ def fit_scaler(logits: np.ndarray, labels: np.ndarray, method: str = "platt"):
 class HeadCalibration:
     heads: tuple[str, ...]
     scalers: tuple[TemperatureScaler | PlattScaler, ...]
+    #: Positive rate of the calibration fold per head. A calibrated probability is a posterior under
+    #: this base rate, so logit(p) - logit(prior) is the window's log-likelihood ratio: the quantity
+    #: the Java RiskEngine accumulates in log-odds mode. None for bundles written before it existed.
+    priors: dict[str, float] | None = None
 
     @classmethod
     def fit(cls, logits, labels, heads, method: str = "platt"):
-        return cls(tuple(heads), tuple(fit_scaler(logits[:, i], labels[:, i], method) for i in range(len(heads))))
+        labels = np.asarray(labels, dtype=np.float64)
+        priors = {head: float(np.mean(labels[:, i])) for i, head in enumerate(heads)}
+        return cls(tuple(heads), tuple(fit_scaler(logits[:, i], labels[:, i], method) for i in range(len(heads))),
+                   priors)
+
+    def prior(self, head: str) -> float | None:
+        """The calibration fold's positive rate for a head, or None when unknown or degenerate."""
+        value = (self.priors or {}).get(head)
+        return float(value) if value is not None and 0.0 < value < 1.0 else None
 
     def apply_logits(self, logits):
         logits = np.asarray(logits)
@@ -312,8 +324,22 @@ class HeadCalibration:
         # "per-head-temperature" is kept for an all-temperature calibration so bundles written
         # before Platt scaling existed and bundles written after it describe themselves the same way.
         method = "per-head-temperature" if all(isinstance(s, TemperatureScaler) for s in self.scalers) else "per-head"
-        return {"method": method, "heads": list(self.heads),
+        data = {"method": method, "heads": list(self.heads),
                 "scalers": {h: s.to_dict() for h, s in zip(self.heads, self.scalers)}}
+        if self.priors is not None:
+            data["priors"] = dict(self.priors)
+        return data
+
+
+def _priors(data, heads):
+    if data is None:
+        return None
+    if not isinstance(data, dict) or not set(data) <= set(heads):
+        raise ValueError("calibration priors must name model heads")
+    priors = {head: float(value) for head, value in data.items()}
+    if any(not 0.0 <= value <= 1.0 for value in priors.values()):
+        raise ValueError("calibration priors must be rates in [0, 1]")
+    return priors
 
 
 def load_calibration(data, heads):
@@ -323,9 +349,11 @@ def load_calibration(data, heads):
     if method in ("per-head-temperature", "per-head"):
         if tuple(data.get("heads", [])) != tuple(heads) or set(data.get("scalers", {})) != set(heads):
             raise ValueError("calibration heads differ from model heads")
+        priors = _priors(data.get("priors"), heads)
         if method == "per-head-temperature":
-            return HeadCalibration(tuple(heads), tuple(TemperatureScaler.from_dict(data["scalers"][h]) for h in heads))
-        return HeadCalibration(tuple(heads), tuple(_scaler_from_dict(data["scalers"][h]) for h in heads))
+            return HeadCalibration(tuple(heads), tuple(TemperatureScaler.from_dict(data["scalers"][h]) for h in heads),
+                                   priors)
+        return HeadCalibration(tuple(heads), tuple(_scaler_from_dict(data["scalers"][h]) for h in heads), priors)
     # Legacy experimental bundles; promotion requires per-head evidence.
     return _scaler_from_dict(data)
 

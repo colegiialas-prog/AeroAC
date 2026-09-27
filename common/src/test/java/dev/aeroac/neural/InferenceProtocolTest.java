@@ -84,6 +84,17 @@ class InferenceProtocolTest {
         assertFalse(response.calibrated());
     }
 
+    @Test void anOptionalCalibrationPriorIsCarriedAndValidated() {
+        InferenceRequest request = request(1);
+        String head = "{\"protocolVersion\":1,\"featureSchemaVersion\":" + FeatureEncoder.FEATURE_SCHEMA_VERSION
+                + ",\"requestId\":" + request.requestId() + ",\"modelVersion\":\"v\",\"calibrated\":true,"
+                + "\"heads\":{\"overall\":0.5}";
+        assertTrue(Double.isNaN(InferenceJson.decode(head + "}", request).calibrationPrior()));
+        assertEquals(0.2, InferenceJson.decode(head + ",\"calibrationPrior\":0.2}", request).calibrationPrior(), 0);
+        assertThrows(IllegalArgumentException.class, () -> InferenceJson.decode(head + ",\"calibrationPrior\":1.5}", request));
+        assertThrows(IllegalArgumentException.class, () -> InferenceJson.decode(head + ",\"calibrationPrior\":\"x\"}", request));
+    }
+
     @Test void protocolIdentifiersAndFlagsMustNotBeCoerced() {
         String valid = reply(1, "\"overall\":0.5");
         for (String field : new String[]{"requestId", "protocolVersion", "featureSchemaVersion"}) {

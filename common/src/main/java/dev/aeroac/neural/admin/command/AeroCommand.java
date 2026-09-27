@@ -84,6 +84,23 @@ public final class AeroCommand implements BuildableCommand {
                             AeroAPI.INSTANCE.getNeuralManager().monitor(player, sender, enable))));
                 }));
 
+        // Straight from an alert to the suspect. Platforms without the actions say so instead.
+        manager.command(manager.commandBuilder("aero", "aeroac").literal("tp").permission(permission(AdminPermissions.ACTION_TELEPORT))
+                .required("target", arguments.singlePlayerSelectorParser())
+                .handler(context -> withPlatformPlayer(context, player -> {
+                    if (!service().gui().teleport(context.sender(), player.getUniqueId())) {
+                        reply(context.sender(), "cmd.aero.action_unavailable");
+                    }
+                })));
+
+        manager.command(manager.commandBuilder("aero", "aeroac").literal("spectate").permission(permission(AdminPermissions.ACTION_SPECTATE))
+                .required("target", arguments.singlePlayerSelectorParser())
+                .handler(context -> withPlatformPlayer(context, player -> {
+                    if (!service().gui().spectate(context.sender(), player.getUniqueId())) {
+                        reply(context.sender(), "cmd.aero.action_unavailable");
+                    }
+                })));
+
         manager.command(manager.commandBuilder("aero", "aeroac").literal("view").permission(permission(AdminPermissions.VIEW))
                 .required("mode", StringParser.stringParser())
                 .handler(context -> view(context.sender(), context.get("mode"))));
