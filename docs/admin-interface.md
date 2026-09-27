@@ -470,3 +470,16 @@ without opening the profile.
   `plugins/AeroAC/neural/staff-marks.json` and shown in the lists. It never changes risk, training
   or bans; it records what a person concluded, next to what the model says.
 * **Alerts** carry Profile, Watch, TP and Spectate buttons (`/aero tp`, `/aero spectate`).
+
+## Event snapshots
+
+When risk crosses `risk.snapshot-threshold`, a snapshot with the frames around the moment is written
+to `datasets/snapshots/`. The profile's **Event snapshots** button lists that player's snapshots,
+newest first (state change, risk before and after, trigger, model score). Clicking one opens a
+replay: the model's heads, the evidence accumulated so far, and 36 panes — 24 samples of run-up and
+12 of aftermath, 50 ms each — red for an attack, green when the crosshair was inside the target's
+box, yellow when a target was tracked but the crosshair was off it, grey with no target; glass
+before the event, concrete after. Hovering a pane shows the rotation, aim error and distance.
+
+Snapshots name players only by the dataset pseudonym; the viewer derives it from the UUID and
+never writes anything. A snapshot is a reason to review, not proof, and it is never a training label.

@@ -38,6 +38,7 @@ public final class ProfileMenu extends AeroMenu {
     private static final int SLOT_EVIDENCE = 31;
     private static final int SLOT_FLAGS = 32;
     private static final int SLOT_MITIGATION = 33;
+    private static final int SLOT_SNAPSHOTS = 34;
     // Operator actions, one row: go there, watch, hold, look inside, remove, clear.
     private static final int SLOT_MARK = 36;
     private static final int SLOT_TELEPORT = 37;
@@ -119,6 +120,9 @@ public final class ProfileMenu extends AeroMenu {
                 MenuItems.line(AeroMessages.tr("gui.active"), view.mitigation() == null ? AeroMessages.tr("gui.none") : view.mitigation(),
                         view.mitigation() == null ? MenuItems.MUTED : MenuItems.BAD)));
 
+        inventory.setItem(SLOT_SNAPSHOTS, MenuItems.item(Material.FILLED_MAP,
+                MenuItems.HEADER + AeroMessages.tr("gui.snapshots.button"),
+                MenuItems.note(AeroMessages.tr("gui.snapshots.what"))));
         drawActions(inventory, view);
         footer(inventory, this::back, fromSuspicious ? AeroMessages.tr("gui.the_suspicious_list") : AeroMessages.tr("gui.the_player_list"));
     }
@@ -375,6 +379,10 @@ public final class ProfileMenu extends AeroMenu {
                     HistoryMenu.Kind.EVIDENCE, fromSuspicious));
             case SLOT_FLAGS -> gui.show(new HistoryMenu(gui, viewer, target,
                     HistoryMenu.Kind.GRIM_FLAGS, fromSuspicious));
+            case SLOT_SNAPSHOTS -> {
+                AdminPlayerView shown = service().snapshot().find(target);
+                gui.show(new SnapshotsMenu(gui, viewer, target, shown == null ? "?" : shown.name(), fromSuspicious));
+            }
             case SLOT_MARK -> {
                 StaffMarks.Mark now = gui.marks().cycle(target, viewer.getName());
                 viewer.sendMessage(MenuItems.HEADER + AeroMessages.tr("gui.mark.set", markLabel(now)));

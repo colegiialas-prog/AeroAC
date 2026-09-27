@@ -60,6 +60,9 @@ public final class DatasetManager implements AutoCloseable {
         worker.scheduleWithFixedDelay(this::drainAll, 50, 50, TimeUnit.MILLISECONDS);
     }
 
+    /** Where evidence snapshots are written; read by the snapshot viewer. */
+    public Path snapshotsDirectory() { return root.resolve("snapshots"); }
+
     public String pseudonym(UUID playerId) {
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
