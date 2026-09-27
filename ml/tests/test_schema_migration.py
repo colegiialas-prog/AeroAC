@@ -42,13 +42,28 @@ def _manifest_dict(schema, *, version: int, channels=None) -> dict:
     }
 
 
-def test_the_current_schema_is_version_four(schema):
-    assert schema.version == 4
-    assert manifest_path().name == "feature_schema_v4.json"
+def test_the_current_schema_is_version_five(schema):
+    assert schema.version == 5
+    assert manifest_path().name == "feature_schema_v5.json"
 
 
-def test_v4_only_inserts_the_crosshair_channels_after_rotation_off_axis(schema):
+def test_v5_adds_the_mouse_grid_after_the_crosshair_channels(schema):
+    """Raw schema 2 appends the grid fields; every v4 channel keeps its definition."""
+    previous = load_schema(manifest_path().with_name("feature_schema_v4.json"))
+    assert previous.raw_schema_version == 1 and schema.raw_schema_version == 2
+    assert schema.raw_fields == previous.raw_fields + ("MOUSE_GRID_YAW", "MOUSE_GRID_PITCH")
+    assert schema.raw_fields_for(1) == previous.raw_fields
+    added = [value for value in schema.values if value.name not in {v.name for v in previous.values}]
+    assert [value.name for value in added] == ["ROTATION_COUNTS_YAW", "ROTATION_COUNTS_PITCH",
+                                               "GRID_RESIDUAL_YAW", "GRID_RESIDUAL_PITCH"]
+    names = [value.name for value in schema.values]
+    assert names.index("ROTATION_COUNTS_YAW") == names.index("CENTER_AIM_ERROR_RATIO") + 1
+    assert [value for value in schema.values if value not in added] == list(previous.values)
+
+
+def test_v4_only_inserts_the_crosshair_channels_after_rotation_off_axis():
     """Every v3 channel keeps its definition; v4 adds four derived channels and nothing else."""
+    schema = load_schema(manifest_path().with_name("feature_schema_v4.json"))
     previous = load_schema(manifest_path().with_name("feature_schema_v3.json"))
     assert previous.version == 3 and previous.raw_fields == schema.raw_fields
     added = [value for value in schema.values if value.name not in {v.name for v in previous.values}]

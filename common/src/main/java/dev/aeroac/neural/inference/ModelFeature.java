@@ -38,6 +38,12 @@ public enum ModelFeature {
     /** Angle between the look direction and the target box centre. */
     CENTER_AIM_ERROR(null, true, 0, 180),
     CENTER_AIM_ERROR_RATIO(null, true, 0, 64),
+    /** Rotation in mouse counts: sensitivity-free, unlike degrees per sample. */
+    ROTATION_COUNTS_YAW(null, true, -400, 400),
+    ROTATION_COUNTS_PITCH(null, true, -400, 400),
+    /** Distance from a whole mouse count; a mouse cannot produce a fraction, injected rotation can. */
+    GRID_RESIDUAL_YAW(null, true, 0, 0.5),
+    GRID_RESIDUAL_PITCH(null, true, 0, 0.5),
     PLAYER_SPEED_HORIZONTAL(null, true, 0, 8),
     PLAYER_VELOCITY_Y(FrameField.VELOCITY_Y, true, -8, 8),
     ON_GROUND(FrameField.ON_GROUND, false, 0, 1),

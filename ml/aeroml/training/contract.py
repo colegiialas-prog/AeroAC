@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 CONTRACT_VERSION = 1
-RAW_SCHEMA_VERSION = 1
+RAW_SCHEMA_VERSION = 2
 
 # ---------------------------------------------------------------------------
 # Real job states. The Java side keeps its own names; ``java_status`` maps onto them so the

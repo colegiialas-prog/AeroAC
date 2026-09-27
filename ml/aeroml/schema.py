@@ -56,6 +56,18 @@ class FeatureSchema:
     values: tuple[ValueChannel, ...]
     heads: tuple[str, ...]
     required_heads: tuple[str, ...]
+    #: Raw schema version that introduced each field added after version 1.
+    raw_field_since: tuple[tuple[str, int], ...] = ()
+
+    def raw_fields_for(self, raw_version: int) -> tuple[str, ...]:
+        """Fields a recording of an older raw schema carries; the rest load as unknown."""
+        if not 1 <= raw_version <= self.raw_schema_version:
+            raise ValueError(f"raw schema {raw_version} is not readable (1..{self.raw_schema_version})")
+        since = dict(self.raw_field_since)
+        return tuple(field for field in self.raw_fields if since.get(field, 1) <= raw_version)
+
+    def readable_raw_version(self, raw_version: int) -> bool:
+        return 1 <= raw_version <= self.raw_schema_version
 
     @property
     def value_count(self) -> int:
@@ -142,7 +154,11 @@ def load_schema(path: Path | str | None = None) -> FeatureSchema:
         values=values,
         heads=tuple(data["heads"]),
         required_heads=tuple(data["requiredHeads"]),
+        raw_field_since=tuple((field, int(version)) for version, fields in data.get("rawFieldsSince", {}).items()
+                              for field in fields),
     )
+    if {field for field, _ in schema.raw_field_since} - set(raw_fields):
+        raise ValueError("rawFieldsSince names fields the manifest does not declare")
     missing = [value.source for value in values if not value.derived and value.source not in raw_fields]
     if missing:
         raise ValueError(f"value channels reference unknown raw fields: {missing}")

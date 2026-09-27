@@ -13,13 +13,14 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import zlib
 import random
 import uuid
 from pathlib import Path
 
 from ..console import use_utf8_console
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def _schema_fields() -> list[str]:
@@ -120,6 +121,11 @@ def generate_session(directory: Path, *, label: str, client: str, configuration:
     previous_aim_error: float | None = None
     switch_tick = 0
 
+    # Sensitivity from the player id, not from rng, so every other draw stays where it was.
+    sensitivity = 0.3 + (zlib.crc32(player_id.encode("utf-8")) % 1000) / 1000.0 * 0.6
+    factor = sensitivity * 0.6 + 0.2
+    grid = factor * factor * factor * 8.0 * 0.15
+
     for tick in range(1, samples + 1):
         offset_ns = start_ns + int(tick * 50_000_000)
         angle += angular_speed
@@ -133,9 +139,10 @@ def generate_session(directory: Path, *, label: str, client: str, configuration:
         delayed = history[max(0, len(history) - 1 - reaction_ticks)]
         error_yaw = _wrap180(delayed[0] - yaw)
         error_pitch = delayed[1] - pitch
-        # A human closes most of the gap with an overshooting, noisy correction.
-        human_yaw = error_yaw * rng.uniform(0.18, 0.42) + rng.gauss(0, noise)
-        human_pitch = error_pitch * rng.uniform(0.18, 0.42) + rng.gauss(0, noise * 0.6)
+        # A human closes most of the gap with an overshooting, noisy correction, and a mouse can
+        # only move in whole counts of the sensitivity grid.
+        human_yaw = round((error_yaw * rng.uniform(0.18, 0.42) + rng.gauss(0, noise)) / grid) * grid
+        human_pitch = round((error_pitch * rng.uniform(0.18, 0.42) + rng.gauss(0, noise * 0.6)) / grid) * grid
         if assist > 0:
             # The toy assist blends a fraction of the exact correction into the human motion.
             human_yaw = human_yaw * (1 - assist) + _wrap180(want_yaw - yaw) * assist
@@ -176,6 +183,7 @@ def generate_session(directory: Path, *, label: str, client: str, configuration:
         aim_error_delta = None if previous_aim_error is None else aim_error_total - previous_aim_error
         recorder.frame(session_id, tick, offset_ns, {
             "YAW": yaw, "PITCH": pitch,
+            "MOUSE_GRID_YAW": grid, "MOUSE_GRID_PITCH": grid,
             "DELTA_YAW": delta_yaw if tick > 1 else None,
             "DELTA_PITCH": delta_pitch if tick > 1 else None,
             "DELTA2_YAW": (delta_yaw - previous_delta_yaw) if tick > 2 else None,

@@ -113,7 +113,7 @@ common/src/main/java/dev/aeroac/neural/
   NeuralPlayerState.java    единственное новое поле AeroPlayer
   NeuralMessages.java       доставка ответа оператору вне packet-потока
   telemetry/
-    FrameField.java             79 raw полей (НЕ список входов модели)
+    FrameField.java             81 raw поле (НЕ список входов модели)
     TelemetryRecord.java, CombatFrame.java, CombatEvent.java, ReachObservation.java
     CombatTelemetryCollector.java
   target/
@@ -124,7 +124,7 @@ common/src/main/java/dev/aeroac/neural/
     DatasetMetadata.java, DatasetSession.java, DatasetJson.java, DatasetManager.java
     SnapshotJson.java
   inference/
-    ModelFeature.java          75 каналов входа модели
+    ModelFeature.java          83 канала входа модели
     FeatureEncoder.java        окно кадров -> float[]
     ModelKind.java, ModelWindow.java
     InferenceRequest.java, InferenceResponse.java, PredictionResult.java
@@ -172,7 +172,7 @@ flowchart TD
   Q --> W[Dedicated JSONL writer]
   W --> M[Raw session + metadata]
   E --> G[Complete attack or continuous window]
-  G --> X[FeatureEncoder: 75 channels]
+  G --> X[FeatureEncoder: 83 channels]
   X --> I[Bounded async inference client]
   I --> P[PredictionResult applied via runSafely]
   P --> T[PredictionTrail]
@@ -218,8 +218,8 @@ Attack tick для window builder — первый следующий sample, в
 
 ## Окна и вход модели
 
-Кадр — это 79 raw полей; вход модели — 75 каналов, и это два разных контракта.
-Новейший `ml/schema/feature_schema_v*.json` (сейчас v4) канонически задаёт второй: 42 value channels и 33 mask
+Кадр — это 81 raw поле; вход модели — 83 канала, и это два разных контракта.
+Новейший `ml/schema/feature_schema_v*.json` (сейчас v5) канонически задаёт второй: 46 value channels и 37 mask
 channels (маски идут после всех значений, в порядке объявления nullable значений).
 Java `ModelFeature`/`FeatureEncoder` и Python `encode_window` обязаны совпадать; это удерживают
 `FeatureSchemaTest`, `FeatureEncoderGoldenTest` и `ml/tests/test_features.py` через общий

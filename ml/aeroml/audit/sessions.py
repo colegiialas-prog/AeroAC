@@ -101,7 +101,7 @@ def audit_session(session: Session, policy: AuditPolicy | None = None,
     if frames == 0:
         unusable.append("no frames")
 
-    if metadata.schema_version != schema.raw_schema_version:
+    if not schema.readable_raw_version(metadata.schema_version):
         unusable.append(f"unsupported schema {metadata.schema_version}")
     if session.quality.malformed_lines:
         unusable.append(f"corrupt records: {session.quality.malformed_lines} malformed lines")

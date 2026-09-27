@@ -59,12 +59,12 @@ neural:
 ```json
 {
   "protocolVersion": 1,
-  "featureSchemaVersion": 4,
+  "featureSchemaVersion": 5,
   "requestId": 1234,
   "model": "flash",
   "window": "attack",
   "sequenceLength": 31,
-  "featureCount": 75,
+  "featureCount": 83,
   "features": [ ... sequenceLength * featureCount значений ... ]
 }
 ```
@@ -74,7 +74,7 @@ neural:
 ```json
 {
   "protocolVersion": 1,
-  "featureSchemaVersion": 4,
+  "featureSchemaVersion": 5,
   "requestId": 1234,
   "model": "flash",
   "modelVersion": "aero-flash-attack-20260513-101500-1a2b3c4d",

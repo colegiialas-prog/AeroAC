@@ -1,6 +1,7 @@
 package dev.aeroac.neural.telemetry;
 
 import dev.aeroac.AeroAPI;
+import dev.aeroac.checks.impl.aim.processor.AimProcessor;
 import dev.aeroac.neural.NeuralConfig;
 import dev.aeroac.neural.dataset.DatasetSession;
 import dev.aeroac.neural.target.AimErrorCalculator;
@@ -10,6 +11,7 @@ import dev.aeroac.neural.window.AttackWindowBuilder;
 import dev.aeroac.player.AeroPlayer;
 import dev.aeroac.utils.collisions.datatypes.SimpleCollisionBox;
 import dev.aeroac.utils.data.packetentity.PacketEntity;
+import dev.aeroac.utils.math.AeroMath;
 import dev.aeroac.utils.math.Vector3dm;
 import dev.aeroac.utils.math.VectorUtils;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
@@ -173,6 +175,11 @@ public final class CombatTelemetryCollector {
         tick++;
         Arrays.fill(scratch, Double.NaN);
         put(YAW, player.yaw); put(PITCH, player.pitch);
+        AimProcessor aim = player.checkManager.getRotationCheck(AimProcessor.class);
+        if (aim != null) {
+            put(MOUSE_GRID_YAW, aim.modeX > AeroMath.MINIMUM_DIVISOR ? aim.modeX : Double.NaN);
+            put(MOUSE_GRID_PITCH, aim.modeY > AeroMath.MINIMUM_DIVISOR ? aim.modeY : Double.NaN);
+        }
         double dyaw = AimErrorCalculator.normalizeYaw(player.yaw - yaw);
         double dpitch = player.pitch - pitch;
         double acc = Math.hypot(dyaw - deltaYaw, dpitch - deltaPitch);

@@ -6,7 +6,7 @@ Python-часть: загрузка raw sessions, построение окон,
 
 ```text
 ml/
-    schema/feature_schema_v4.json   текущий канонический контракт model input (v1–v3 сохранены для истории)
+    schema/feature_schema_v5.json   текущий канонический контракт model input (v1–v4 сохранены для истории)
     aeroml/
         schema.py                   загрузка и проверка контракта
         dataset/                    records, windows, features, splits, normalize, statistics
@@ -33,14 +33,22 @@ evaluation не должны требовать установки training stac
 
 ## Контракт features
 
-`ml/schema/feature_schema_v4.json` — текущий источник истины о том, что получает модель.
+`ml/schema/feature_schema_v5.json` — текущий источник истины о том, что получает модель.
 Java `ModelFeature`/`FeatureEncoder`, training pipeline и service обязаны совпадать с ним.
 
-* Текущая версия — **featureSchemaVersion 4** (`schema/feature_schema_v4.json`). Загрузчик берёт
+* Текущая версия — **featureSchemaVersion 5** (`schema/feature_schema_v5.json`). Загрузчик берёт
   файл с наибольшим номером; v1 и v2 остаются на диске для объяснения старых bundle, но bundle,
   собранный под старую версию, отклоняется по версии, а не переинтерпретируется.
-* 42 value channels + 33 mask channels = **75 каналов**. Mask идут после всех values,
+* 46 value channels + 37 mask channels = **83 канала**. Mask идут после всех values,
   в порядке объявления nullable values, имя `<NAME>_MASK`.
+* **v5 — поворот в щелчках мыши.** Raw schema 2 добавляет `MOUSE_GRID_YAW/PITCH` — сколько градусов
+  даёт один щелчок мыши, по оценке сетки чувствительности из Grim `AimProcessor`.
+  `ROTATION_COUNTS_YAW/PITCH` — поворот в щелчках: градусы за сэмпл смешивают поведение с
+  чувствительностью, и модель выучила бы чувствительность игрока, а не то, как он целится.
+  `GRID_RESIDUAL_YAW/PITCH` — расстояние до целого числа щелчков (0..0.5): мышь не умеет двигаться
+  на дробный щелчок, а подмешанный читом поворот умеет, если он не подгоняет его под сетку.
+  Записи raw schema 1 по-прежнему загружаются, с неизвестной сеткой; синтетический генератор
+  квантует «человеческое» движение по сетке. Bundle под v4 нужно переобучить.
 * **v4 — где прицел относительно хитбокса.** `CROSSHAIR_ON_TARGET` — входит ли луч взгляда в коробку
   цели (slab-тест одной коробки, не рейкаст по миру), `CROSSHAIR_HIT_HEIGHT` — на какой доле высоты
   коробки он входит, `CENTER_AIM_ERROR` — угол между взглядом и центром коробки,

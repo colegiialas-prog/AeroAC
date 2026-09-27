@@ -223,11 +223,13 @@ def load_session(metadata_path: Path | str, raw_path: Path | str | None = None,
     schema = schema or default_schema()
     metadata_path = Path(metadata_path)
     metadata = read_metadata(metadata_path)
-    if metadata.schema_version != schema.raw_schema_version:
+    if not schema.readable_raw_version(metadata.schema_version):
         raise ValueError(
             f"{metadata_path}: raw schema {metadata.schema_version} cannot be read by this pipeline "
-            f"(expects {schema.raw_schema_version}); convert the session or use the matching version"
+            f"(reads 1..{schema.raw_schema_version}); convert the session or use the matching version"
         )
+    # Older recordings are read as they were written; fields added later load as unknown.
+    recorded_fields = schema.raw_fields_for(metadata.schema_version)
     if raw_path is None:
         raw_path = metadata_path.parent.parent / "raw" / f"session-{metadata.session_id}.jsonl"
     raw_path = Path(raw_path)
@@ -262,7 +264,7 @@ def load_session(metadata_path: Path | str, raw_path: Path | str | None = None,
                 quality.malformed_lines += 1
             continue
         kind = record.get("type")
-        if record.get("schemaVersion") != schema.raw_schema_version or record.get("sessionId") != metadata.session_id:
+        if record.get("schemaVersion") != metadata.schema_version or record.get("sessionId") != metadata.session_id:
             raise ValueError(f"{raw_path}: record has wrong schemaVersion or sessionId")
         offset = record.get("offsetNanos")
         tick = record.get("tick", record.get("precedingTick", 0))
@@ -273,13 +275,13 @@ def load_session(metadata_path: Path | str, raw_path: Path | str | None = None,
             raise ValueError(f"{raw_path}: chronology violation: timestamps are decreasing")
         last_offset = offset
         if kind == FRAME_TYPE:
-            if record.get("schemaVersion") != schema.raw_schema_version:
+            if record.get("schemaVersion") != metadata.schema_version:
                 raise ValueError(f"{raw_path}: frame with schemaVersion {record.get('schemaVersion')}")
             if record.get("sessionId") != metadata.session_id:
                 raise ValueError(f"{raw_path}: frame belongs to session {record.get('sessionId')}")
             ticks.append(int(record["tick"]))
             offsets.append(int(record["offsetNanos"]))
-            rows.append(_frame_row(record["values"], schema, raw_path))
+            rows.append(_frame_row(record["values"], schema, raw_path, recorded_fields))
         elif kind is None:
             quality.unknown_record_types += 1
         else:
@@ -317,13 +319,18 @@ _MARKERS = (
 )
 
 
-def _frame_row(values: dict, schema: FeatureSchema, path: Path) -> np.ndarray:
-    if len(values) != len(schema.raw_fields):
+def _frame_row(values: dict, schema: FeatureSchema, path: Path,
+               recorded: Sequence[str] | None = None) -> np.ndarray:
+    recorded = tuple(schema.raw_fields if recorded is None else recorded)
+    if len(values) != len(recorded):
         raise ValueError(
-            f"{path}: frame carries {len(values)} fields, schema declares {len(schema.raw_fields)}"
+            f"{path}: frame carries {len(values)} fields, schema declares {len(recorded)}"
         )
-    row = np.empty(len(schema.raw_fields), dtype=np.float64)
+    row = np.full(len(schema.raw_fields), np.nan, dtype=np.float64)
+    present = set(recorded)
     for index, name in enumerate(schema.raw_fields):
+        if name not in present:
+            continue
         if name not in values:
             raise ValueError(f"{path}: frame is missing field {name}")
         raw = values[name]

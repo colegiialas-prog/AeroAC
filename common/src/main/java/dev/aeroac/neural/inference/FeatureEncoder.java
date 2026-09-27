@@ -10,7 +10,7 @@ import dev.aeroac.neural.telemetry.FrameField;
  * derived deltas are unknown. ml/aeroml/features.py applies exactly the same rule.
  */
 public final class FeatureEncoder {
-    public static final int FEATURE_SCHEMA_VERSION = 4;
+    public static final int FEATURE_SCHEMA_VERSION = 5;
     private static final double EPSILON = 1.0E-6;
     /** Below this aim error (degrees) the error-frame channels are noise and stay unknown. */
     private static final double MIN_ERROR_FRAME_DEGREES = 1.0;
@@ -48,6 +48,12 @@ public final class FeatureEncoder {
                 && frame.value(FrameField.TARGET_ENTITY_ID) == previous.value(FrameField.TARGET_ENTITY_ID)
                 && frame.value(FrameField.TARGET_SWITCH) == 0
                 && frame.value(FrameField.SEGMENT_START) == 0;
+    }
+
+    /** Rotation in mouse counts, or NaN without a usable sensitivity grid. */
+    private static double counts(double delta, double grid) {
+        if (!Double.isFinite(delta) || !Double.isFinite(grid) || !(grid > EPSILON)) return Double.NaN;
+        return delta / grid;
     }
 
     /**
@@ -144,6 +150,18 @@ public final class FeatureEncoder {
                 return feature == ModelFeature.ROTATION_CORRECTION_GAIN
                         ? -(deltaYaw * errorYaw + deltaPitch * errorPitch) / norm2
                         : (deltaYaw * errorPitch - deltaPitch * errorYaw) / norm2;
+            }
+            case ROTATION_COUNTS_YAW:
+                return counts(frame.value(FrameField.DELTA_YAW), frame.value(FrameField.MOUSE_GRID_YAW));
+            case ROTATION_COUNTS_PITCH:
+                return counts(frame.value(FrameField.DELTA_PITCH), frame.value(FrameField.MOUSE_GRID_PITCH));
+            case GRID_RESIDUAL_YAW: {
+                double counts = counts(frame.value(FrameField.DELTA_YAW), frame.value(FrameField.MOUSE_GRID_YAW));
+                return Math.abs(counts - Math.rint(counts));
+            }
+            case GRID_RESIDUAL_PITCH: {
+                double counts = counts(frame.value(FrameField.DELTA_PITCH), frame.value(FrameField.MOUSE_GRID_PITCH));
+                return Math.abs(counts - Math.rint(counts));
             }
             case CROSSHAIR_ON_TARGET:
                 return crosshair(frame)[0];

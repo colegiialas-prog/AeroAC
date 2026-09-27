@@ -85,6 +85,18 @@ def crosshair(raw: np.ndarray, schema: FeatureSchema) -> tuple[np.ndarray, np.nd
     return on_target, hit_height, center_error
 
 
+def mouse_counts(delta: np.ndarray, grid: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Rotation in mouse counts, and how far it is from a whole count; unknown without a grid.
+
+    Mirrors ``FeatureEncoder`` (``Math.rint`` rounds half to even, as ``np.rint`` does).
+    """
+    usable = np.isfinite(grid) & (grid > EPSILON) & np.isfinite(delta)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        counts = np.where(usable, delta / np.where(usable, grid, 1.0), np.nan)
+    residual = np.abs(counts - np.rint(counts))
+    return counts, residual
+
+
 def _ray_box(origin, direction, low, high) -> tuple[bool, float]:
     """Slab test for s >= 0. Returns (hit, entry distance clamped at 0)."""
     near, far = -math.inf, math.inf
@@ -164,7 +176,14 @@ def derive(raw: np.ndarray, schema: FeatureSchema) -> dict[str, np.ndarray]:
     with np.errstate(invalid="ignore", divide="ignore"):
         center_ratio = np.where(ratio_usable, center_error / np.where(ratio_usable, radius, 1.0), unknown)
 
+    counts_yaw, residual_yaw = mouse_counts(delta_yaw, raw[:, schema.raw_index("MOUSE_GRID_YAW")])
+    counts_pitch, residual_pitch = mouse_counts(delta_pitch, raw[:, schema.raw_index("MOUSE_GRID_PITCH")])
+
     return {
+        "rotationCountsYaw": counts_yaw,
+        "rotationCountsPitch": counts_pitch,
+        "gridResidualYaw": residual_yaw,
+        "gridResidualPitch": residual_pitch,
         "crosshairOnTarget": on_target,
         "crosshairHitHeight": hit_height,
         "centerAimError": center_error,

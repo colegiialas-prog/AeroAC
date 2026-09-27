@@ -69,7 +69,9 @@ DERIVED_SOURCES = {"targetAngularVelocityYaw", "targetAngularVelocityPitch", "ro
                    # Schema 4. Look ray against the target box: they read YAW/PITCH together with the
                    # player and box positions, so only a rigid rotation of the whole scene leaves them
                    # unchanged; pinned by the rigid world-rotation check.
-                   "crosshairOnTarget", "crosshairHitHeight", "centerAimError", "centerAimErrorRatio"}
+                   "crosshairOnTarget", "crosshairHitHeight", "centerAimError", "centerAimErrorRatio",
+                   # Schema 5. DELTA_* divided by the mouse grid: relative rotation in counts.
+                   "rotationCountsYaw", "rotationCountsPitch", "gridResidualYaw", "gridResidualPitch"}
 
 #: Channels that combine look direction with positions. The yaw-only rotation check cannot apply
 #: to them (turning the player without turning the world really does move the crosshair).

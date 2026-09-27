@@ -10,8 +10,8 @@ from aeroml.schema import MASK_SUFFIX, check_channels, load_schema, manifest_pat
 def test_manifest_is_self_consistent(schema):
     # The feature schema and the raw dataset schema version independently: a model input change
     # does not invalidate recordings, and a recorder change does not silently reinterpret channels.
-    assert schema.version == 4
-    assert schema.raw_schema_version == 1
+    assert schema.version == 5
+    assert schema.raw_schema_version == 2
     assert schema.value_count + schema.mask_count == schema.feature_count
     assert len(schema.channel_names) == schema.feature_count
     assert len(set(schema.channel_names)) == schema.feature_count

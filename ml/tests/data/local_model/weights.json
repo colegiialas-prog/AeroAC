@@ -2,7 +2,7 @@
  "weightsFormat": 1,
  "architecture": {
   "architecture": "temporal-convnet-v1",
-  "featureCount": 75,
+  "featureCount": 83,
   "sequenceLength": 9,
   "heads": [
    "overall",
@@ -14,25 +14,25 @@
   "dropout": 0.1,
   "groups": 8
  },
- "floatCount": 5091,
- "sha256": "80cf87d9bc7a7ff1fbe6a854c00ff580df558befacdc32e383867db6c1aab00a",
+ "floatCount": 5219,
+ "sha256": "9340b46f1c9101426c1beb7c511418d9d7e02bcfadac75e4e9b3e2fc8843f4c3",
  "tensors": [
   {
    "name": "project.0.weight",
    "shape": [
     16,
-    75,
+    83,
     1
    ],
    "offset": 0,
-   "count": 1200
+   "count": 1328
   },
   {
    "name": "project.0.bias",
    "shape": [
     16
    ],
-   "offset": 1200,
+   "offset": 1328,
    "count": 16
   },
   {
@@ -40,7 +40,7 @@
    "shape": [
     16
    ],
-   "offset": 1216,
+   "offset": 1344,
    "count": 16
   },
   {
@@ -48,7 +48,7 @@
    "shape": [
     16
    ],
-   "offset": 1232,
+   "offset": 1360,
    "count": 16
   },
   {
@@ -58,7 +58,7 @@
     16,
     3
    ],
-   "offset": 1248,
+   "offset": 1376,
    "count": 768
   },
   {
@@ -66,7 +66,7 @@
    "shape": [
     16
    ],
-   "offset": 2016,
+   "offset": 2144,
    "count": 16
   },
   {
@@ -74,7 +74,7 @@
    "shape": [
     16
    ],
-   "offset": 2032,
+   "offset": 2160,
    "count": 16
   },
   {
@@ -82,7 +82,7 @@
    "shape": [
     16
    ],
-   "offset": 2048,
+   "offset": 2176,
    "count": 16
   },
   {
@@ -92,7 +92,7 @@
     16,
     3
    ],
-   "offset": 2064,
+   "offset": 2192,
    "count": 768
   },
   {
@@ -100,7 +100,7 @@
    "shape": [
     16
    ],
-   "offset": 2832,
+   "offset": 2960,
    "count": 16
   },
   {
@@ -108,7 +108,7 @@
    "shape": [
     16
    ],
-   "offset": 2848,
+   "offset": 2976,
    "count": 16
   },
   {
@@ -116,7 +116,7 @@
    "shape": [
     16
    ],
-   "offset": 2864,
+   "offset": 2992,
    "count": 16
   },
   {
@@ -126,7 +126,7 @@
     16,
     3
    ],
-   "offset": 2880,
+   "offset": 3008,
    "count": 768
   },
   {
@@ -134,7 +134,7 @@
    "shape": [
     16
    ],
-   "offset": 3648,
+   "offset": 3776,
    "count": 16
   },
   {
@@ -142,7 +142,7 @@
    "shape": [
     16
    ],
-   "offset": 3664,
+   "offset": 3792,
    "count": 16
   },
   {
@@ -150,7 +150,7 @@
    "shape": [
     16
    ],
-   "offset": 3680,
+   "offset": 3808,
    "count": 16
   },
   {
@@ -160,7 +160,7 @@
     16,
     3
    ],
-   "offset": 3696,
+   "offset": 3824,
    "count": 768
   },
   {
@@ -168,7 +168,7 @@
    "shape": [
     16
    ],
-   "offset": 4464,
+   "offset": 4592,
    "count": 16
   },
   {
@@ -176,7 +176,7 @@
    "shape": [
     16
    ],
-   "offset": 4480,
+   "offset": 4608,
    "count": 16
   },
   {
@@ -184,7 +184,7 @@
    "shape": [
     16
    ],
-   "offset": 4496,
+   "offset": 4624,
    "count": 16
   },
   {
@@ -194,7 +194,7 @@
     16,
     1
    ],
-   "offset": 4512,
+   "offset": 4640,
    "count": 16
   },
   {
@@ -202,7 +202,7 @@
    "shape": [
     1
    ],
-   "offset": 4528,
+   "offset": 4656,
    "count": 1
   },
   {
@@ -211,7 +211,7 @@
     16,
     32
    ],
-   "offset": 4529,
+   "offset": 4657,
    "count": 512
   },
   {
@@ -219,7 +219,7 @@
    "shape": [
     16
    ],
-   "offset": 5041,
+   "offset": 5169,
    "count": 16
   },
   {
@@ -228,7 +228,7 @@
     1,
     16
    ],
-   "offset": 5057,
+   "offset": 5185,
    "count": 16
   },
   {
@@ -236,7 +236,7 @@
    "shape": [
     1
    ],
-   "offset": 5073,
+   "offset": 5201,
    "count": 1
   },
   {
@@ -245,7 +245,7 @@
     1,
     16
    ],
-   "offset": 5074,
+   "offset": 5202,
    "count": 16
   },
   {
@@ -253,7 +253,7 @@
    "shape": [
     1
    ],
-   "offset": 5090,
+   "offset": 5218,
    "count": 1
   }
  ]

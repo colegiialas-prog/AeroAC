@@ -22,7 +22,7 @@ from ..dataset.features import encode_window
 from ..schema import default_schema
 
 CASES = ("all_unknown", "tracking_run", "target_switch", "segment_boundary", "clipping", "yaw_wrap", "no_target",
-         "error_frame", "crosshair")
+         "error_frame", "crosshair", "mouse_grid")
 
 
 def _row(schema, **values) -> list[float | None]:
@@ -166,6 +166,21 @@ def build_cases() -> list[dict]:
         aimed(0.0, 90.0),             # straight down: x and z parallel to their slabs, a miss
     ]
     cases.append({"name": "crosshair", "raw": crosshair})
+
+    # Mouse grid: 0.15 degrees per count. Whole counts, a fraction, a negative half count that
+    # rint rounds to even, a missing grid and a zero grid.
+    def gridded(delta_yaw, delta_pitch, grid_yaw=0.15, grid_pitch=0.15):
+        return _row(schema, TARGET_PRESENT=0, SEGMENT_START=0, DELTA_YAW=delta_yaw, DELTA_PITCH=delta_pitch,
+                    MOUSE_GRID_YAW=grid_yaw, MOUSE_GRID_PITCH=grid_pitch)
+    grid = [
+        gridded(0.45, -0.30),            # 3 and -2 counts: on the grid
+        gridded(0.52, 0.07),             # 3.47 and 0.47 counts: off it
+        gridded(-0.375, 0.0),            # -2.5 counts: rint gives -2, residual 0.5
+        gridded(1.2, 0.3, grid_yaw=None, grid_pitch=None),  # no sensitivity estimate yet
+        gridded(1.2, 0.3, grid_yaw=0.0, grid_pitch=0.15),   # degenerate grid
+        gridded(900.0, None),            # far past the counts clip; missing pitch delta
+    ]
+    cases.append({"name": "mouse_grid", "raw": grid})
     return cases
 
 
