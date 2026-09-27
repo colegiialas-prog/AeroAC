@@ -397,6 +397,10 @@ neural:
         cooldown-seconds: 600
         # An announced verdict nobody answered is dropped after this. Silence is a refusal.
         confirm-timeout-seconds: 900
+        # automatic mode only: collect verdicts and carry them out together in a ban wave this many
+        # minutes later (randomised between half and one and a half periods). An instant ban tells a
+        # cheat developer which fight and which setting tripped the detector. 0 bans at once.
+        wave-minutes: 30
         # Run by the console. {player} and {reason} are substituted; point it at whatever
         # punishment plugin you actually use.
         command: "ban {player} {reason}"

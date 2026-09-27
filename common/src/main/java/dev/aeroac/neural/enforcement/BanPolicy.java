@@ -24,7 +24,14 @@ import java.util.regex.Pattern;
  */
 public record BanPolicy(Mode mode, RiskState minState, int minEvidence, int minPredictions,
                         int cooldownSeconds, int confirmTimeoutSeconds, String command, String reason,
-                        Animation animation) {
+                        Animation animation, int waveMinutes) {
+
+    /**
+     * An automatic verdict carried out the moment it is reached tells a cheat developer which fight,
+     * which setting and which minute tripped the detector. Collected into waves, the ban arrives
+     * minutes later together with others and says nothing about what caused it. 0 bans at once.
+     */
+    public boolean waves() { return mode == Mode.AUTOMATIC && waveMinutes > 0; }
 
     public enum Mode {
         /** Nothing is decided and nothing is announced. */
@@ -134,7 +141,8 @@ public record BanPolicy(Mode mode, RiskState minState, int minEvidence, int minP
                         Cue.parse(config.getStringElse(prefix + "ascend-sound", "block.beacon.activate 0.6 1.5"), 0.6f, 1.5f),
                         Cue.parse(config.getStringElse(prefix + "charge-sound", "block.note_block.bass 0.5 1.0"), 0.5f, 1.0f),
                         Cue.parse(config.getStringElse(prefix + "scatter-sound", "entity.item.break 1.2 0.8"), 1.2f, 0.8f),
-                        cues(config.getStringListElse(prefix + "ban-sounds", DEFAULT_BANG))));
+                        cues(config.getStringListElse(prefix + "ban-sounds", DEFAULT_BANG))),
+                bounded(config, "neural.enforcement.wave-minutes", 0, 0, 1440));
     }
 
     private static List<Cue> cues(List<String> specs) {

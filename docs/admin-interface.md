@@ -82,12 +82,18 @@ The anticheat can ask for a ban. Whether it asks, and who answers, is `neural.en
 | --- | --- |
 | `off` | Nothing. |
 | `announce` (default) | Staff with `aero.enforce` see *"the anticheat would ban X — but will not without confirmation"*, with the numbers behind it and three buttons: **BAN**, **DECLINE**, **PROFILE**. Nothing happens until somebody with `aero.enforce.confirm` answers. |
-| `automatic` | The ban runs on its own. |
+| `automatic` | The ban runs on its own, in the next ban wave (`wave-minutes`, 0 for at once). |
 
 The default is `announce` because the model behind the risk value has not been calibrated against a
 labelled dataset recorded on this server. Pointed at automatic bans, an uncalibrated detector removes
 honest players and nobody finds out until the appeal. Switch to `automatic` after measuring your own
 false positive rate.
+
+In automatic mode verdicts are not carried out when they are reached. They queue for a ban wave that
+runs `wave-minutes` later, randomised between half and one and a half periods, and every verdict
+queued by then runs together; a player who logs out in the meantime is still banned. An instant ban
+tells a cheat developer exactly which fight and which setting tripped the detector; a wave does not.
+Reloading into any mode other than `automatic` withdraws the queued verdicts.
 
 The bar is a gate on a verdict the risk engine already reached — it computes nothing of its own:
 reported state at least `min-state` (CONFIRMED), at least `min-evidence` accumulated evidence, and

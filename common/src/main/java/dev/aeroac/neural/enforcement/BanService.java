@@ -46,9 +46,21 @@ public final class BanService {
     private final Map<UUID, Long> decided = new ConcurrentHashMap<>();
     /** Players whose send-off is running; a second decision must not start a second flight. */
     private final Map<UUID, Boolean> running = new ConcurrentHashMap<>();
+    /** Automatic verdicts waiting for the next wave. A disconnect does not clear them. */
+    private final BanWave wave = new BanWave(() -> java.util.concurrent.ThreadLocalRandom.current().nextDouble());
+
+    /** Uniform [0,1); a seam so tests can pin the wave jitter. */
+    public void random(java.util.function.DoubleSupplier replacement) {
+        wave.random(replacement == null ? () -> java.util.concurrent.ThreadLocalRandom.current().nextDouble() : replacement);
+    }
 
     public void reload(BanPolicy replacement) {
         policy = replacement;
+        if (!replacement.automatic()) {
+            // A switch away from automatic bans also withdraws the ones still waiting for a wave.
+            wave.clear().forEach(decision -> LogUtil.info("Aero enforcement " + decision.id()
+                    + " withdrawn from the wave by reload: " + decision.name()));
+        }
         pending.clear();
         decided.clear();
         presenter.cancelAll();
@@ -88,7 +100,10 @@ public final class BanService {
                 + " model=" + AdminStyle.percent(decision.overall())
                 + " evidence=" + decision.evidence() + " predictions=" + decision.predictions());
 
-        if (current.automatic()) {
+        if (current.waves()) {
+            wave.queue(decision, nowMillis, current.waveMinutes());
+            LogUtil.info("Aero enforcement " + decision.id() + " queued for the ban wave: " + decision.name());
+        } else if (current.automatic()) {
             carryOut(decision, AeroMessages.tr("ban.by_automatic"));
         } else {
             pending.put(decision.id(), decision);
@@ -96,8 +111,26 @@ public final class BanService {
         return decision;
     }
 
+    /** Automatic verdicts waiting for the next wave. */
+    public List<BanDecision> queued() { return wave.queued(); }
+
+    /** When the next wave runs, or 0 when nothing waits. */
+    public long nextWaveMillis() { return wave.nextMillis(); }
+
+    /**
+     * Carries out every queued verdict once the wave is due. Returns how many ran. Called on the same
+     * refresh that expires unanswered verdicts; a player who left in the meantime is banned anyway.
+     */
+    public int releaseWave(long nowMillis) {
+        List<BanDecision> due = wave.release(nowMillis);
+        if (!due.isEmpty()) LogUtil.info("Aero enforcement ban wave: " + due.size() + " verdict(s)");
+        for (BanDecision decision : due) carryOut(decision, AeroMessages.tr("ban.by_automatic"));
+        return due.size();
+    }
+
     /** Drops verdicts nobody answered. An unanswered verdict is a refusal, not a delayed ban. */
     public void expire(long nowMillis) {
+        releaseWave(nowMillis);
         int timeout = policy.confirmTimeoutSeconds();
         pending.values().removeIf(decision -> {
             if (!decision.expired(nowMillis, timeout)) return false;
