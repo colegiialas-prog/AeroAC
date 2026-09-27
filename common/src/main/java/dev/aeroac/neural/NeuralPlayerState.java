@@ -20,6 +20,8 @@ public final class NeuralPlayerState {
     public volatile boolean cancelOpening;
     public volatile boolean disconnected;
     public CombatTelemetryCollector collector;
+    /** Rotations while not in combat, so the first attack of a fight has history. Lazily created. */
+    public dev.aeroac.neural.window.RotationHistory history;
 
     public PredictionTrail trail;
     public long lastFlashNanos;
@@ -52,6 +54,7 @@ public final class NeuralPlayerState {
     /** Drops per-connection derived state without touching the dataset session. */
     public void resetRuntime() {
         collector = null;
+        history = null;
         trail = null;
         risk = null;
         pendingSnapshot = null;

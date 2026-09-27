@@ -221,14 +221,44 @@ public final class NeuralManager implements StartableInitable, StoppableInitable
         return collector;
     }
 
-    /** Creates the collector on demand. Called on the first attack and when recording starts. */
+    /**
+     * Out of combat: keep only the last few rotations, primitive and in place, so a first attack
+     * has the history an aimbot's snap onto its target happens in. Teleports, vehicles and cancelled
+     * ticks break it the same way they break a collector's segment.
+     */
+    private void recordHistory(AeroPlayer player, PacketReceiveEvent event, NeuralRuntime active) {
+        NeuralPlayerState state = player.getNeuralState();
+        if (state.disconnected || !active.config().telemetryEnabled()) return;
+        try {
+            int capacity = Math.max(1, active.config().attackBefore());
+            if (state.history == null || state.history.capacity() != capacity) {
+                state.history = new dev.aeroac.neural.window.RotationHistory(capacity);
+            }
+            if ((WrapperPlayClientPlayerFlying.isFlying(event.getPacketType()) && player.packetStateData.lastPacketWasTeleport)
+                    || player.inVehicle()) {
+                state.history.clear();
+            } else if (player.packetEntityReplication.isTickPacket(event.getPacketType()) && !event.isCancelled()) {
+                CombatTelemetryCollector.recordHistory(player, state.history, System.nanoTime());
+            }
+        } catch (RuntimeException error) { failed(player, error); }
+    }
+
+    /**
+     * Creates the collector on demand. Called on the first attack and when recording starts; it continues
+     * from the rotation history kept while the player was not in combat.
+     */
     private CombatTelemetryCollector openCollector(AeroPlayer player, long nowNanos) {
         NeuralRuntime active = runtime;
         if (active == null || player.getNeuralState().disconnected) return null;
         CombatTelemetryCollector collector = collector(player);
         if (collector == null) {
             collector = new CombatTelemetryCollector(player, active.config(), active.generation(), nowNanos);
-            player.getNeuralState().collector = collector;
+            NeuralPlayerState state = player.getNeuralState();
+            if (state.history != null) {
+                collector.seed(state.history.frames(1, nowNanos));
+                state.history.clear();
+            }
+            state.collector = collector;
         }
         return collector;
     }
@@ -236,8 +266,11 @@ public final class NeuralManager implements StartableInitable, StoppableInitable
     // Called immediately before PacketEntityReplication advances compensated interpolation.
     public void beforeEntityReplication(AeroPlayer player, PacketReceiveEvent event) {
         CombatTelemetryCollector collector = collector(player);
-        if (collector == null) return;
         NeuralRuntime active = runtime;
+        if (collector == null) {
+            if (active != null) recordHistory(player, event, active);
+            return;
+        }
         if (active == null) return;
         try {
             long now = System.nanoTime();
