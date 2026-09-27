@@ -14,10 +14,15 @@ public record NeuralConfig(boolean enabled, boolean collectionEnabled, int conti
                            int idleTimeoutSeconds, Inference inference, Risk risk, Mitigation mitigation,
                            int monitorIntervalMs, boolean debug) {
 
-    /** A rejected endpoint disables inference instead of silently pointing requests somewhere else. */
+    /**
+     * A rejected endpoint disables inference instead of silently pointing requests somewhere else.
+     * local = true runs the bundles named by flashBundle/proBundle inside the JVM; the endpoint is
+     * then unused. A blank bundle path means that model is not served locally.
+     */
     public record Inference(boolean enabled, String endpoint, int timeoutMs, int maxInFlight, int minIntervalMs,
                             ModelWindow flashWindow, int flashSequence, boolean proEnabled, ModelWindow proWindow,
-                            int proSequence, double proTrigger, int proMinIntervalMs) { }
+                            int proSequence, double proTrigger, int proMinIntervalMs, boolean local,
+                            String flashBundle, String proBundle, int localThreads) { }
 
     /**
      * acceptUncalibrated exists so an uncalibrated sigmoid cannot silently be treated as a probability.
@@ -56,10 +61,15 @@ public record NeuralConfig(boolean enabled, boolean collectionEnabled, int conti
 
     private static Inference inference(ConfigManager config, int attackWindow, int continuous) {
         String endpoint = config.getStringElse("neural.inference.endpoint", "http://127.0.0.1:8080/predict");
-        boolean remote = "remote".equalsIgnoreCase(config.getStringElse("neural.inference.mode", "remote"));
+        String mode = config.getStringElse("neural.inference.mode", "remote").trim();
+        boolean remote = "remote".equalsIgnoreCase(mode);
+        boolean local = "local".equalsIgnoreCase(mode);
+        String flashBundle = config.getStringElse("neural.inference.local.flash-bundle", "models/flash").trim();
+        String proBundle = config.getStringElse("neural.inference.local.pro-bundle", "").trim();
         ModelWindow flash = ModelWindow.parse(config.getStringElse("neural.inference.flash.window", "attack"));
         ModelWindow pro = ModelWindow.parse(config.getStringElse("neural.inference.pro.window", "continuous"));
-        return new Inference(config.getBooleanElse("neural.inference.enabled", false) && remote && usableEndpoint(endpoint),
+        boolean usable = remote ? usableEndpoint(endpoint) : local && !flashBundle.isEmpty();
+        return new Inference(config.getBooleanElse("neural.inference.enabled", false) && usable,
                 endpoint, bounded(config, "inference.timeout-ms", 300, 20, 5000),
                 bounded(config, "inference.max-in-flight", 8, 1, 256),
                 bounded(config, "inference.min-interval-ms", 500, 0, 60000),
@@ -67,7 +77,8 @@ public record NeuralConfig(boolean enabled, boolean collectionEnabled, int conti
                 config.getBooleanElse("neural.inference.pro.enabled", false),
                 pro, sequence(config, "inference.pro.sequence-length", 96, pro, attackWindow, continuous),
                 fraction(config, "inference.pro.trigger-overall", 0.5),
-                bounded(config, "inference.pro.min-interval-ms", 2000, 0, 600000));
+                bounded(config, "inference.pro.min-interval-ms", 2000, 0, 600000),
+                local, flashBundle, proBundle, bounded(config, "inference.local.threads", 2, 1, 16));
     }
 
     /**

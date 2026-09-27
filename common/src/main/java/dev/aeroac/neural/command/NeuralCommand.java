@@ -144,7 +144,9 @@ public final class NeuralCommand implements BuildableCommand {
                 ? "выключен"
                 : health.describe()));
         if (health != null) {
-            reply(sender, "Эндпоинт " + runtime.config().inference().endpoint()
+            reply(sender, (runtime.config().inference().local()
+                    ? "Локально " + runtime.config().inference().flashBundle()
+                    : "Эндпоинт " + runtime.config().inference().endpoint())
                     + " timeout=" + runtime.config().inference().timeoutMs() + "ms"
                     + " в полёте=" + runtime.inFlight() + "/" + runtime.config().inference().maxInFlight()
                     + " flash=" + runtime.config().inference().flashWindow().wireName()

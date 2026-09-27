@@ -395,7 +395,7 @@ punishments deterministic проверок.
 
 ## Чего здесь нет
 
-Локального inference внутри JVM (`mode: local` ничего не включает), множителя урона в
+Множителя урона в
 mitigation (нет platform damage hook), модели таймингов AutoClicker (её нельзя обучать на
 rotation data), долгосрочного fingerprint игрока (тип evidence зарезервирован), переноса риска
 между подключениями и heads кроме `overall`/`aimAssist` в обученной модели.

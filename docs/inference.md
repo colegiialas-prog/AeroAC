@@ -145,13 +145,34 @@ Timeout, недоступный сервис, 429, мусор в ответе, �
 
 ## Local inference
 
-Архитектура допускает будущий локальный режим: `InferenceClient` — интерфейс, `HttpInferenceClient` —
-одна реализация, `ModelKind`/`ModelWindow`/`FeatureEncoder` от транспорта не зависят.
-Локальный ONNX Runtime внутри JVM потребует отдельной зависимости и своего бюджета по CPU;
-в этой ветке его нет, и `mode: local` не включает ничего.
+`mode: local` запускает модель прямо в JVM сервера: без Python-сервиса, сети и JSON.
 
-Разделение Flash/Pro уже заложено в конфиге и протоколе, поэтому переезд «Flash локально,
-Pro удалённо» не потребует изменения телеметрии.
+```yaml
+neural:
+    inference:
+        enabled: true
+        mode: local
+        local:
+            flash-bundle: "models/flash"   # относительно папки плагина
+            pro-bundle: ""                 # пусто — Pro не обслуживается
+            threads: 2
+```
+
+* Обучение (`aeroml.training.train`) кладёт в bundle рядом с `model.onnx` ещё `weights.json` и
+  `model.weights` — те же веса PyTorch в плоском float32 little-endian. Папку bundle достаточно
+  скопировать в `plugins/AeroAC/models/flash`.
+* `LocalModelBundle` отказывается загружать bundle под другую `featureSchemaVersion`, с другим
+  набором каналов или с повреждёнными весами (sha256 из индекса), и тогда inference выключается
+  с причиной в логе, а не читает чужие каналы.
+* `TemporalConvNet` — построчный порт `ml/aeroml/models/tcn.py`; нормализация и калибровка
+  повторяют `service/runtime.py`. `LocalModelGoldenTest` (Java) и `tests/test_local_model.py`
+  (Python) сверяют логиты с PyTorch на одном и том же bundle
+  (`python -m aeroml.tools.make_local_model_golden`).
+* Полноразмерный Flash (ширина 64, 4 блока, окно 31) — около 2 мс на окно на одном ядре. Считает
+  его фоновый пул `threads`; `max-in-flight` по-прежнему сбрасывает лишние запросы, а не ставит
+  их в очередь, так что пакетный поток не ждёт никогда.
+* Ответ — тот же `InferenceResponse` с `calibrationPrior`, так что Risk Engine, монитор и
+  снимки работают одинаково в обоих режимах.
 
 ## Проверка перед включением
 

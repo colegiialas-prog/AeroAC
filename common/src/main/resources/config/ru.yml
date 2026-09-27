@@ -277,8 +277,16 @@ neural:
     inference:
         # Requires a running model service; see docs/inference.md. Monitoring only, never a punishment.
         enabled: false
+        # remote: POST windows to the Python service at endpoint. local: run the exported bundle
+        # inside the server (no service, ~2 ms per Flash window on a background thread).
         mode: remote
         endpoint: "http://127.0.0.1:8080/predict"
+        local:
+            # Bundle directories written by the training pipeline (manifest.json, weights.json,
+            # model.weights), relative to the plugin folder. An empty pro-bundle keeps Pro off.
+            flash-bundle: "models/flash"
+            pro-bundle: ""
+            threads: 2
         timeout-ms: 300
         max-in-flight: 8
         min-interval-ms: 500

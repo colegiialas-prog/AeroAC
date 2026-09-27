@@ -48,7 +48,19 @@ class NeuralConfigTest {
                     "neural.inference.endpoint", broken))).inference().enabled(), broken);
         }
         assertFalse(NeuralConfig.read(config(Map.of("neural.enabled", true, "neural.inference.enabled", true,
-                "neural.inference.mode", "local"))).inference().enabled());
+                "neural.inference.mode", "somewhere"))).inference().enabled(), "an unknown mode serves nothing");
+    }
+
+    @Test void localModeServesTheConfiguredBundleWithoutAnEndpoint() {
+        NeuralConfig.Inference local = NeuralConfig.read(config(Map.of("neural.enabled", true,
+                "neural.inference.enabled", true, "neural.inference.mode", "local",
+                "neural.inference.endpoint", "not a url"))).inference();
+        assertTrue(local.enabled() && local.local());
+        assertEquals("models/flash", local.flashBundle());
+        assertEquals(2, local.localThreads());
+        assertFalse(NeuralConfig.read(config(Map.of("neural.enabled", true, "neural.inference.enabled", true,
+                "neural.inference.mode", "local", "neural.inference.local.flash-bundle", " "))).inference().enabled(),
+                "local mode with no bundle serves nothing");
     }
 
     @Test void attackModelLengthFollowsTheConfiguredWindow() {

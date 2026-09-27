@@ -129,10 +129,43 @@ public final class NeuralManager implements StartableInitable, StoppableInitable
         return settings.enabled() && (settings.collectionEnabled() || settings.risk().enabled());
     }
 
-    private static InferenceClient buildClient(NeuralConfig settings) {
+    private InferenceClient buildClient(NeuralConfig settings) throws IOException {
         if (!settings.inference().enabled()) return null;
+        if (settings.inference().local()) return buildLocalClient(settings.inference());
         return new HttpInferenceClient(settings.inference().endpoint(), settings.inference().timeoutMs(),
                 settings.inference().maxInFlight(), Math.min(4, Math.max(1, settings.inference().maxInFlight())));
+    }
+
+    /**
+     * Loads the configured bundles for in-JVM inference. A bundle that is missing or built for another
+     * feature schema throws, which disables the runtime with a logged reason instead of serving a model
+     * that would read the wrong channels.
+     */
+    private InferenceClient buildLocalClient(NeuralConfig.Inference inference) throws IOException {
+        java.util.List<dev.aeroac.neural.inference.local.LocalModelBundle> bundles = new java.util.ArrayList<>();
+        bundles.add(loadBundle(inference.flashBundle(), dev.aeroac.neural.inference.ModelKind.FLASH));
+        if (inference.proEnabled() && !inference.proBundle().isEmpty()) {
+            bundles.add(loadBundle(inference.proBundle(), dev.aeroac.neural.inference.ModelKind.PRO));
+        }
+        return new dev.aeroac.neural.inference.local.LocalInferenceClient(bundles, inference.maxInFlight(),
+                inference.localThreads());
+    }
+
+    private dev.aeroac.neural.inference.local.LocalModelBundle loadBundle(String configured,
+                                                                          dev.aeroac.neural.inference.ModelKind kind) throws IOException {
+        Path path = Path.of(configured);
+        if (!path.isAbsolute()) {
+            Path folder = dataFolder();
+            if (folder == null) throw new IOException("папка данных недоступна для " + configured);
+            path = folder.resolve(configured);
+        }
+        var bundle = dev.aeroac.neural.inference.local.LocalModelBundle.load(path);
+        if (bundle.kind() != kind) {
+            throw new IOException(path + " содержит модель " + bundle.kind().wireName() + ", ожидалась " + kind.wireName());
+        }
+        log.info("Aero AC: локальная модель " + kind.wireName() + " " + bundle.modelVersion() + " из " + path
+                + (bundle.calibrated() ? "" : " (без калибровки)"));
+        return bundle;
     }
 
     public void serverTick() {
