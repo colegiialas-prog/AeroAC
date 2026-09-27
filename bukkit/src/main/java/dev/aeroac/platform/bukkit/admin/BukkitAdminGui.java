@@ -50,6 +50,22 @@ public final class BukkitAdminGui implements AdminGuiBridge, StartableInitable, 
 
     public dev.aeroac.neural.NeuralManager neural() { return AeroAPI.INSTANCE.getNeuralManager(); }
     private final PlayerActions actions = new PlayerActions();
+    private volatile StaffMarks marks;
+
+    /** Moderator marks, loaded on first use from plugins/AeroAC/neural/staff-marks.json. */
+    public StaffMarks marks() {
+        StaffMarks current = marks;
+        if (current == null) {
+            synchronized (this) {
+                if (marks == null) {
+                    marks = new StaffMarks(AeroACBukkitLoaderPlugin.LOADER.getDataFolder().toPath()
+                            .resolve("neural").resolve("staff-marks.json"));
+                }
+                current = marks;
+            }
+        }
+        return current;
+    }
 
     /** Teleport, spectate and freeze state that outlives any one screen. */
     public PlayerActions actions() { return actions; }

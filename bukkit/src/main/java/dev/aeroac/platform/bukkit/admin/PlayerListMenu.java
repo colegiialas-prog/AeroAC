@@ -104,6 +104,8 @@ public final class PlayerListMenu extends AeroMenu {
         lore.add(MenuItems.line(AeroMessages.tr("gui.combat"), AdminStyle.duration(view.combatSeconds())));
         lore.add("");
         lore.add(MenuItems.line(AeroMessages.tr("gui.evidence"), String.valueOf(view.evidenceCount())));
+        StaffMarks.Mark mark = gui.marks().mark(view.uuid());
+        if (mark != StaffMarks.Mark.NONE) lore.add(MenuItems.line(AeroMessages.tr("gui.mark.title"), ProfileMenu.markLabel(mark)));
         if (view.mitigation() != null) {
             lore.add(MenuItems.line(AeroMessages.tr("gui.mitigation"), view.mitigation() + " "
                     + view.mitigationRemainingMs() + AeroMessages.tr("gui.ms_left"), MenuItems.BAD));

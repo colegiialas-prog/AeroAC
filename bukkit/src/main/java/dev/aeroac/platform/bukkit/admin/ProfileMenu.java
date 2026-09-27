@@ -39,6 +39,7 @@ public final class ProfileMenu extends AeroMenu {
     private static final int SLOT_FLAGS = 32;
     private static final int SLOT_MITIGATION = 33;
     // Operator actions, one row: go there, watch, hold, look inside, remove, clear.
+    private static final int SLOT_MARK = 36;
     private static final int SLOT_TELEPORT = 37;
     private static final int SLOT_SPECTATE = 38;
     private static final int SLOT_FREEZE = 39;
@@ -123,6 +124,15 @@ public final class ProfileMenu extends AeroMenu {
     }
 
     private void drawActions(Inventory inventory, AdminPlayerView view) {
+        StaffMarks.Entry mark = gui.marks().get(target);
+        List<String> markLore = new ArrayList<>();
+        markLore.add(MenuItems.line(AeroMessages.tr("gui.mark.current"), markLabel(mark == null ? StaffMarks.Mark.NONE : mark.mark())));
+        if (mark != null) markLore.add(MenuItems.line(AeroMessages.tr("gui.mark.by"), mark.by() + ", " + AdminStyle.age(System.currentTimeMillis() - mark.atMillis())));
+        markLore.add("");
+        markLore.add(MenuItems.note(AeroMessages.tr("gui.mark.note")));
+        markLore.add(MenuItems.note(AeroMessages.tr("gui.mark.click")));
+        inventory.setItem(SLOT_MARK, MenuItems.item(Material.NAME_TAG, MenuItems.HEADER + AeroMessages.tr("gui.mark.title"), markLore));
+        lockSlot(inventory, SLOT_MARK, AdminPermissions.PROFILE);
         PlayerActions actions = gui.actions();
         boolean spectating = actions.spectating(viewer.getUniqueId());
         boolean frozen = actions.frozen(target);
@@ -152,6 +162,15 @@ public final class ProfileMenu extends AeroMenu {
         lockSlot(inventory, SLOT_KICK, AdminPermissions.ACTION_KICK);
         lockSlot(inventory, SLOT_BAN, AdminPermissions.ENFORCE_CONFIRM);
         lockSlot(inventory, SLOT_RESET, AdminPermissions.ACTION_RESET);
+    }
+
+    static String markLabel(StaffMarks.Mark mark) {
+        return switch (mark) {
+            case NONE -> MenuItems.MUTED + AeroMessages.tr("gui.mark.none");
+            case CLEAN -> MenuItems.GOOD + AeroMessages.tr("gui.mark.clean");
+            case WATCHING -> MenuItems.WARN + AeroMessages.tr("gui.mark.watching");
+            case CHEATER -> MenuItems.BAD + AeroMessages.tr("gui.mark.cheater");
+        };
     }
 
     /** Runs an action against the online target, or says why it cannot. */
@@ -356,6 +375,11 @@ public final class ProfileMenu extends AeroMenu {
                     HistoryMenu.Kind.EVIDENCE, fromSuspicious));
             case SLOT_FLAGS -> gui.show(new HistoryMenu(gui, viewer, target,
                     HistoryMenu.Kind.GRIM_FLAGS, fromSuspicious));
+            case SLOT_MARK -> {
+                StaffMarks.Mark now = gui.marks().cycle(target, viewer.getName());
+                viewer.sendMessage(MenuItems.HEADER + AeroMessages.tr("gui.mark.set", markLabel(now)));
+                redraw();
+            }
             case SLOT_TELEPORT -> act(AdminPermissions.ACTION_TELEPORT, online -> {
                 viewer.closeInventory();
                 gui.actions().teleport(viewer, online);

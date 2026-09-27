@@ -454,3 +454,19 @@ and are children of `aero.admin`.
 
 In the player and suspicious lists, Shift + left click teleports and Shift + right click spectates
 without opening the profile.
+
+## Reading a player
+
+* **State and risk come first.** Lists are sorted by accumulated risk; the model's last single
+  window is shown after it and labelled as such, because one window is not a verdict.
+* **Cheat probability (fight)** turns accumulated risk into a percentage:
+  `sigmoid(logit(risk.cheater-share) + risk.probability-scale * risk / risk.log-odds-weight)`.
+  With the defaults WATCH, SUSPICIOUS and CONFIRMED read about 5%, 29% and 89%. It is an estimate:
+  `probability-scale` stands in for how strongly one player's windows are correlated and should be
+  fitted on labelled sessions. Not shown in `threshold` scoring.
+* **Risk timeline** (third row of the profile): the risk each of the last nine pieces of evidence
+  left behind, coloured by the state it meant. It shows how the verdict was reached.
+* **Staff mark** (name tag): none → checked, clean → watching → cheater, stored in
+  `plugins/AeroAC/neural/staff-marks.json` and shown in the lists. It never changes risk, training
+  or bans; it records what a person concluded, next to what the model says.
+* **Alerts** carry Profile, Watch, TP and Spectate buttons (`/aero tp`, `/aero spectate`).
