@@ -25,7 +25,16 @@ public final class DatasetJson {
         if (version < 1 || version > CombatFrame.SCHEMA_VERSION || !"frame".equals(json.get("type").getAsString())) {
             throw new IllegalArgumentException("Incompatible dataset schema/type");
         }
-        JsonObject values = json.getAsJsonObject("values");
+        double[] data = readValues(json.getAsJsonObject("values"), version);
+        return new CombatFrame(json.get("tick").getAsLong(), Math.addExact(sessionStartNanos, json.get("offsetNanos").getAsLong()), data);
+    }
+
+    /**
+     * The raw field values of one frame written under {@code version}. Fields added in a later raw
+     * schema read as unknown (NaN), exactly as the Python loader reads older recordings.
+     */
+    public static double[] readValues(JsonObject values, int version) {
+        if (values == null) throw new IllegalArgumentException("Missing values");
         int expected = 0;
         for (FrameField field : FIELDS) if (field.since() <= version) expected++;
         if (values.entrySet().size() != expected) throw new IllegalArgumentException("Incompatible feature count");
@@ -45,7 +54,7 @@ public final class DatasetJson {
                 data[field.ordinal()] = number;
             }
         }
-        return new CombatFrame(json.get("tick").getAsLong(), Math.addExact(sessionStartNanos, json.get("offsetNanos").getAsLong()), data);
+        return data;
     }
 
     /** Shared frame encoding so an evidence snapshot and a raw session describe a frame identically. */

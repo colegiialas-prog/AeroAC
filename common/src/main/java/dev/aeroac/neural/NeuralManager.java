@@ -666,6 +666,65 @@ public final class NeuralManager implements StartableInitable, StoppableInitable
                         + "neural.collection.enabled=false, generation=" + published.generation() + ")."));
     }
 
+    /** plugins/AeroAC/models, where trained bundles and backups live; null when there is no data folder. */
+    public Path modelsRoot() {
+        Path folder = dataFolder();
+        return folder == null ? null : folder.resolve("models");
+    }
+
+    /** The folder the local Flash model is loaded from, as configured. */
+    public Path activeModelPath() {
+        Path path = Path.of(config.inference().flashBundle().isEmpty() ? "models/flash" : config.inference().flashBundle());
+        if (path.isAbsolute()) return path;
+        Path folder = dataFolder();
+        return folder == null ? null : folder.resolve(path);
+    }
+
+    /**
+     * Switches the server to a trained model in one step: copies models/trained/&lt;name&gt; into the
+     * configured flash-bundle folder (keeping the old one under models/previous/), turns on local
+     * inference in config.yml without touching anything else in it, and reloads. Runs on the config
+     * executor; the future carries one operator-facing line.
+     */
+    public CompletableFuture<String> activateModel(String name) {
+        CompletableFuture<String> result = new CompletableFuture<>();
+        try {
+            ioExecutor().execute(() -> {
+                try {
+                    result.complete(applyModel(name));
+                } catch (dev.aeroac.neural.training.TrainingException refused) {
+                    result.complete(refused.getMessage());
+                } catch (Throwable error) {
+                    result.complete("Не удалось включить модель: " + describe(error));
+                }
+            });
+        } catch (RejectedExecutionException rejected) {
+            result.complete("Не удалось включить модель: " + describe(rejected));
+        }
+        return result;
+    }
+
+    private String applyModel(String name) throws Exception {
+        Path models = modelsRoot(), active = activeModelPath(), file = configFile();
+        AeroAPI api = AeroAPI.INSTANCE;
+        ConfigManager canonical = api == null || api.getConfigManager() == null ? null : api.getConfigManager().getConfig();
+        if (models == null || active == null || file == null || canonical == null) return "Папка данных Aero недоступна.";
+        var info = dev.aeroac.neural.training.ModelLibrary.activate(models, name, active);
+        String before = Files.readString(file);
+        String after = dev.aeroac.manager.config.YamlScalars.set(before, "neural.inference.enabled", "true");
+        if (after != null) after = dev.aeroac.manager.config.YamlScalars.set(after, "neural.inference.mode", "local");
+        if (after == null) return "Модель скопирована в " + active + ", но " + file + " не удалось изменить: включите neural.inference.enabled и mode: local вручную.";
+        if (!after.equals(before)) dev.aeroac.manager.config.NeuralFlagsFile.writeAtomically(file, after);
+        boolean reloaded = api.getExternalAPI().reloadAsync(canonical).get(60, TimeUnit.SECONDS);
+        NeuralRuntime current = runtime;
+        String quality = Double.isNaN(info.testRocAuc()) ? "" : String.format(java.util.Locale.ROOT, " (ROC-AUC на тесте %.3f)", info.testRocAuc());
+        if (!reloaded || current == null || !config.inference().enabled()) {
+            return "Модель " + name + " скопирована в " + active + quality + ", но нейро-рантайм не запустился: проверьте "
+                    + "neural.enabled и консоль.";
+        }
+        return "Модель " + name + quality + " включена: локальный режим, перезагружено. Предыдущая лежит в " + models.resolve("previous") + ".";
+    }
+
     private Executor ioExecutor() {
         Executor current = ioExecutor;
         if (current != null) return current;

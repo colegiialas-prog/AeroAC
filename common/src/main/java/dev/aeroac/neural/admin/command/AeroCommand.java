@@ -132,6 +132,28 @@ public final class AeroCommand implements BuildableCommand {
                     .handler(context -> startTraining(context.sender(), preset)));
         }
 
+        manager.command(manager.commandBuilder("aero", "aeroac").literal("training").literal("cancel")
+                .permission(permission(AdminPermissions.TRAINING_MODEL))
+                .handler(context -> {
+                    if (!TrainingLaunchers.cancel(message -> reply(context.sender(), message))) {
+                        reply(context.sender(), AeroMessages.tr("Отмена недоступна: обучение не подключено."));
+                    }
+                }));
+
+        manager.command(manager.commandBuilder("aero", "aeroac").literal("models")
+                .permission(permission(AdminPermissions.TRAINING))
+                .handler(context -> models(context.sender())));
+
+        manager.command(manager.commandBuilder("aero", "aeroac").literal("models").literal("use")
+                .permission(permission(AdminPermissions.TRAINING_MODEL))
+                .required("name", org.incendo.cloud.parser.standard.StringParser.stringParser())
+                .handler(context -> {
+                    String name = context.get("name");
+                    reply(context.sender(), AeroMessages.tr("Включаю модель ") + name + "...");
+                    AeroAPI.INSTANCE.getNeuralManager().activateModel(name)
+                            .thenAccept(message -> reply(context.sender(), message));
+                }));
+
         manager.command(manager.commandBuilder("aero", "aeroac").literal("training").literal("active")
                 .permission(permission(AdminPermissions.TRAINING))
                 .handler(context -> open(context.sender(), gui -> gui.openRecordings(context.sender()),
@@ -423,7 +445,7 @@ public final class AeroCommand implements BuildableCommand {
         reply(sender, AeroMessages.tr("Состояние обучения Aero AC"));
         trainingLine(sender, service().training());
         reply(sender, AeroMessages.tr("Запись запускается так: /aero neural dataset start <игрок> <legit|cheat|unlabeled>."));
-        reply(sender, AeroMessages.tr("Обучение выполняется вне сервера; JVM никогда не обучает модель."));
+        reply(sender, AeroMessages.tr("Запуск: /aero training start flash | отмена: /aero training cancel | модели: /aero models"));
     }
 
     /** The run the plugin will not perform itself: it hands the request over and says what happened. */
@@ -433,7 +455,6 @@ public final class AeroCommand implements BuildableCommand {
             String reason = training.unavailableReason();
             reply(sender, AeroMessages.tr("Запуск обучения недоступен")
                     + (reason == null || reason.isBlank() ? "." : ": " + reason));
-            reply(sender, AeroMessages.tr("Обучение выполняется вне сервера; JVM никогда не обучает модель."));
             return;
         }
         String dataset = TrainingLaunchers.dataset();
@@ -443,6 +464,29 @@ public final class AeroCommand implements BuildableCommand {
         if (!handedOver) {
             reply(sender, AeroMessages.tr("Запуск обучения не принят: исполнитель стал недоступен."));
         }
+    }
+
+    /** {@code /aero models}: trained bundles, newest first, and which one the server runs. */
+    private static void models(Sender sender) {
+        var neural = AeroAPI.INSTANCE.getNeuralManager();
+        java.nio.file.Path root = neural.modelsRoot();
+        if (root == null) { reply(sender, AeroMessages.tr("Папка данных Aero недоступна.")); return; }
+        var active = neural.activeModelPath() == null ? null : dev.aeroac.neural.training.ModelLibrary.read(neural.activeModelPath());
+        reply(sender, AeroMessages.tr("Активная модель: ") + (active == null ? AeroMessages.tr("нет") : active.modelVersion())
+                + (neural.config().inference().enabled() && neural.config().inference().local() ? "" : AeroMessages.tr(" (локальный режим выключен)")));
+        var trained = dev.aeroac.neural.training.ModelLibrary.list(root);
+        if (trained.isEmpty()) {
+            reply(sender, AeroMessages.tr("Обученных моделей нет. Обучить: /aero training start flash"));
+            return;
+        }
+        for (var model : trained.subList(0, Math.min(10, trained.size()))) {
+            boolean running = active != null && java.util.Objects.equals(active.modelVersion(), model.modelVersion());
+            reply(sender, (running ? "* " : "  ") + model.name() + "  ROC-AUC " + AdminStyle.number(model.testRocAuc(), 3)
+                    + "  TPR@0.1% " + AdminStyle.percent(model.testTprAtFpr())
+                    + (model.synthetic() ? AeroMessages.tr("  [синтетика]") : "")
+                    + (model.unknownClientTest() ? "" : AeroMessages.tr("  [тест без незнакомого клиента]")));
+        }
+        reply(sender, AeroMessages.tr("Включить: /aero models use <имя>"));
     }
 
     /** The config schema version on disk, or a placeholder — never a made-up number. */

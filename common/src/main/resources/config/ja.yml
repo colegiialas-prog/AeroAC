@@ -362,6 +362,18 @@ neural:
         # The training service, separate from inference: inference answers questions about a
         # running model, this starts and watches runs that produce one. Both are off unless the
         # server has something to talk to.
+        # local (default): train inside the plugin in Java, no Python and no service.
+        # service: the external Python service (enabled/endpoint/token below).
+        mode: local
+        local:
+            # Maximum epochs; training stops earlier once validation stops improving.
+            epochs: 30
+            # CPU threads for training (low priority, never the game thread).
+            threads: 2
+            # Use CHEAT/LEGIT verdicts staff gave snapshots in the GUI (training fold only).
+            include-staff-reviews: true
+            # Also use recordings the audit marked REVIEW, not only clean ones.
+            include-review: false
         enabled: false
         endpoint: "http://127.0.0.1:8090"
         timeout-ms: 2000
