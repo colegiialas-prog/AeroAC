@@ -140,6 +140,14 @@ public final class AeroCommand implements BuildableCommand {
                     }
                 }));
 
+        manager.command(manager.commandBuilder("aero", "aeroac").literal("bot")
+                .permission(permission(AdminPermissions.TRAINING_RECORD))
+                .handler(context -> {
+                    if (!service().gui().available() || !service().gui().openBot(context.sender())) {
+                        reply(context.sender(), AeroMessages.tr("Бот для тренировки доступен только игроку в игре (Paper/Folia)."));
+                    }
+                }));
+
         manager.command(manager.commandBuilder("aero", "aeroac").literal("models")
                 .permission(permission(AdminPermissions.TRAINING))
                 .handler(context -> models(context.sender())));

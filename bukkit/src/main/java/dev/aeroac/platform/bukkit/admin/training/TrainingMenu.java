@@ -48,6 +48,7 @@ public final class TrainingMenu extends AeroMenu {
     private static final int SLOT_START_PRO = 24;
     private static final int SLOT_CANCEL_JOB = 25;
     private static final int SLOT_REFRESH_JOB = 26;
+    private static final int SLOT_BOT = 16;
 
     public TrainingMenu(BukkitAdminGui gui, Player viewer) {
         super(gui, viewer);
@@ -116,8 +117,8 @@ public final class TrainingMenu extends AeroMenu {
                 MenuItems.line(AeroMessages.tr("gui.training.status"), TrainingStatus.label(job.status()),
                         MenuItems.colourOf(TrainingStatus.tone(job.status()))),
                 "",
-                MenuItems.note(AeroMessages.tr("gui.training.training_runs_outside_this_server")),
-                MenuItems.note(AeroMessages.tr("gui.training.the_jvm_never_trains_a_model"))));
+                MenuItems.note(AeroMessages.tr("gui.training.trains_in_plugin")),
+                MenuItems.note(AeroMessages.tr("gui.training.switch_with_models_use"))));
 
         inventory.setItem(SLOT_SERVICE, serviceBlock(job));
         inventory.setItem(SLOT_START_FLASH, startItem(TrainingLaunchers.PRESET_FLASH, job));
@@ -128,7 +129,10 @@ public final class TrainingMenu extends AeroMenu {
                 MenuItems.note(AeroMessages.tr("gui.training.asks_the_backend_for_a_new_snapshot")),
                 MenuItems.note(AeroMessages.tr("gui.training.returns_immediately_nothing_waits_on_the_network"))));
 
+        inventory.setItem(SLOT_BOT, MenuItems.item(Material.ZOMBIE_HEAD, MenuItems.HEADER + AeroMessages.tr("gui.bot.title"),
+                MenuItems.note(AeroMessages.tr("gui.bot.about1")), MenuItems.note(AeroMessages.tr("gui.bot.about2"))));
         footer(inventory, this::back, AeroMessages.tr("gui.training.the_aero_menu"));
+        lockSlot(inventory, SLOT_BOT, AdminPermissions.TRAINING_RECORD);
         lockSlot(inventory, SLOT_START, AdminPermissions.TRAINING_RECORD);
         lockSlot(inventory, SLOT_OVERVIEW, AdminPermissions.TRAINING_OVERVIEW);
         lockSlot(inventory, SLOT_RECENT, AdminPermissions.TRAINING_OVERVIEW);
@@ -439,6 +443,10 @@ public final class TrainingMenu extends AeroMenu {
         }
         switch (slot) {
             case SLOT_ACTIVE -> gui.show(new RecordingsMenu(gui, viewer));
+            case SLOT_BOT -> {
+                if (permitted(AdminPermissions.TRAINING_RECORD)) gui.show(new dev.aeroac.platform.bukkit.admin.bot.BotMenu(gui, viewer));
+                else deny(AdminPermissions.TRAINING_RECORD);
+            }
             case SLOT_START -> {
                 if (!permitted(AdminPermissions.TRAINING_RECORD)) {
                     deny(AdminPermissions.TRAINING_RECORD);

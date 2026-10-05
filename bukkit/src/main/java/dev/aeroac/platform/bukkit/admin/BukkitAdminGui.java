@@ -50,6 +50,10 @@ public final class BukkitAdminGui implements AdminGuiBridge, StartableInitable, 
 
     public dev.aeroac.neural.NeuralManager neural() { return AeroAPI.INSTANCE.getNeuralManager(); }
     private final PlayerActions actions = new PlayerActions();
+    private final dev.aeroac.platform.bukkit.admin.bot.TrainingBots bots = new dev.aeroac.platform.bukkit.admin.bot.TrainingBots();
+
+    /** Sparring bots for collecting training data. */
+    public dev.aeroac.platform.bukkit.admin.bot.TrainingBots bots() { return bots; }
     private volatile StaffMarks marks;
 
     /** Moderator marks, loaded on first use from plugins/AeroAC/neural/staff-marks.json. */
@@ -84,6 +88,7 @@ public final class BukkitAdminGui implements AdminGuiBridge, StartableInitable, 
         running = true;
         Bukkit.getPluginManager().registerEvents(new MenuListener(this), AeroACBukkitLoaderPlugin.LOADER);
         Bukkit.getPluginManager().registerEvents(actions, AeroACBukkitLoaderPlugin.LOADER);
+        Bukkit.getPluginManager().registerEvents(bots, AeroACBukkitLoaderPlugin.LOADER);
         service().gui(this);
         schedule();
     }
@@ -129,6 +134,12 @@ public final class BukkitAdminGui implements AdminGuiBridge, StartableInitable, 
 
     @Override public void openTraining(Sender sender) {
         with(sender, player -> show(new TrainingMenu(this, player)));
+    }
+
+    @Override public boolean openBot(Sender sender) {
+        if (sender == null || sender.getPlatformPlayer() == null) return false;
+        with(sender, player -> show(new dev.aeroac.platform.bukkit.admin.bot.BotMenu(this, player)));
+        return true;
     }
 
     @Override public void openRecordings(Sender sender) {
@@ -258,6 +269,7 @@ public final class BukkitAdminGui implements AdminGuiBridge, StartableInitable, 
     @Override public void stop() {
         running = false;
         actions.releaseAll();
+        bots.removeAll();
         closeAll();
         service().gui(null);
         if (refreshTask != null) {

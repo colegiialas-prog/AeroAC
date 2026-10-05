@@ -176,6 +176,7 @@ What the send-off guarantees, and what its tests hold it to:
 /aero training cancel                     stop the running training
 /aero models                              trained models with their test scores
 /aero models use <name>                   switch the server to a trained model
+/aero bot                                 your sparring bot (spawn and configure)
 /aero training active                     active recordings
 /aero training player <name>              one recording
 /aero rec <player>                        start recording honest play, one command
@@ -525,3 +526,20 @@ and then puts those windows in the train fold only: never validation, calibratio
 reviewed player who also appears in one of those folds is dropped rather than leaked across the
 split. The numbers added and dropped are recorded in the bundle provenance
 (`staffReviewedWindows`). Lab recordings remain the only ground truth for evaluation.
+
+## Training bot
+
+`/aero bot`, or the zombie head in the training centre, opens a sparring bot for collecting data
+without a second player (permission `aero.training.record`, Paper/Folia). The bot is a zombie, whose
+0.6 x 1.95 box is a player's, so recorded target geometry matches a real fight. Vanilla AI is off
+(`setAware(false)`) and the plugin steers it every tick on its own entity scheduler.
+
+Settings, each applied to the live bot on click (left click forward, right click back): behaviour
+(stand, follow, strafe around you, run around, fight back), speed (up to player sprint and above),
+distance kept, jumping, knockback taken (0-150 %), damage dealt to you in fight-back mode, armor set
+(leather to netherite), held item, immortal or a health pool. Bots are never saved with the world,
+drop nothing, do not burn or take environmental damage, and are removed when their owner leaves or
+the plugin stops.
+
+To collect data, record yourself as usual (`/aero rec <you>` for LEGIT, `/aero rec <you> aimassist`
+with the cheat on) and fight the bot; stop with `/aero rec stop <you>`.

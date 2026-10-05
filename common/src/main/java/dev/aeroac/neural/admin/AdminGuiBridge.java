@@ -48,6 +48,9 @@ public interface AdminGuiBridge {
     /** Teleports the sender to the target. False when this platform cannot. */
     default boolean teleport(Sender sender, UUID target) { return false; }
 
+    /** Opens the sparring-bot screen; false where the platform has no bots. */
+    default boolean openBot(Sender sender) { return false; }
+
     /** Toggles spectating the target. False when this platform cannot. */
     default boolean spectate(Sender sender, UUID target) { return false; }
 
