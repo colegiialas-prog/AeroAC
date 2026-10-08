@@ -183,8 +183,8 @@ Temporal ConvNet: dilated 1D residual blocks, GroupNorm, attention pooling, MLP 
 
 | Preset | Окно | Ширина | Блоков | Параметров | Receptive field |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Flash | 31 (attack) | 64 | 4 | 112 515 | 61 |
-| Pro | 96 (continuous) | 128 | 6 | 636 163 | 253 |
+| Flash | 31 (attack) | 64 | 4 | 113 795 | 61 |
+| Pro | 96 (continuous) | 128 | 6 | 638 723 | 253 |
 
 Receptive field у обоих пресетов покрывает всё окно: модель видит связь между началом наводки
 и самим ударом, а не только локальный участок.

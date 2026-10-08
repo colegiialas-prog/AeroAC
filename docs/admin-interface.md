@@ -171,8 +171,12 @@ What the send-off guarantees, and what its tests hold it to:
 /aero alerts <on|off>                     your alerts
 /aero status                              service health as text
 /aero training                            training centre
-/aero training status                     cached external job status
-/aero training start <flash|pro>          enqueue an external training job
+/aero training status                     training progress (epoch, loss, stage)
+/aero training start <flash|pro>          train a model (in the plugin by default)
+/aero training cancel                     stop the running training
+/aero models                              trained models with their test scores
+/aero models use <name>                   switch the server to a trained model
+/aero bot                                 your sparring bot (spawn and configure)
 /aero training active                     active recordings
 /aero training player <name>              one recording
 /aero rec <player>                        start recording honest play, one command
@@ -332,19 +336,43 @@ a model on held-out reviewed sessions.
 
 ### Model training
 
-The JVM does not import PyTorch or start a training subprocess. Training runs in the separate Python
-service described in `ml/README.md`. `neural.training.enabled` defaults to `false`; in that state the
-normal status is `NOT_CONFIGURED`. When enabled, the HTTP client polls on its daemon thread and the
-GUI reads only its cached snapshot. A slow or unavailable backend therefore does not stall a tick or
-change deterministic checks.
+**In the plugin (default, `neural.training.mode: local`).** `/aero training start flash`, or the
+start button in the training centre, trains on `plugins/AeroAC/datasets` inside the server with
+the Java trainer (`dev.aeroac.neural.training`). No Python, service or token is involved. The run
+uses `neural.training.local.threads` low-priority threads and never the server tick; the screens and
+`/aero training status` read its cached progress, and a config reload does not interrupt it.
+
+The Java trainer is a port of `ml/aeroml/training/train.py`, not a simplification of it: the same
+session audit, attack windows, player-grouped split with an unknown-client holdout, normalisation fit
+on the training fold, yaw mirroring and channel dropout, the same temporal ConvNet (PyTorch
+initialisation, GroupNorm, exact GELU, attention pooling) trained with AdamW, a cosine schedule,
+gradient clipping and class/player weighting, epoch selection on validation partial AUC with early
+stopping, Platt calibration with temperature fallback on the calibration fold, and evaluation on the
+test fold. Tests pin the forward pass to PyTorch's logits on `ml/tests/data/local_model` and the
+backward pass to central differences; on the same data both trainers produce the same split and
+test ROC-AUC within seed-to-seed noise. Moderator CHEAT/LEGIT verdicts on snapshots are used in the
+training fold only (`include-staff-reviews`, on by default here).
+
+A finished run is a candidate in `plugins/AeroAC/models/trained/<name>` and is **not** used until
+`/aero models use <name>`. That command refuses models trained on synthetic data or that this build
+cannot load, copies the bundle into the configured `flash-bundle` folder (the previous model moves to
+`models/previous/`), sets `neural.inference.enabled: true` and `mode: local` in `config.yml` without
+touching anything else in the file, and reloads. A failed run leaves its audit in
+`models/last-audit.json`.
+
+Without a server, the same trainer runs from the jar:
+`java -cp AeroAC.jar dev.aeroac.neural.training.TrainCli <dataset> <output> [--epochs N]`.
+
+**External service (`neural.training.mode: service`).** The Python service in `ml/README.md`, as
+before: `neural.training.enabled`, `endpoint` and `token`. The HTTP client polls on its daemon thread
+and the GUI reads only its cached snapshot.
 
 For an offline workflow, `neural.gui.training.report-directory` can point to exported
 `current.json`, `candidate.json` and optional `job.json` files under the plugin data directory. This
-adapter is read-only. The HTTP and report-directory adapters are mutually selected at reload, with
-the HTTP service taking precedence when explicitly enabled.
+read-only adapter is used when neither of the above is active.
 
 **Nothing deploys automatically.** The status enum stops at `CANDIDATE`. Finishing training does not
-swap the running model, enable mitigation or move a threshold, and a test asserts that no status
+swap the running model (only `/aero models use` does, on request), enable mitigation or move a threshold, and a test asserts that no status
 containing `DEPLOY`, `PROMOT`, `ACTIVE` or `LIVE` exists.
 
 Model comparison states the direction per metric, because "higher is better" is wrong for half of
@@ -498,3 +526,20 @@ and then puts those windows in the train fold only: never validation, calibratio
 reviewed player who also appears in one of those folds is dropped rather than leaked across the
 split. The numbers added and dropped are recorded in the bundle provenance
 (`staffReviewedWindows`). Lab recordings remain the only ground truth for evaluation.
+
+## Training bot
+
+`/aero bot`, or the zombie head in the training centre, opens a sparring bot for collecting data
+without a second player (permission `aero.training.record`, Paper/Folia). The bot is a zombie, whose
+0.6 x 1.95 box is a player's, so recorded target geometry matches a real fight. Vanilla AI is off
+(`setAware(false)`) and the plugin steers it every tick on its own entity scheduler.
+
+Settings, each applied to the live bot on click (left click forward, right click back): behaviour
+(stand, follow, strafe around you, run around, fight back), speed (up to player sprint and above),
+distance kept, jumping, knockback taken (0-150 %), damage dealt to you in fight-back mode, armor set
+(leather to netherite), held item, immortal or a health pool. Bots are never saved with the world,
+drop nothing, do not burn or take environmental damage, and are removed when their owner leaves or
+the plugin stops.
+
+To collect data, record yourself as usual (`/aero rec <you>` for LEGIT, `/aero rec <you> aimassist`
+with the cheat on) and fight the bot; stop with `/aero rec stop <you>`.

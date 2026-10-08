@@ -128,9 +128,32 @@ public final class AdminService implements StartableInitable, StoppableInitable 
         // gets the same screens, one refresh behind, with no service to configure. Whatever was
         // configured before is closed, so a reload never leaves two clients polling.
         String endpoint = trim(source.getStringElse("neural.training.endpoint", ""));
-        boolean serviceWanted = replacement.enabled()
+        // mode: local (the default) trains inside the plugin with the Java trainer; mode: service
+        // asks the external Python service, as before.
+        String mode = trim(source.getStringElse("neural.training.mode", "local")).toLowerCase(java.util.Locale.ROOT);
+        boolean localWanted = replacement.enabled() && !"service".equals(mode);
+        boolean serviceWanted = replacement.enabled() && !localWanted
                 && source.getBooleanElse("neural.training.enabled", false) && !endpoint.isEmpty();
-        if (serviceWanted) {
+        if (localWanted) {
+            if (oldClient instanceof dev.aeroac.neural.admin.training.LocalTrainingServiceClient local && local.running()) {
+                // A reload must not kill a run that is minutes into training; it keeps its settings.
+                training = local;
+            } else {
+                try {
+                    Path folder = AeroAPI.INSTANCE.getGrimPlugin().getDataFolder().toPath();
+                    int cores = Runtime.getRuntime().availableProcessors();
+                    training = new dev.aeroac.neural.admin.training.LocalTrainingServiceClient(datasetRoot(),
+                            folder.resolve("models"), new dev.aeroac.neural.admin.training.LocalTrainingServiceClient.Options(
+                            Math.max(1, Math.min(500, source.getIntElse("neural.training.local.epochs", 30))),
+                            Math.max(1, Math.min(64, source.getIntElse("neural.training.local.threads",
+                                    Math.max(1, Math.min(4, cores / 2))))),
+                            source.getBooleanElse("neural.training.local.include-staff-reviews", true),
+                            source.getBooleanElse("neural.training.local.include-review", false)));
+                } catch (RuntimeException error) {
+                    LogUtil.warn("Aero local training unavailable: " + error.getMessage());
+                }
+            }
+        } else if (serviceWanted) {
             try {
                 training = new HttpTrainingServiceClient(endpoint,
                         source.getIntElse("neural.training.timeout-ms", 2000),
@@ -153,7 +176,7 @@ public final class AdminService implements StartableInitable, StoppableInitable 
                 LogUtil.warn("Aero training reports unavailable: " + error.getMessage());
             }
         }
-        oldClient.close();
+        if (oldClient != training) oldClient.close();
 
         // Publish what the interface may ask for, and withdraw it when the interface is off. Both are
         // references to live machinery, not copies of it.

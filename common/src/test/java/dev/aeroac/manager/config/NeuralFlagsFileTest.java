@@ -67,7 +67,7 @@ class NeuralFlagsFileTest {
         String updated = NeuralFlagsFile.apply(withoutMaster, true);
         assertNotNull(updated);
         assertTrue(NeuralFlagsFile.applied(updated, true));
-        assertEquals("neural:\n  enabled: true\n  collection:\n    enabled: true\n", updated);
+        assertEquals("neural:\n  collection:\n    enabled: true\n  enabled: true\n", updated);
     }
 
     @Test
@@ -86,7 +86,7 @@ class NeuralFlagsFileTest {
         assertNotNull(updated);
         assertTrue(NeuralFlagsFile.applied(updated, true));
         assertTrue(updated.contains("checks:\n  enabled: true"));
-        assertTrue(updated.endsWith("neural:\n  enabled: true\n  collection:\n    enabled: true"));
+        assertTrue(updated.endsWith("neural:\n  enabled: true\n  collection:\n    enabled: true\n"), updated);
     }
 
     @Test
