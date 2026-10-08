@@ -2,10 +2,12 @@ package dev.aeroac.utils.latency;
 
 import dev.aeroac.AeroAPI;
 import ac.grim.grimac.api.PacketWorld;
+import dev.aeroac.checks.impl.movement.GhostBlock;
 import dev.aeroac.player.AeroPlayer;
 import dev.aeroac.utils.change.BlockModification;
 import dev.aeroac.utils.chunks.Column;
 import dev.aeroac.utils.collisions.CollisionData;
+import dev.aeroac.utils.collisions.datatypes.CollisionBox;
 import dev.aeroac.utils.collisions.datatypes.SimpleCollisionBox;
 import dev.aeroac.utils.data.*;
 import dev.aeroac.utils.data.packetentity.PacketEntity;
@@ -113,6 +115,65 @@ public class CompensatedWorld implements PacketWorld {
         }
     }
 
+    /**
+     * Records the pending predictions - blocks the client placed, broke or filled that the server has not
+     * answered yet - that the player's movement this tick relied on: stood on, pushed against, swam in or
+     * walked through. Until the server answers, the client really has them, so the movement is simulated
+     * with them; if the server then refuses one, that movement never had a world to happen in.
+     *
+     * @param body   the player's box after this tick's movement
+     * @param before where the player was before this tick
+     */
+    public void markPredictionsUsed(SimpleCollisionBox body, boolean onGround, boolean horizontalCollision, Vector3d before) {
+        if (originalServerBlocks.isEmpty()) return;
+
+        SimpleCollisionBox feet = new SimpleCollisionBox(body.minX + 1.0E-3, body.minY - 0.06, body.minZ + 1.0E-3,
+                body.maxX - 1.0E-3, body.minY + 1.0E-3, body.maxZ - 1.0E-3, false);
+        SimpleCollisionBox sides = new SimpleCollisionBox(body.minX - 0.03, body.minY + 0.01, body.minZ - 0.03,
+                body.maxX + 0.03, body.maxY - 0.01, body.maxZ + 0.03, false);
+        SimpleCollisionBox inside = body.copy().expand(-1.0E-3);
+
+        for (BlockPrediction prediction : originalServerBlocks.values()) {
+            if (prediction.getPositionBeforeUse() != null) continue;
+
+            Vector3i pos = prediction.getBlockPosition();
+            WrappedBlockState predicted = getBlock(pos);
+            WrappedBlockState server = WrappedBlockState.getByGlobalId(blockVersion, prediction.getOriginalBlockId());
+            CollisionBox predictedBox = movementCollision(predicted, pos);
+            CollisionBox serverBox = movementCollision(server, pos);
+
+            boolean relied = predictedBox.isNull() != serverBox.isNull() && (predictedBox.isNull()
+                    // Walked through a block the client broke or opened
+                    ? serverBox.isIntersected(inside)
+                    // Stood on or pushed against a block the client placed
+                    : onGround && predictedBox.isIntersected(feet) || horizontalCollision && predictedBox.isIntersected(sides));
+            // Swam in water or lava the client poured
+            relied |= isFluid(predicted) && !isFluid(server)
+                    && inside.isIntersected(new SimpleCollisionBox(pos.getX(), pos.getY(), pos.getZ()));
+
+            if (relied) prediction.setPositionBeforeUse(before);
+        }
+    }
+
+    /** After a setback the recorded uses are moot; the player is back where none of them happened. */
+    public void forgetPredictionUse() {
+        for (BlockPrediction prediction : originalServerBlocks.values()) prediction.setPositionBeforeUse(null);
+    }
+
+    /** Whether the server's state takes away what the predicted one gave movement: support, a gap or fluid. */
+    private boolean differsForMovement(WrappedBlockState predicted, WrappedBlockState server, Vector3i pos) {
+        return movementCollision(predicted, pos).isNull() != movementCollision(server, pos).isNull()
+                || isFluid(predicted) && !isFluid(server);
+    }
+
+    private CollisionBox movementCollision(WrappedBlockState state, Vector3i pos) {
+        return CollisionData.getData(state.getType()).getMovementCollisionBox(player, player.getClientVersion(), state, pos.getX(), pos.getY(), pos.getZ());
+    }
+
+    private boolean isFluid(WrappedBlockState state) {
+        return Materials.isWater(player.getClientVersion(), state) || state.getType() == StateTypes.LAVA;
+    }
+
     /** Pending block predictions belong to the world they were made in; a world change drops them. */
     public void clearPredictions() {
         originalServerBlocks.clear();
@@ -127,7 +188,7 @@ public class CompensatedWorld implements PacketWorld {
             player.sendTransaction(); // This packet actually matters
             player.latencyUtils.addRealTimeTask(player.lastTransactionSent.get(), () -> {
                 Vector3d playerPos = unackedActions.remove(new Pair<>(blockPos, action));
-                handleAck(blockPos, blockState, playerPos);
+                handleAck(blockPos, blockState, playerPos, null);
             });
         } else {
             unackedActions.remove(new Pair<>(blockPos, action));
@@ -149,14 +210,19 @@ public class CompensatedWorld implements PacketWorld {
             // Block changes are allowed to execute out of order, because it actually doesn't matter
             if (predictionData != null && predictionData.getForBlockUpdate() == toApplyBlocks) {
                 originalServerBlocks.remove(vector3i.getSerializedPosition());
-                handleAck(vector3i, predictionData.getOriginalBlockId(), predictionData.getPlayerPosition());
+                handleAck(vector3i, predictionData.getOriginalBlockId(), predictionData.getPlayerPosition(),
+                        predictionData.getPositionBeforeUse());
             }
         }));
     }
 
-    private void handleAck(Vector3i vector3i, int originalBlockId, Vector3d playerPosition) {
+    private void handleAck(Vector3i vector3i, int originalBlockId, Vector3d playerPosition, Vector3d positionBeforeUse) {
         // If we need to change the world block state
         if (getBlock(vector3i).getGlobalId() != originalBlockId) {
+            // The server refused a block, gap or fluid the player's movement already relied on
+            boolean refusedWhatWasUsed = positionBeforeUse != null && differsForMovement(getBlock(vector3i),
+                    WrappedBlockState.getByGlobalId(blockVersion, originalBlockId), vector3i);
+
             player.blockHistory.add(
                     new BlockModification(
                             getBlock(vector3i),
@@ -178,6 +244,10 @@ public class CompensatedWorld implements PacketWorld {
                 player.y = playerPosition.getY();
                 player.z = playerPosition.getZ();
                 player.boundingBox = GetBoundingBox.getCollisionBoxForPlayer(player, player.x, player.y, player.z);
+            }
+
+            if (refusedWhatWasUsed) {
+                player.checkManager.getPostPredictionCheck(GhostBlock.class).onRefusedPredictionUsed(positionBeforeUse);
             }
         }
     }

@@ -27,8 +27,8 @@ deterministic checks flag, alert or punish.
 See [neural architecture](docs/neural-architecture.md), [dataset recording and commands](docs/dataset.md),
 [inference](docs/inference.md), [risk engine and mitigation](docs/risk-and-mitigation.md),
 [data collection protocol](docs/data-collection-protocol.md), [model promotion](docs/model-promotion.md), [synthetic session](docs/examples/neural-session/README.md) and the [ML pipeline](ml/README.md).
-Movement, combat and inventory bypasses closed on top of Grim (AirStuck, NoSlow, NoWeb, entity pushing, boats, AutoTotem) are listed in
-[movement checks](docs/movement-checks.md).
+Movement, combat and inventory bypasses closed on top of Grim (AirStuck, NoSlow, NoWeb, entity pushing, boats, AutoTotem, Spider on ghost blocks) are listed in
+[movement checks](docs/movement-checks.md); the aura rotation checks (snap-back, shake, centre lock) in [aura checks](docs/aura-checks.md).
 The active plugin id and data folder are `AeroAC`. On Bukkit, a guarded one-time migration copies
 owned configuration, database, dataset and bundle files from `plugins/GrimAC` without deleting or
 overwriting the legacy folder. The badges and historical description below refer to the upstream

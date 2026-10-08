@@ -6,7 +6,11 @@ import dev.aeroac.checks.Check;
 import dev.aeroac.checks.debug.HitboxDebugHandler;
 import dev.aeroac.checks.impl.aim.AimDuplicateLook;
 import dev.aeroac.checks.impl.aim.AimModulo360;
+import dev.aeroac.checks.impl.aim.AuraLock;
+import dev.aeroac.checks.impl.aim.AuraShake;
+import dev.aeroac.checks.impl.aim.AuraSnapBack;
 import dev.aeroac.checks.impl.aim.processor.AimProcessor;
+import dev.aeroac.checks.impl.aim.processor.CombatTargetTracker;
 import dev.aeroac.checks.impl.badpackets.*;
 import dev.aeroac.checks.impl.breaking.*;
 import dev.aeroac.checks.impl.chat.ChatA;
@@ -25,6 +29,7 @@ import dev.aeroac.checks.impl.misc.GhostBlockMitigation;
 import dev.aeroac.checks.impl.misc.Post;
 import dev.aeroac.checks.impl.misc.TransactionOrder;
 import dev.aeroac.checks.impl.movement.AirStuck;
+import dev.aeroac.checks.impl.movement.GhostBlock;
 import dev.aeroac.checks.impl.movement.NoSlow;
 import dev.aeroac.checks.impl.movement.PredictionRunner;
 import dev.aeroac.checks.impl.movement.SetbackBlocker;
@@ -126,6 +131,8 @@ public class CheckManager {
                 .put(PacketOrderProcessor.class, player.packetOrderProcessor)
                 .put(Reach.class, new Reach(player))
                 .put(PacketEntityReplication.class, player.packetEntityReplication)
+                // Counts attacks and movement packets for the aura aim checks
+                .put(CombatTargetTracker.class, new CombatTargetTracker(player))
                 .put(PacketChangeGameState.class, new PacketChangeGameState(player))
                 // Before the inventory simulation, so a click it cancels is never simulated
                 .put(InventoryH.class, new InventoryH(player))
@@ -179,6 +186,10 @@ public class CheckManager {
                 .put(AimProcessor.class, new AimProcessor(player))
                 .put(AimModulo360.class, new AimModulo360(player))
                 .put(AimDuplicateLook.class, new AimDuplicateLook(player))
+                // After AimProcessor, which hands them the mouse step
+                .put(AuraSnapBack.class, new AuraSnapBack(player))
+                .put(AuraShake.class, new AuraShake(player))
+                .put(AuraLock.class, new AuraLock(player))
                 .build();
         vehicleChecks = new ImmutableClassToInstanceMap.Builder<VehicleCheck>()
                 .put(VehiclePredictionRunner.class, new VehiclePredictionRunner(player))
@@ -189,6 +200,7 @@ public class CheckManager {
                 .put(ExplosionHandler.class, new ExplosionHandler(player))
                 .put(KnockbackHandler.class, new KnockbackHandler(player))
                 .put(GhostBlockDetector.class, new GhostBlockDetector(player))
+                .put(GhostBlock.class, new GhostBlock(player))
                 .put(InventoryD.class, new InventoryD(player))
                 .put(Phase.class, new Phase(player))
                 .put(Post.class, new Post(player))

@@ -17,6 +17,8 @@ public enum EvidenceType {
     GRIM_PACKET_ORDER(false),
     /** Kept ticking without reporting a position, the way air-stuck clients hang in the air to hit. */
     GRIM_AIR_STUCK(false),
+    /** Rotations only an aura produces: snapping back after hits, shaking, locking onto the centre. */
+    GRIM_AURA_ROTATION(false),
     SESSION_ANOMALY(false);
 
     private final boolean model;
@@ -33,6 +35,7 @@ public enum EvidenceType {
         if (checkName.equals("EntityPierce")) return GRIM_ENTITY_PIERCE;
         if (checkName.startsWith("PacketOrder")) return GRIM_PACKET_ORDER;
         if (checkName.equals("AirStuck")) return GRIM_AIR_STUCK;
+        if (checkName.startsWith("Aura")) return GRIM_AURA_ROTATION;
         return null;
     }
 }

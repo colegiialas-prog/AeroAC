@@ -103,6 +103,7 @@ class RiskEngineTest {
         assertEquals(EvidenceType.GRIM_WALL_HIT, engine.fromCheck("WallHit", SECOND).type());
         assertEquals(EvidenceType.GRIM_PACKET_ORDER, engine.fromCheck("PacketOrderC", SECOND).type());
         assertEquals(EvidenceType.GRIM_AIR_STUCK, engine.fromCheck("AirStuck", SECOND).type());
+        assertEquals(EvidenceType.GRIM_AURA_ROTATION, engine.fromCheck("AuraSnapBack", SECOND).type());
         assertNull(engine.fromCheck("SimulationA", SECOND));
         assertNull(engine.fromCheck(null, SECOND));
         assertNull(engine(Map.of("neural.risk.grim-weight", 0.0)).fromCheck("Reach", SECOND));

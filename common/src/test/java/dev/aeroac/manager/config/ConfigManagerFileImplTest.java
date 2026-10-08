@@ -3,6 +3,7 @@ package dev.aeroac.manager.config;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConfigManagerFileImplTest {
@@ -81,15 +82,26 @@ class ConfigManagerFileImplTest {
         assertTrue(output.contains("  AirStuck:\n"));
         assertTrue(output.contains("      - \"AirStuck\"\n"));
         assertTrue(output.contains("      - \"3:5 [alert]\"\n"));
+        assertTrue(output.contains("  GhostBlock:\n"));
+        assertTrue(output.contains("      - \"GhostBlock\"\n"));
+        assertTrue(output.contains("  Aura:\n"));
+        assertTrue(output.contains("      - \"Aura\"\n"));
         assertEquals(output, ConfigManagerFileImpl.ensureAeroMovementPunishmentGroups(output), "idempotent");
     }
 
     @Test
-    void leavesAirStuckAloneWhereverTheOperatorPutIt() {
+    void leavesEachCheckAloneWhereverTheOperatorPutIt() {
         for (String entry : new String[]{"      - \"AirStuck\"\n", "      - \"!AirStuck\"\n", "      - airstuck\n"}) {
-            String input = "Punishments:\n  Movement:\n    checks:\n" + entry + "    commands:\n      - \"1:1 [alert]\"\n";
+            String input = "Punishments:\n  Movement:\n    checks:\n" + entry + "      - \"GhostBlock\"\n"
+                    + "      - \"AuraLock\"\n    commands:\n      - \"1:1 [alert]\"\n";
             assertEquals(input, ConfigManagerFileImpl.ensureAeroMovementPunishmentGroups(input), entry);
         }
+        // Only the check that is missing gets a group
+        String onlyAirStuck = "Punishments:\n  Movement:\n    checks:\n      - \"AirStuck\"\n    commands:\n      - \"1:1 [alert]\"\n";
+        String output = ConfigManagerFileImpl.ensureAeroMovementPunishmentGroups(onlyAirStuck);
+        assertTrue(output.contains("  GhostBlock:\n"));
+        assertTrue(output.contains("  Aura:\n"));
+        assertFalse(output.contains("  AirStuck:\n"));
         String notPunishments = "alerts:\n  print-to-console: true\n";
         assertEquals(notPunishments, ConfigManagerFileImpl.ensureAeroMovementPunishmentGroups(notPunishments));
     }

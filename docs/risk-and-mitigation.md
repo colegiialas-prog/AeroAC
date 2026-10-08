@@ -77,7 +77,7 @@ RiskEngine принимает не число, а наблюдение:
 ```text
 type       AI_AIM | AI_KILLAURA | AI_TRIGGER | AI_OVERALL | AI_RELIEF
            GRIM_REACH | GRIM_WALL_HIT | GRIM_ENTITY_PIERCE | GRIM_PACKET_ORDER
-           GRIM_AIR_STUCK | SESSION_ANOMALY
+           GRIM_AIR_STUCK | GRIM_AURA_ROTATION | SESSION_ANOMALY
 strength   дельта риска в единицах движка; отрицательная только у AI_RELIEF
 timestamp  монотонное время
 source     "flash/<modelVersion>" или "grim/<checkName>"
@@ -93,8 +93,9 @@ metadata   текст для оператора, не вход модели
 устойчиво спокойное поведение постепенно снижает накопленный риск.
 
 Grim flags входят как отдельное семейство с весом `grim-weight`. Принимаются только боевые проверки,
-которые доказывают нечестный удар: Reach, WallHit, EntityPierce, PacketOrder* и AirStuck (удары из
-позиции, которую клиент отказывается сообщать). Их собственный учёт violations,
+которые доказывают нечестный удар: Reach, WallHit, EntityPierce, PacketOrder*, AirStuck (удары из
+позиции, которую клиент отказывается сообщать) и Aura* (ротации ауры: snap-back, тряска, лок на центр,
+семейство `GRIM_AURA_ROTATION`). Их собственный учёт violations,
 alerts и punishments **не меняется**. Grim flag — это evidence, а не label: если скармливать
 его как истину, модель выучит существующие пороги вместо поведения.
 
