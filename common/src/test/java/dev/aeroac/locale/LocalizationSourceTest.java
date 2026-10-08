@@ -54,7 +54,7 @@ class LocalizationSourceTest {
     private static final Set<String> NOT_COPY = Set.of(
             "AERO \u203a ", "[Aero] ", "Aero: ", "REC ", "w | ", "  x", " x",
             "[A-Za-z0-9_-]{1,128}", "[A-Za-z0-9][A-Za-z0-9_.-]{0,63}",
-            "/aero player ", "/aero watch ", "/aero training set ",
+            "/aero player ", "/aero watch ", "/aero training set ", "/aero tp ", "/aero spectate ",
             "Aim Assist", "KillAura", "TriggerBot",
             "[a-f0-9]{64}");
 

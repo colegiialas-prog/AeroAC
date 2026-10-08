@@ -81,7 +81,7 @@ public final class TrainingBots implements Listener {
         zombie.setRemoveWhenFarAway(false);
         zombie.setCanPickupItems(false);
         zombie.setAdult();
-        zombie.setCustomName(MenuItems.WARN + "Aero Bot " + MenuItems.MUTED + "(" + owner.getName() + ")");
+        zombie.setCustomName(MenuItems.WARN + AeroMessages.tr("gui.bot.name", owner.getName()));
         zombie.setCustomNameVisible(true);
         try {
             zombie.setAware(false); // goals off, physics and knockback on: we steer it ourselves

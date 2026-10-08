@@ -524,8 +524,9 @@ public final class NeuralManager implements StartableInitable, StoppableInitable
                 for (AeroPlayer player : AeroAPI.INSTANCE.getPlayerDataManager().getEntries()) {
                     active.remember(player.getUniqueId(), player.getNeuralState().risk, now);
                 }
-            } catch (RuntimeException unavailable) {
-                log.warn("Aero AC: риск онлайн-игроков не сохранён при остановке: " + unavailable.getMessage());
+            } catch (RuntimeException | LinkageError unavailable) {
+                // LinkageError: without a platform (tests, a broken start) AeroAPI cannot even initialise.
+                log.warn("Aero AC: риск онлайн-игроков не сохранён при остановке: " + unavailable);
             }
             active.close();
         }

@@ -15,7 +15,7 @@ class HttpTrainingServiceClientTest {
         JsonObject response = JsonParser.parseString("""
                 {"jobId":"outside","state":"QUEUED","message":"accepted","job":{
                   "status":"QUEUED","javaStatus":"QUEUED","jobId":"job-42","modelType":"flash",
-                  "datasetVersion":null,"featureSchemaVersion":3,"window":"attack",
+                  "datasetVersion":null,"featureSchemaVersion":5,"window":"attack",
                   "heads":["overall","aimAssist"],"epoch":0,"totalEpochs":3,"progress":0.0,
                   "trainLoss":null,"validationLoss":null,"elapsedSeconds":0,"updatedAtMillis":123,
                   "message":"queued"}}
@@ -32,7 +32,7 @@ class HttpTrainingServiceClientTest {
     @Test
     void parsesEveryDetailedServiceStateAndRejectsUnknownStates() {
         JsonObject status = JsonParser.parseString("""
-                {"status":"AUDITING","javaStatus":"QUEUED","jobId":"job-1","featureSchemaVersion":3,
+                {"status":"AUDITING","javaStatus":"QUEUED","jobId":"job-1","featureSchemaVersion":5,
                  "heads":[],"epoch":0,"totalEpochs":3,"progress":0.02,"elapsedSeconds":1,
                  "updatedAtMillis":123,"message":"audit"}
                 """).getAsJsonObject();
@@ -44,7 +44,7 @@ class HttpTrainingServiceClientTest {
     @Test
     void readsSessionReplayMetricsAndCohortFromTheEvaluationReport() {
         JsonObject result = JsonParser.parseString("""
-                {"modelVersion":"candidate-1","datasetVersion":"dataset-v1","featureSchemaVersion":3,
+                {"modelVersion":"candidate-1","datasetVersion":"dataset-v1","featureSchemaVersion":5,
                  "calibrated":true,"smokeOnly":false,"updatedAtMillis":456,
                  "evaluationReport":{"cohortId":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                   "limitations":["held-out fixture"],
@@ -76,7 +76,7 @@ class HttpTrainingServiceClientTest {
     @Test
     void keepsMissingEvaluationMeasurementsMissing() {
         JsonObject result = JsonParser.parseString("""
-                {"featureSchemaVersion":3,"calibrated":false,"updatedAtMillis":456,
+                {"featureSchemaVersion":5,"calibrated":false,"updatedAtMillis":456,
                  "evaluationReport":{"cohortId":"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
                   "windowMetrics":{"tprAtFpr":{"0.001":{"reliable":0}}},
                   "riskSimulation":{"detection":{"knownClient":{"sessions":0},"unknownClient":{"sessions":0}}}}}
@@ -93,7 +93,7 @@ class HttpTrainingServiceClientTest {
     @Test
     void doesNotPublishAnUnreliableTprWhenTheTestFoldHasNoPositives() {
         JsonObject result = JsonParser.parseString("""
-                {"featureSchemaVersion":3,"updatedAtMillis":456,
+                {"featureSchemaVersion":5,"updatedAtMillis":456,
                  "evaluationReport":{"cohortId":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
                   "windowMetrics":{"positives":0,"tprAtFpr":{"0.001":{"tpr":1.0,"reliable":1}}},
                   "riskSimulation":{"detection":{"knownClient":{"sessions":0},"unknownClient":{"sessions":0}}}}}
@@ -105,14 +105,14 @@ class HttpTrainingServiceClientTest {
     @Test
     void rejectsInvalidExternalRatesAndCohortIdentity() {
         JsonObject invalidCohort = JsonParser.parseString("""
-                {"featureSchemaVersion":3,"updatedAtMillis":456,
+                {"featureSchemaVersion":5,"updatedAtMillis":456,
                  "evaluationReport":{"cohortId":"not-a-cohort",
                   "windowMetrics":{},"riskSimulation":{}}}
                 """).getAsJsonObject();
         assertThrows(IllegalArgumentException.class, () -> HttpTrainingServiceClient.parseEvaluation(invalidCohort));
 
         JsonObject invalidRate = JsonParser.parseString("""
-                {"featureSchemaVersion":3,"updatedAtMillis":456,
+                {"featureSchemaVersion":5,"updatedAtMillis":456,
                  "evaluationReport":{"cohortId":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
                   "windowMetrics":{},"riskSimulation":{"detection":{"knownClient":{"sessions":1,
                   "reachedSuspicious":1.5},"unknownClient":{"sessions":0}}}}}
