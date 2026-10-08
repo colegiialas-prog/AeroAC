@@ -24,7 +24,11 @@ import java.util.function.Consumer;
  */
 public final class LocalTrainingServiceClient implements TrainingServiceClient {
     /** Operator settings from neural.training.local.*. */
-    public record Options(int epochs, int threads, boolean includeStaffReviews, boolean includeReview) { }
+    public record Options(int epochs, int threads, boolean includeStaffReviews, boolean includeReview, String split) {
+        public Options(int epochs, int threads, boolean includeStaffReviews, boolean includeReview) {
+            this(epochs, threads, includeStaffReviews, includeReview, "auto");
+        }
+    }
 
     private final Path datasetRoot;
     private final Path modelsRoot;
@@ -75,7 +79,7 @@ public final class LocalTrainingServiceClient implements TrainingServiceClient {
         Path output = ModelLibrary.trainedRoot(modelsRoot).resolve(name);
         JavaTrainer.Settings settings = ("pro".equals(request.preset()) ? JavaTrainer.Settings.pro() : JavaTrainer.Settings.flash())
                 .withEpochs(options.epochs()).withThreads(options.threads()).withSeed(request.seed())
-                .withData(false, options.includeReview(), options.includeStaffReviews());
+                .withData(false, options.includeReview(), options.includeStaffReviews()).withSplit(options.split());
         AtomicBoolean flag = new AtomicBoolean();
         cancel = flag;
         long started = System.currentTimeMillis();
@@ -113,9 +117,11 @@ public final class LocalTrainingServiceClient implements TrainingServiceClient {
                     + " Проверка записей: " + modelsRoot.resolve("last-audit.json"));
             discard(output);
         } catch (Throwable error) {
-            job = state(TrainingJob.Status.FAILED, name, request, 0, settings.epochs(), Double.NaN, Double.NaN, started,
-                    "Ошибка обучения: " + error);
-            reply.accept("Ошибка обучения: " + error);
+            String text = error instanceof java.io.IOException
+                    ? "Не удалось прочитать записи или сохранить модель: " + error.getMessage()
+                    : "Ошибка обучения: " + error;
+            job = state(TrainingJob.Status.FAILED, name, request, 0, settings.epochs(), Double.NaN, Double.NaN, started, text);
+            reply.accept(text);
             discard(output);
         } finally {
             running.set(false);

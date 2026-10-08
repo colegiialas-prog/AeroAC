@@ -25,10 +25,13 @@ public final class GroupSplit {
 
     final Map<String, int[]> folds;
     final Map<String, Object> manifest;
+    /** Grouped by recording only: one player's sessions may sit in different folds. */
+    final boolean bySession;
 
-    private GroupSplit(Map<String, int[]> folds, Map<String, Object> manifest) {
+    private GroupSplit(Map<String, int[]> folds, Map<String, Object> manifest, boolean bySession) {
         this.folds = folds;
         this.manifest = manifest;
+        this.bySession = bySession;
     }
 
     public int[] fold(String name) { return folds.get(name); }
@@ -48,12 +51,15 @@ public final class GroupSplit {
         return Collections.unmodifiableMap(map);
     }
 
-    /** Group key per window: the first session id of its connected component over session + player. */
-    static String[] groupKeys(WindowSet windows, int[] rows) {
+    /**
+     * Group key per window: the first session id of its connected component over session + player,
+     * or over session alone when {@code bySession}.
+     */
+    static String[] groupKeys(WindowSet windows, int[] rows, boolean bySession) {
         int n = rows.length;
         int[] parent = new int[n];
         for (int i = 0; i < n; i++) parent[i] = i;
-        for (String name : List.of("session", "player")) {
+        for (String name : bySession ? List.of("session") : List.of("session", "player")) {
             Map<String, Integer> seen = new HashMap<>();
             for (int i = 0; i < n; i++) {
                 String value = windows.attribute(name, rows[i]);
@@ -78,19 +84,75 @@ public final class GroupSplit {
     }
 
     /** Assigns whole groups to folds, greedily balancing window count and label mix. */
-    static GroupSplit group(WindowSet windows, int[] rows, long seed) {
-        String[] keys = groupKeys(windows, rows);
+    static GroupSplit group(WindowSet windows, int[] rows, long seed, boolean bySession) {
+        String[] keys = groupKeys(windows, rows, bySession);
         Map<String, List<Integer>> members = new LinkedHashMap<>();
         for (int i = 0; i < rows.length; i++) members.computeIfAbsent(keys[i], key -> new ArrayList<>()).add(i);
         if (members.size() < FRACTIONS.size()) {
-            throw new TrainingException("Игроков слишком мало: " + members.size() + " независимых групп не хватает на "
-                    + FRACTIONS.size() + " выборки (обучение, проверка, калибровка, тест). Запишите больше разных игроков.");
+            throw new TrainingException((bySession ? "Записей слишком мало: " : "Игроков слишком мало: ") + members.size()
+                    + " независимых групп не хватает на " + FRACTIONS.size()
+                    + " выборки (обучение, проверка, калибровка, тест). " + (bySession
+                    ? "Сделайте больше отдельных записей: хотя бы 5 честных и 5 с читом."
+                    : "Запишите больше разных игроков."));
         }
         List<String> order = new ArrayList<>(members.keySet());
         order.sort(Comparator.comparingInt((String key) -> -members.get(key).size()).thenComparing(key -> key));
         Collections.shuffle(order, new Random(seed));
         order.sort(Comparator.comparingInt(key -> -members.get(key).size()));
+        Map<String, String> assignment = bySession
+                ? stratified(windows, rows, members, order)
+                : balanced(windows, rows, members, order);
+        return build(windows, rows, keys, assignment, seed, bySession);
+    }
 
+    /**
+     * By-session folds, one class at a time. A recording is a single class, so assigning LEGIT and
+     * CHEAT recordings separately guarantees both classes in every fold as soon as each class has
+     * four recordings; the mixed greedy pass can leave a small fold with one class only.
+     */
+    private static Map<String, String> stratified(WindowSet windows, int[] rows, Map<String, List<Integer>> members,
+                                                  List<String> order) {
+        Map<String, String> assignment = new HashMap<>();
+        List<String> seeded = new ArrayList<>(FRACTIONS.keySet());
+        seeded.sort(Comparator.comparingDouble((String fold) -> -FRACTIONS.get(fold)).thenComparing(fold -> fold));
+        int[] perLabel = new int[2];
+        for (String key : order) perLabel[windows.label(rows[members.get(key).get(0)])]++;
+        if (perLabel[0] < seeded.size() || perLabel[1] < seeded.size()) {
+            throw new TrainingException("Записей слишком мало: без чита " + perLabel[0] + ", с читом " + perLabel[1]
+                    + ". Нужно хотя бы по " + seeded.size() + " отдельных записи каждого вида (лучше 5-10), "
+                    + "по 1-2 минуты боя каждая.");
+        }
+        for (int label = 0; label < 2; label++) {
+            List<String> groups = new ArrayList<>();
+            int total = 0;
+            for (String key : order) {
+                if (windows.label(rows[members.get(key).get(0)]) == label) { groups.add(key); total += members.get(key).size(); }
+            }
+            Map<String, Integer> counts = new LinkedHashMap<>();
+            for (String fold : FRACTIONS.keySet()) counts.put(fold, 0);
+            for (int i = 0; i < groups.size(); i++) {
+                String key = groups.get(i);
+                String fold;
+                if (i < seeded.size()) {
+                    fold = seeded.get(i);
+                } else {
+                    fold = null;
+                    double best = 0;
+                    for (Map.Entry<String, Double> entry : FRACTIONS.entrySet()) {
+                        double deficit = entry.getValue() * total - counts.get(entry.getKey());
+                        if (fold == null || deficit > best) { fold = entry.getKey(); best = deficit; }
+                    }
+                }
+                assignment.put(key, fold);
+                counts.merge(fold, members.get(key).size(), Integer::sum);
+            }
+        }
+        return assignment;
+    }
+
+    /** The by-player greedy pass of splits.group_split: whole groups, balancing size and label mix. */
+    private static Map<String, String> balanced(WindowSet windows, int[] rows, Map<String, List<Integer>> members,
+                                                List<String> order) {
         int total = rows.length, cheatTotal = 0;
         for (int row : rows) cheatTotal += windows.label(row);
         int[] totals = {total, cheatTotal, total - cheatTotal};
@@ -116,6 +178,11 @@ public final class GroupSplit {
             assignment.put(key, best);
             assign(windows, rows, members.get(key), best, counts);
         }
+        return assignment;
+    }
+
+    private static GroupSplit build(WindowSet windows, int[] rows, String[] keys, Map<String, String> assignment,
+                                    long seed, boolean bySession) {
         Map<String, int[]> folds = new LinkedHashMap<>();
         Map<String, List<String>> groups = new LinkedHashMap<>();
         for (String fold : FOLDS) {
@@ -128,12 +195,12 @@ public final class GroupSplit {
             groups.put(fold, names);
         }
         Map<String, Object> manifest = new LinkedHashMap<>();
-        manifest.put("strategy", "group");
-        manifest.put("groupBy", List.of("player"));
+        manifest.put("strategy", bySession ? "group-stratified" : "group");
+        manifest.put("groupBy", List.of(bySession ? "session" : "player"));
         manifest.put("fractions", FRACTIONS);
         manifest.put("seed", seed);
         manifest.put("groups", groups);
-        GroupSplit split = new GroupSplit(folds, manifest);
+        GroupSplit split = new GroupSplit(folds, manifest, bySession);
         manifest.put("sizes", split.sizes());
         return split;
     }
@@ -148,7 +215,7 @@ public final class GroupSplit {
     }
 
     /** The default split of a training run: a precommitted unknown-client holdout when there are two cheat clients or more. */
-    public static GroupSplit make(WindowSet windows, long seed, List<String> holdoutClients, List<String> log) {
+    public static GroupSplit make(WindowSet windows, long seed, List<String> holdoutClients, List<String> log, boolean bySession) {
         int[] all = new int[windows.size()];
         for (int i = 0; i < all.length; i++) all[i] = i;
         TreeMap<String, Boolean> cheatClients = new TreeMap<>();
@@ -159,14 +226,14 @@ public final class GroupSplit {
         List<String> holdout = new ArrayList<>(holdoutClients);
         if (holdout.isEmpty() && clients.size() >= 2) holdout.add(clients.get((int) Math.floorMod(seed, clients.size())));
         if (clients.size() < 2) log.add("Проверка на незнакомом чит-клиенте невозможна: записан только один чит-клиент.");
-        if (holdout.isEmpty()) return group(windows, all, seed);
-        return unknownClient(windows, all, holdout, seed);
+        if (holdout.isEmpty()) return group(windows, all, seed, bySession);
+        return unknownClient(windows, all, holdout, seed, bySession);
     }
 
-    static GroupSplit unknownClient(WindowSet windows, int[] all, List<String> holdoutClients, long seed) {
+    static GroupSplit unknownClient(WindowSet windows, int[] all, List<String> holdoutClients, long seed, boolean bySession) {
         Set<String> holdout = new HashSet<>();
         for (String client : holdoutClients) holdout.add(client.trim().toLowerCase(Locale.ROOT));
-        String[] keys = groupKeys(windows, all);
+        String[] keys = groupKeys(windows, all, bySession);
         Set<String> tainted = new HashSet<>();
         int direct = 0;
         for (int i = 0; i < all.length; i++) {
@@ -178,7 +245,7 @@ public final class GroupSplit {
         List<Integer> held = new ArrayList<>(), remaining = new ArrayList<>();
         for (int i = 0; i < all.length; i++) (tainted.contains(keys[i]) ? held : remaining).add(all[i]);
         if (remaining.isEmpty()) throw new TrainingException("После отделения тестового чит-клиента не осталось данных для обучения.");
-        GroupSplit inner = group(windows, remaining.stream().mapToInt(Integer::intValue).toArray(), seed);
+        GroupSplit inner = group(windows, remaining.stream().mapToInt(Integer::intValue).toArray(), seed, bySession);
         Map<String, int[]> folds = new LinkedHashMap<>(inner.folds);
         List<Integer> test = new ArrayList<>();
         for (int row : inner.folds.get("test")) test.add(row);
@@ -187,13 +254,13 @@ public final class GroupSplit {
         Map<String, Object> manifest = new LinkedHashMap<>();
         manifest.put("strategy", "unknown-client");
         manifest.put("holdoutClients", new ArrayList<>(new java.util.TreeSet<>(holdout)));
-        manifest.put("groupBy", List.of("player"));
+        manifest.put("groupBy", List.of(bySession ? "session" : "player"));
         manifest.put("innerFractions", FRACTIONS);
         manifest.put("seed", seed);
         manifest.put("holdoutWindows", direct);
         manifest.put("windowsPulledInByGroup", held.size() - direct);
         manifest.put("groups", inner.manifest.get("groups"));
-        GroupSplit split = new GroupSplit(folds, manifest);
+        GroupSplit split = new GroupSplit(folds, manifest, bySession);
         manifest.put("sizes", split.sizes());
         return split;
     }
@@ -242,7 +309,7 @@ public final class GroupSplit {
                 count++;
                 if (windows.sessionOf(row).staffReview() && !"train".equals(fold)) throw new IllegalStateException("staff review outside train");
                 String player = windows.attribute("player", row);
-                if (!windows.sessionOf(row).staffReview() && !players.computeIfAbsent(player, key -> fold).equals(fold)) {
+                if (!bySession && !windows.sessionOf(row).staffReview() && !players.computeIfAbsent(player, key -> fold).equals(fold)) {
                     throw new IllegalStateException("player " + player + " is in two folds");
                 }
                 String session = windows.attribute("session", row);

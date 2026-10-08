@@ -75,7 +75,11 @@ class RiskCarryOverTest {
                 "neural.risk.enabled", true, "neural.risk.restore-cap", 4.0)));
         try (RiskStore store = new RiskStore(file, null)) {
             NeuralRuntime before = new NeuralRuntime(1, config, null, () -> null, store);
-            before.park(player, suspicious(before), 0);
+            // Real clock: close() decays parked risk up to System.nanoTime(), as on a live server.
+            long now = System.nanoTime();
+            PlayerRiskProfile profile = new PlayerRiskProfile(16, now);
+            before.riskEngine().accept(profile, Evidence.of(EvidenceType.AI_AIM, 8, 0, "test"), now);
+            before.park(player, profile, now);
             before.close();
         }
         try (RiskStore store = new RiskStore(file, null)) {

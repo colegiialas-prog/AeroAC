@@ -67,4 +67,24 @@ class JavaTrainerTest {
         for (int i = 0; i < a.remaining(); i++) worst = Math.max(worst, Math.abs(a.get(i) - b.get(i)));
         assertTrue(worst < 1e-3, "largest weight difference " + worst);
     }
+
+    @Test void aSingleOperatorRecordingThemselvesStillTrainsBySessionAndSaysSo(@TempDir Path temp) throws Exception {
+        Path dataset = temp.resolve("datasets");
+        SyntheticRecordings.writeSolo(dataset, 6, 420, 21);
+        JavaTrainer.Settings settings = JavaTrainer.Settings.flash().withEpochs(2).withThreads(2).withData(true, false, false);
+        JavaTrainer.Result result = new JavaTrainer(settings, null, null).run(dataset, temp.resolve("solo"));
+        assertTrue(result.warnings().stream().anyMatch(warning -> warning.contains("по записям")), result.warnings().toString());
+        assertTrue(Files.readString(temp.resolve("solo/manifest.json")).contains("\"splitBy\": \"session\""));
+
+        // Asking for a by-player split explicitly keeps the old refusal.
+        TrainingException refused = assertThrows(TrainingException.class, () -> new JavaTrainer(settings.withSplit("player"),
+                null, null).run(dataset, temp.resolve("strict")));
+        assertTrue(refused.getMessage().contains("Игроков слишком мало"), refused.getMessage());
+    }
+
+    @Test void anEmptyDatasetExplainsHowToRecord(@TempDir Path temp) {
+        TrainingException empty = assertThrows(TrainingException.class, () -> new JavaTrainer(JavaTrainer.Settings.flash(),
+                null, null).run(temp.resolve("datasets"), temp.resolve("out")));
+        assertTrue(empty.getMessage().contains("/aero rec"), empty.getMessage());
+    }
 }

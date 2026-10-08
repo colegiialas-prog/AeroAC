@@ -492,6 +492,7 @@ public final class AeroCommand implements BuildableCommand {
             reply(sender, (running ? "* " : "  ") + model.name() + "  ROC-AUC " + AdminStyle.number(model.testRocAuc(), 3)
                     + "  TPR@0.1% " + AdminStyle.percent(model.testTprAtFpr())
                     + (model.synthetic() ? AeroMessages.tr("  [синтетика]") : "")
+                    + (model.splitBySession() ? AeroMessages.tr("  [тест на тех же игроках: оценка завышена]") : "")
                     + (model.unknownClientTest() ? "" : AeroMessages.tr("  [тест без незнакомого клиента]")));
         }
         reply(sender, AeroMessages.tr("Включить: /aero models use <имя>"));

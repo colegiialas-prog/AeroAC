@@ -367,6 +367,9 @@ neural:
             include-staff-reviews: true
             # Also use recordings the audit marked REVIEW, not only clean ones.
             include-review: false
+            # auto: split folds by player, or by recording when there are too few players (one
+            # operator against the bot); scores are then optimistic. player / session to force one.
+            split: auto
         enabled: false
         endpoint: "http://127.0.0.1:8090"
         timeout-ms: 2000

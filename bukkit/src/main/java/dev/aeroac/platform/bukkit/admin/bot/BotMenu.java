@@ -45,15 +45,15 @@ public final class BotMenu extends AeroMenu {
         inventory.setItem(SLOT_SPAWN, active
                 ? MenuItems.item(Material.RED_CONCRETE, MenuItems.BAD + AeroMessages.tr("gui.bot.remove"), MenuItems.note(AeroMessages.tr("gui.bot.remove_hint")))
                 : MenuItems.item(Material.LIME_CONCRETE, MenuItems.GOOD + AeroMessages.tr("gui.bot.spawn"), MenuItems.note(AeroMessages.tr("gui.bot.spawn_hint"))));
-        inventory.setItem(SLOT_MODE, option(Material.COMPASS, "gui.bot.mode", AeroMessages.tr("gui.bot.mode." + s.mode.name().toLowerCase(Locale.ROOT)),
+        inventory.setItem(SLOT_MODE, option(Material.COMPASS, "gui.bot.mode", named("gui.bot.mode.", s.mode.name()),
                 AeroMessages.tr("gui.bot.mode_hint")));
-        inventory.setItem(SLOT_SPEED, option(Material.SUGAR, "gui.bot.speed", AeroMessages.tr("gui.bot.speed." + s.speed), null));
+        inventory.setItem(SLOT_SPEED, option(Material.SUGAR, "gui.bot.speed", named("gui.bot.speed.", String.valueOf(s.speed)), null));
         inventory.setItem(SLOT_DISTANCE, option(Material.LEAD, "gui.bot.distance", fmt(s.distanceValue()) + " " + AeroMessages.tr("gui.bot.blocks"), null));
         inventory.setItem(SLOT_JUMP, toggle(Material.RABBIT_FOOT, "gui.bot.jumping", s.jumping));
         inventory.setItem(SLOT_KNOCKBACK, option(Material.SLIME_BALL, "gui.bot.knockback", Math.round(s.knockbackValue() * 100) + "%", null));
         inventory.setItem(SLOT_DAMAGE, option(Material.IRON_SWORD, "gui.bot.damage",
                 s.damageValue() == 0 ? AeroMessages.tr("gui.bot.off") : fmt(s.damageValue() / 2) + " ❤", AeroMessages.tr("gui.bot.damage_hint")));
-        inventory.setItem(SLOT_ARMOR, option(armorIcon(s.armor), "gui.bot.armor", AeroMessages.tr("gui.bot.armor." + TrainingBots.ARMOR[s.armor].toLowerCase(Locale.ROOT)), null));
+        inventory.setItem(SLOT_ARMOR, option(armorIcon(s.armor), "gui.bot.armor", named("gui.bot.armor.", TrainingBots.ARMOR[s.armor]), null));
         Material weapon = Material.matchMaterial(TrainingBots.WEAPONS[s.weapon]);
         inventory.setItem(SLOT_WEAPON, option(weapon == null ? Material.STICK : weapon, "gui.bot.weapon",
                 weapon == null ? AeroMessages.tr("gui.bot.off") : TrainingBots.WEAPONS[s.weapon].toLowerCase(Locale.ROOT).replace('_', ' '), null));
@@ -63,6 +63,12 @@ public final class BotMenu extends AeroMenu {
         inventory.setItem(SLOT_RECORD, MenuItems.item(Material.WRITABLE_BOOK, MenuItems.HEADER + AeroMessages.tr("gui.bot.record"),
                 MenuItems.note(AeroMessages.tr("gui.bot.record_legit")), MenuItems.note(AeroMessages.tr("gui.bot.record_cheat"))));
         footer(inventory, () -> gui.show(new TrainingMenu(gui, viewer)), AeroMessages.tr("gui.training.aero_training_center"));
+    }
+
+    /** A catalog entry chosen at run time, e.g. gui.bot.mode.strafe. */
+    private static String named(String prefix, String value) {
+        String key = prefix + value.toLowerCase(Locale.ROOT);
+        return AeroMessages.tr(key);
     }
 
     private static String fmt(double value) {
@@ -112,9 +118,9 @@ public final class BotMenu extends AeroMenu {
             case SLOT_RECORD -> {
                 viewer.closeInventory();
                 viewer.sendMessage(MenuItems.HEADER + AeroMessages.tr("gui.bot.record"));
-                viewer.sendMessage(MenuItems.VALUE + "/aero rec " + viewer.getName() + MenuItems.MUTED + "  — " + AeroMessages.tr("gui.bot.record_legit"));
-                viewer.sendMessage(MenuItems.VALUE + "/aero rec " + viewer.getName() + " aimassist" + MenuItems.MUTED + "  — " + AeroMessages.tr("gui.bot.record_cheat"));
-                viewer.sendMessage(MenuItems.VALUE + "/aero rec stop " + viewer.getName());
+                viewer.sendMessage(MenuItems.VALUE + AeroMessages.tr("gui.bot.cmd_legit", viewer.getName()));
+                viewer.sendMessage(MenuItems.VALUE + AeroMessages.tr("gui.bot.cmd_cheat", viewer.getName()));
+                viewer.sendMessage(MenuItems.VALUE + AeroMessages.tr("gui.bot.cmd_stop", viewer.getName()));
                 return;
             }
             default -> { return; }

@@ -43,6 +43,14 @@ class AdminMenusTest {
     @BeforeEach void setup() {
         gui = mock(BukkitAdminGui.class); service = mock(AdminService.class); viewer = mock(Player.class);
         when(gui.service()).thenReturn(service);
+        // Collaborators the screens reach through the GUI: real objects, not nulls from the mock.
+        try {
+            when(gui.marks()).thenReturn(new StaffMarks(Files.createTempDirectory("aero-marks").resolve("staff-marks.json")));
+        } catch (java.io.IOException error) {
+            throw new IllegalStateException(error);
+        }
+        when(gui.actions()).thenReturn(new PlayerActions());
+        when(gui.bots()).thenReturn(new dev.aeroac.platform.bukkit.admin.bot.TrainingBots());
         when(viewer.getUniqueId()).thenReturn(viewerId); when(viewer.getName()).thenReturn("PreviewAdmin");
         when(viewer.hasPermission(anyString())).thenReturn(true);
         ConfigManager settings = (ConfigManager) Proxy.newProxyInstance(getClass().getClassLoader(),
@@ -162,7 +170,8 @@ class AdminMenusTest {
                 new MitigationsMenu(gui, viewer, 0), new AlertsMenu(gui, viewer), new StatisticsMenu(gui, viewer),
                 new SettingsMenu(gui, viewer), new TrainingMenu(gui, viewer), new RecordingsMenu(gui, viewer),
                 new RecordingDetailMenu(gui, viewer, targetId), new ModelMenu(gui, viewer, false), new ModelMenu(gui, viewer, true),
-                new QuickRecordMenu(gui, viewer), new QuickCheatMenu(gui, viewer, targetId, "DemoTarget")));
+                new QuickRecordMenu(gui, viewer), new QuickCheatMenu(gui, viewer, targetId, "DemoTarget"),
+                new dev.aeroac.platform.bukkit.admin.bot.BotMenu(gui, viewer)));
         for (var kind : HistoryMenu.Kind.values()) screens.add(new HistoryMenu(gui, viewer, targetId, kind, false));
         for (var kind : DatasetMenu.Kind.values()) screens.add(new DatasetMenu(gui, viewer, kind, 0));
         for (var step : WizardMenu.Step.values()) screens.add(new WizardMenu(gui, viewer, step));

@@ -27,7 +27,7 @@ public final class ModelLibrary {
     /** What a screen or a command shows about one bundle. NaN where nothing was measured. */
     public record ModelInfo(String name, Path path, String modelVersion, String kind, boolean synthetic,
                             boolean calibrated, double testRocAuc, double testPrAuc, double testTprAtFpr,
-                            boolean unknownClientTest, String created, List<String> warnings) { }
+                            boolean unknownClientTest, String created, List<String> warnings, boolean splitBySession) { }
 
     private static final List<String> FILES = List.of("manifest.json", "weights.json", "model.weights",
             "dataset_audit.json", "split_manifest.json");
@@ -77,7 +77,7 @@ public final class ModelLibrary {
                     text(manifest, "modelKind"), evaluation != null && evaluation.has("synthetic") && evaluation.get("synthetic").getAsBoolean(),
                     calibration != null && calibration.isJsonObject(), number(test, "rocAuc"), number(test, "prAuc"), tpr,
                     evaluation != null && "held-out".equals(text(evaluation, "unknownClientBenchmark")),
-                    text(provenance, "created"), List.copyOf(warnings));
+                    text(provenance, "created"), List.copyOf(warnings), "session".equals(text(evaluation, "splitBy")));
         } catch (IOException | RuntimeException notABundle) {
             return null;
         }

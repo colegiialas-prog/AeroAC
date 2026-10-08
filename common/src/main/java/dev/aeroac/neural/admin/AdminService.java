@@ -148,7 +148,8 @@ public final class AdminService implements StartableInitable, StoppableInitable 
                             Math.max(1, Math.min(64, source.getIntElse("neural.training.local.threads",
                                     Math.max(1, Math.min(4, cores / 2))))),
                             source.getBooleanElse("neural.training.local.include-staff-reviews", true),
-                            source.getBooleanElse("neural.training.local.include-review", false)));
+                            source.getBooleanElse("neural.training.local.include-review", false),
+                            source.getStringElse("neural.training.local.split", "auto")));
                 } catch (RuntimeException error) {
                     LogUtil.warn("Aero local training unavailable: " + error.getMessage());
                 }
