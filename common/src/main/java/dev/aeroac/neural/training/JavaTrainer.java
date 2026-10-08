@@ -41,12 +41,13 @@ public final class JavaTrainer {
                            List<String> heads, List<String> holdoutClients, boolean allowSynthetic,
                            boolean includeReview, boolean includeStaffReviews, double groupBalance,
                            boolean augment, double mirrorProbability, double channelDropout,
-                           double selectionMaxFpr, int earlyStoppingPatience, int threads, long maxCacheBytes) {
+                           double selectionMaxFpr, int earlyStoppingPatience, int threads, long maxCacheBytes,
+                           String split) {
 
         public static Settings flash() {
             return new Settings("flash", "attack", 31, 4, 30, 128, 2.0e-3, 1.0e-4, 0.1, 0,
                     List.of("overall", "aimAssist"), List.of(), false, false, false, 0.5, true, 0.5, 0.05,
-                    0.05, 6, Math.max(1, Runtime.getRuntime().availableProcessors() / 2), 0);
+                    0.05, 6, Math.max(1, Runtime.getRuntime().availableProcessors() / 2), 0, "auto");
         }
 
         public static Settings pro() {
@@ -57,37 +58,46 @@ public final class JavaTrainer {
         Settings with(String preset, String window, int length) {
             return new Settings(preset, window, length, stride, epochs, batchSize, learningRate, weightDecay, dropout, seed,
                     heads, holdoutClients, allowSynthetic, includeReview, includeStaffReviews, groupBalance, augment,
-                    mirrorProbability, channelDropout, selectionMaxFpr, earlyStoppingPatience, threads, maxCacheBytes);
+                    mirrorProbability, channelDropout, selectionMaxFpr, earlyStoppingPatience, threads, maxCacheBytes, split);
         }
 
         public Settings withEpochs(int value) {
             return new Settings(preset, window, sequenceLength, stride, value, batchSize, learningRate, weightDecay, dropout, seed,
                     heads, holdoutClients, allowSynthetic, includeReview, includeStaffReviews, groupBalance, augment,
-                    mirrorProbability, channelDropout, selectionMaxFpr, earlyStoppingPatience, threads, maxCacheBytes);
+                    mirrorProbability, channelDropout, selectionMaxFpr, earlyStoppingPatience, threads, maxCacheBytes, split);
         }
 
         public Settings withSeed(long value) {
             return new Settings(preset, window, sequenceLength, stride, epochs, batchSize, learningRate, weightDecay, dropout, value,
                     heads, holdoutClients, allowSynthetic, includeReview, includeStaffReviews, groupBalance, augment,
-                    mirrorProbability, channelDropout, selectionMaxFpr, earlyStoppingPatience, threads, maxCacheBytes);
+                    mirrorProbability, channelDropout, selectionMaxFpr, earlyStoppingPatience, threads, maxCacheBytes, split);
         }
 
         public Settings withThreads(int value) {
             return new Settings(preset, window, sequenceLength, stride, epochs, batchSize, learningRate, weightDecay, dropout, seed,
                     heads, holdoutClients, allowSynthetic, includeReview, includeStaffReviews, groupBalance, augment,
-                    mirrorProbability, channelDropout, selectionMaxFpr, earlyStoppingPatience, Math.max(1, value), maxCacheBytes);
+                    mirrorProbability, channelDropout, selectionMaxFpr, earlyStoppingPatience, Math.max(1, value), maxCacheBytes, split);
         }
 
         public Settings withData(boolean synthetic, boolean review, boolean staff) {
             return new Settings(preset, window, sequenceLength, stride, epochs, batchSize, learningRate, weightDecay, dropout, seed,
                     heads, holdoutClients, synthetic, review, staff, groupBalance, augment,
-                    mirrorProbability, channelDropout, selectionMaxFpr, earlyStoppingPatience, threads, maxCacheBytes);
+                    mirrorProbability, channelDropout, selectionMaxFpr, earlyStoppingPatience, threads, maxCacheBytes, split);
+        }
+
+        /** auto: by player, falling back to by session when there are too few players; player; session. */
+        public Settings withSplit(String value) {
+            String mode = value == null ? "auto" : value.trim().toLowerCase(java.util.Locale.ROOT);
+            if (!mode.equals("auto") && !mode.equals("player") && !mode.equals("session")) mode = "auto";
+            return new Settings(preset, window, sequenceLength, stride, epochs, batchSize, learningRate, weightDecay, dropout, seed,
+                    heads, holdoutClients, allowSynthetic, includeReview, includeStaffReviews, groupBalance, augment,
+                    mirrorProbability, channelDropout, selectionMaxFpr, earlyStoppingPatience, threads, maxCacheBytes, mode);
         }
 
         public Settings withAugment(boolean value) {
             return new Settings(preset, window, sequenceLength, stride, epochs, batchSize, learningRate, weightDecay, dropout, seed,
                     heads, holdoutClients, allowSynthetic, includeReview, includeStaffReviews, groupBalance, value,
-                    mirrorProbability, channelDropout, selectionMaxFpr, earlyStoppingPatience, threads, maxCacheBytes);
+                    mirrorProbability, channelDropout, selectionMaxFpr, earlyStoppingPatience, threads, maxCacheBytes, split);
         }
 
         Map<String, Object> toJson(Path dataset, Path output) {
@@ -106,7 +116,7 @@ public final class JavaTrainer {
             data.put("weight_decay", weightDecay);
             data.put("dropout", dropout);
             data.put("seed", seed);
-            data.put("group_by", List.of("player"));
+            data.put("split", split);
             data.put("holdout_clients", holdoutClients);
             data.put("early_stopping_patience", earlyStoppingPatience);
             data.put("allow_synthetic", allowSynthetic);
@@ -202,8 +212,9 @@ public final class JavaTrainer {
             throw new TrainingException("В датасете есть синтетические записи; они годятся только для проверки (флаг synthetic).");
         }
         if (sessions.isEmpty()) {
-            throw new TrainingException("Нет пригодных размеченных записей в " + dataset + " (принято 0 из " + audits.size()
-                    + "; проверки: " + verdicts + "). Подробности в dataset_audit.json.");
+            throw new TrainingException("Ни одна запись не подошла для обучения (принято 0 из " + audits.size()
+                    + "; проверки: " + verdicts + "). Частые причины: " + topReasons(audits)
+                    + ". Подробности в dataset_audit.json.");
         }
         int staffAdded = 0;
         if (settings.includeStaffReviews()) {
@@ -218,21 +229,22 @@ public final class JavaTrainer {
                 ? WindowSet.attack(sessions, before, settings.sequenceLength() - 1 - before)
                 : WindowSet.continuous(sessions, settings.sequenceLength(), settings.stride());
         if (windows.size() == 0) throw new TrainingException("Нет ни одного полного окна боя: запишите более длинные бои.");
-        GroupSplit split = GroupSplit.make(windows, settings.seed(), settings.holdoutClients(), warnings);
+        boolean bySession = "session".equals(settings.split());
         int[] staffPlacement = {0, 0};
-        if (staffAdded > 0) staffPlacement = split.trainOnly(windows);
-        split.verify(windows);
-        BundleWriter.writeJson(output.resolve("split_manifest.json"), split.manifest);
-        for (String fold : GroupSplit.FOLDS) {
-            int[] rows = split.fold(fold);
-            if (rows.length == 0) throw new TrainingException("Выборка " + fold + " пуста: нужно больше игроков или записей.");
-            boolean cheat = false, legit = false;
-            for (int row : rows) { if (windows.label(row) == 1) cheat = true; else legit = true; }
-            if (!cheat || !legit) {
-                throw new TrainingException("В выборке " + fold + " нет и честных, и читерских боёв от разных игроков. "
-                        + "Запишите больше игроков: и с читом, и без.");
-            }
+        GroupSplit split;
+        try {
+            split = split(windows, bySession, staffAdded > 0, staffPlacement);
+        } catch (TrainingException tooFewPlayers) {
+            if (!"auto".equals(settings.split()) || bySession) throw tooFewPlayers;
+            // One admin recording himself against the bot is one player: a by-player split cannot
+            // exist. Split by recording instead and say plainly what that costs.
+            bySession = true;
+            split = split(windows, true, staffAdded > 0, staffPlacement);
+            warnings.add("Разных игроков мало, поэтому выборки разделены по записям, а не по игрокам: "
+                    + "в тесте те же игроки, что и в обучении, и оценка качества завышена. "
+                    + "Для честной оценки запишите хотя бы 4-5 разных игроков.");
         }
+        BundleWriter.writeJson(output.resolve("split_manifest.json"), split.manifest);
         // Head labels and which heads are trainable.
         List<String> heads = settings.heads();
         List<String> published = new ArrayList<>();
@@ -405,6 +417,7 @@ public final class JavaTrainer {
             evaluation.put("folds", results);
             evaluation.put("history", history);
             evaluation.put("splitSizes", split.sizes());
+            evaluation.put("splitBy", bySession ? "session" : "player");
             evaluation.put("headsNotTrained", notTrained);
             evaluation.put("channelsNeverObserved", neverSeen);
             Map<String, Object> lineage = new LinkedHashMap<>();
@@ -439,6 +452,26 @@ public final class JavaTrainer {
         } finally {
             pool.shutdownNow();
         }
+    }
+
+    /** Builds the folds and checks every fold holds both classes; throws with an operator-facing reason. */
+    private GroupSplit split(WindowSet windows, boolean bySession, boolean staff, int[] staffPlacement) {
+        GroupSplit split = GroupSplit.make(windows, settings.seed(), settings.holdoutClients(), warnings, bySession);
+        int[] placed = staff ? split.trainOnly(windows) : new int[]{0, 0};
+        staffPlacement[0] = placed[0];
+        staffPlacement[1] = placed[1];
+        split.verify(windows);
+        for (String fold : GroupSplit.FOLDS) {
+            int[] rows = split.fold(fold);
+            if (rows.length == 0) throw new TrainingException("Выборка " + fold + " пуста: нужно больше записей.");
+            boolean cheat = false, legit = false;
+            for (int row : rows) { if (windows.label(row) == 1) cheat = true; else legit = true; }
+            if (!cheat || !legit) {
+                throw new TrainingException("В выборке " + fold + " нет и честных, и читерских боёв. "
+                        + "Нужно больше записей: хотя бы 5 честных и 5 с читом" + (bySession ? "." : " от разных игроков."));
+            }
+        }
+        return split;
     }
 
     /** One optimiser step on rows order[from, to). Returns the batch's summed loss (loss * batch size). */
@@ -605,6 +638,17 @@ public final class JavaTrainer {
 
     private static Object finite(double value) {
         return Double.isFinite(value) ? value : null;
+    }
+
+    /** The three commonest reasons recordings were not GOOD, for the error an operator reads. */
+    static String topReasons(List<TrainingDataset.Audit> audits) {
+        Map<String, Integer> counts = new HashMap<>();
+        for (TrainingDataset.Audit audit : audits) {
+            for (String reason : audit.reasons()) counts.merge(reason.replaceAll(":.*", ""), 1, Integer::sum);
+        }
+        if (counts.isEmpty()) return "нет записей с меткой LEGIT или CHEAT";
+        return counts.entrySet().stream().sorted((a, b) -> b.getValue() - a.getValue()).limit(3)
+                .map(entry -> entry.getKey() + " (" + entry.getValue() + ")").collect(java.util.stream.Collectors.joining(", "));
     }
 
     private static Map<String, Object> auditJson(List<TrainingDataset.Audit> audits) {

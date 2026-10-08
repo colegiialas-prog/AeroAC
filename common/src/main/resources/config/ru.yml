@@ -380,6 +380,9 @@ neural:
             include-staff-reviews: true
             # Брать и записи с замечаниями проверки (REVIEW), не только чистые.
             include-review: false
+            # auto: делить выборки по игрокам, а если игроков мало (записываешь себя против бота) —
+            # по отдельным записям; оценка качества тогда завышена. player / session — принудительно.
+            split: auto
         enabled: false
         endpoint: "http://127.0.0.1:8090"
         timeout-ms: 2000

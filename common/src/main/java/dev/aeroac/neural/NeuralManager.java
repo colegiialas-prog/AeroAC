@@ -372,6 +372,13 @@ public final class NeuralManager implements StartableInitable, StoppableInitable
     public void startSession(AeroPlayer player, DatasetMetadata.Label label, String family, String client,
                              String configuration, String scenario, String assistStrength, String notes,
                              Consumer<String> reply) {
+        if (label == DatasetMetadata.Label.CHEAT) {
+            // Quick recordings name only the cheat. Without a client and a configuration the audit
+            // sends the session to REVIEW and training silently leaves it out, so say "not given"
+            // explicitly instead of leaving the fields empty.
+            if (client == null || client.isBlank()) client = "unspecified";
+            if (configuration == null || configuration.isBlank()) configuration = "default";
+        }
         NeuralPlayerState state = player.getNeuralState();
         DatasetManager manager = datasets;
         NeuralConfig settings = config;

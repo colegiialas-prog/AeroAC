@@ -46,6 +46,12 @@ public final class TrainingDataset {
     private static final double MAX_SAMPLING_GAP_MS = 150;
     private static final double MAX_SAMPLING_GAP_RATE = 0.02;
     private static final int MIN_SEGMENT_FRAMES = 32;
+    /** What to do when there is nothing to train on yet. */
+    static final String NO_RECORDINGS = "Записей боёв ещё нет. Сначала запишите бои: включите запись в центре обучения "
+            + "(/aero training), затем /aero rec <ник> для честной игры и /aero rec <ник> aimassist с включённым читом, "
+            + "дерись 1-2 минуты (можно с ботом: /aero bot), остановка /aero rec stop <ник>. "
+            + "Нужно хотя бы 5 записей без чита и 5 с читом.";
+
     /** Staff CHEAT verdicts count as aim assistance, as in ml/aeroml/dataset/reviews.py. */
     public static final String STAFF_CHEAT_FAMILY = "aim-assist-staff-verdict";
 
@@ -54,11 +60,12 @@ public final class TrainingDataset {
     /** Audits every session under {@code root}. Sessions are sorted by file name, like the Python loader. */
     public static List<Audit> audit(Path root) throws IOException {
         Path metadata = root.resolve("metadata");
-        if (!Files.isDirectory(metadata)) throw new IOException(root + " не похож на папку датасета (нет metadata/)");
+        if (!Files.isDirectory(metadata)) throw new TrainingException(NO_RECORDINGS);
         TreeMap<String, Path> files = new TreeMap<>();
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(metadata, "session-*.json")) {
             for (Path path : stream) files.put(path.getFileName().toString(), path);
         }
+        if (files.isEmpty()) throw new TrainingException(NO_RECORDINGS);
         List<Audit> audits = new ArrayList<>();
         Set<String> seen = new HashSet<>();
         for (Path path : files.values()) {

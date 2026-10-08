@@ -353,6 +353,14 @@ backward pass to central differences; on the same data both trainers produce the
 test ROC-AUC within seed-to-seed noise. Moderator CHEAT/LEGIT verdicts on snapshots are used in the
 training fold only (`include-staff-reviews`, on by default here).
 
+Folds are split by player, so the test measures players the model never saw. With too few
+players — one operator recording themselves against the training bot — `neural.training.local.split:
+auto` falls back to splitting by recording (LEGIT and CHEAT recordings stratified separately, at least
+four of each), says so in the result, and `/aero models` marks such a model: its test score is
+optimistic because the same player is on both sides. Quick CHEAT recordings (`/aero rec <player>
+<family>`) are written with client `unspecified` and configuration `default`, so the audit does not
+send them to REVIEW.
+
 A finished run is a candidate in `plugins/AeroAC/models/trained/<name>` and is **not** used until
 `/aero models use <name>`. That command refuses models trained on synthetic data or that this build
 cannot load, copies the bundle into the configured `flash-bundle` folder (the previous model moves to

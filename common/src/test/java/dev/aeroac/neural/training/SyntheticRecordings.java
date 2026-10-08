@@ -37,6 +37,17 @@ final class SyntheticRecordings {
         }
     }
 
+    /** One operator recording themselves: every session is the same player and the same cheat client. */
+    static void writeSolo(Path root, int sessionsPerLabel, int frames, long seed) throws IOException {
+        Files.createDirectories(root.resolve("metadata"));
+        Files.createDirectories(root.resolve("raw"));
+        Random random = new Random(seed);
+        for (int index = 0; index < sessionsPerLabel; index++) {
+            session(root, String.format("solo-%02d-legit", index), "solo-admin", false, "vanilla", frames, random);
+            session(root, String.format("solo-%02d-cheat", index), "solo-admin", true, "unspecified", frames, random);
+        }
+    }
+
     private static void session(Path root, String sessionId, String playerId, boolean cheat, String client, int frames,
                                 Random random) throws IOException {
         try (Writer raw = Files.newBufferedWriter(root.resolve("raw/session-" + sessionId + ".jsonl"), StandardCharsets.UTF_8)) {
